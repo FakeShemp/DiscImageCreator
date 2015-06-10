@@ -6,8 +6,8 @@
 #define CRCPOLY1  0x1021U  /* x^{16}+x^{12}+x^5+1 */
 // init val = 0, output xor = 0xFFFF, shift left
 USHORT GetCrc16CCITT(
-	INT n,
-	UCHAR c[]
+	UCHAR c[],
+	INT n
 	)
 {
 	USHORT r = 0;
@@ -35,7 +35,7 @@ BOOL GetDriveOffset(
 	if (!fpDrive) {
 		OutputErrorString(_T("Failed to open file [F:%s][L:%d]:%s"), 
 			_T(__FUNCTION__), __LINE__, _T("driveOffset.txt\n"));
-		exit(-1);
+		return FALSE;
 	}
 
 	CHAR szProduct[16+1] = {0};
@@ -92,8 +92,8 @@ BOOL GetDriveOffset(
 }
 
 ULONG GetFilesize(
-	FILE *fp,
-	LONG nOffset
+	LONG nOffset,
+	FILE *fp
 	)
 {
 	ULONG filesize = 0;
@@ -123,8 +123,8 @@ UCHAR GetMode(
 }
 
 BOOL GetWriteOffset(
-	CONST PUCHAR pBuf,
-	PDISC_DATA pDiscData
+	PDISC_DATA pDiscData,
+	CONST PUCHAR pBuf
 	)
 {
 	BOOL bRet = FALSE;

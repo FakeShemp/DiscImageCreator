@@ -3,7 +3,7 @@
  */
 
 #define CD_RAW_READ				(2048)
-#define CD_RAW_READ_C2_SIZE_ALT	(294)
+#define CD_RAW_READ_C2_SIZE_294	(294)
 #define CD_RAW_SECTOR_SIZE		(2352)
 #define DVD_RAW_READ			(2064)
 #define DRIVE_MAX_SPEED			(72)
@@ -78,7 +78,17 @@ BOOL ReadCDPartial(
 	INT nStart,
 	INT nEnd,
 	_READ_CD_FLAG::_SectorType flg,
-	BOOL bDC
+	BOOL bDC,
+	BOOL bCheckReading
+	);
+
+BOOL ReadCDForDataTransferLengthTest(
+	PDEVICE_DATA pDevData
+	);
+
+BOOL ReadBufferCapacity(
+	PDEVICE_DATA pDevData,
+	FILE* fpLog
 	);
 
 BOOL ReadConfiguration(

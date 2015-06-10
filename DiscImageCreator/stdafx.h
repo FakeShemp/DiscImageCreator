@@ -7,6 +7,8 @@
 
 #include "targetver.h"
 
+// TODO: プログラムに必要な追加ヘッダーをここで参照してください。
+
 #pragma warning( disable : 4514 )
 #pragma warning( disable : 4711 )
 #pragma warning( push )
@@ -61,21 +63,12 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 /////////////////////////// end spliting from dsm.h ///////////////////////////
 #pragma warning( pop )
 
-
-
-// TODO: プログラムに必要な追加ヘッダーをここで参照してください。
-
-#define BOOLEAN_TO_STRING_TRUE_FALSE(_b_) \
-	( (_b_) ? _T("True") : _T("False") )
-
-#define BOOLEAN_TO_STRING_YES_NO(_b_) \
-	( (_b_) ? _T("Yes") : _T("No") )
-
 #ifdef WIN64
 	typedef INT64 _INT;
 #else
 	typedef INT _INT;
 #endif
+
 #ifdef UNICODE
 	#define WFLAG "w, ccs=UTF-8"
 	#define AFLAG "a, ccs=UTF-8"
@@ -89,11 +82,8 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 #pragma pack(1)
 __declspec(align(1)) typedef struct _DEVICE_DATA {
 	HANDLE hDevice;
-	SCSI_ADDRESS adress;
-	PSTORAGE_ADAPTER_DESCRIPTOR adapterDescriptor;
-#ifdef WIN64
-	ULONG64 AlignmentMask64;
-#endif
+	SCSI_ADDRESS address;
+	UINT_PTR AlignmentMask;
 	CHAR pszVendorId[8+1];
 	CHAR pszProductId[16+1];
 	BOOL bPlextor;
@@ -117,7 +107,7 @@ __declspec(align(1)) typedef struct _DEVICE_DATA {
 
 typedef struct _DISC_DATA {
 	CDROM_TOC toc;
-	USHORT pusCurrentMedia;
+	USHORT usCurrentMedia;
 	UINT* aSessionNum;
 	INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2];
 	INT nFirstDataLBA;

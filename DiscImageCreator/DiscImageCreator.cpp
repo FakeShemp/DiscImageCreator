@@ -27,7 +27,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 		return TRUE;
 	}
 	else if(execType == sub) {
-		OutputParsingSubfile(argv[2]);
+		WriteParsingSubfile(argv[2]);
 		return TRUE;
 	}
 
@@ -65,6 +65,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 
 		FILE* fpLog = NULL;
 		DISC_DATA discData = {0};
+		PSTORAGE_ADAPTER_DESCRIPTOR adapterDescriptor = NULL;
 		try {
 			bRet = ReadTestUnitReady(&devData);
 			if(!bRet) {
@@ -91,34 +92,38 @@ int exec(_TCHAR* argv[], ExecType execType)
 			}
 #endif
 			ULONG ulReturned = 0;
-			bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
-				sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
+			bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS,
+				&devData.address, sizeof(SCSI_ADDRESS), &devData.address,
+				sizeof(SCSI_ADDRESS), &ulReturned, NULL);
 			if(!bRet) {
 //				throw FALSE;
 			}
-			OutputScsiAdress(&devData, fpLog);
+			OutputIoctlScsiAddress(&devData, fpLog);
 
 			STORAGE_DESCRIPTOR_HEADER header = {0};
 			STORAGE_PROPERTY_QUERY query;
 			query.QueryType = PropertyStandardQuery;
 			query.PropertyId = StorageAdapterProperty;
 
-			bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
-				sizeof(STORAGE_PROPERTY_QUERY), &header, sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
+			bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY,
+				&query, sizeof(STORAGE_PROPERTY_QUERY), &header,
+				sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
 			if(!bRet) {
 				throw FALSE;
 			}
-			devData.adapterDescriptor = (PSTORAGE_ADAPTER_DESCRIPTOR)calloc(header.Size, sizeof(UCHAR));
-			if (devData.adapterDescriptor == NULL) {
+
+			adapterDescriptor =
+				(PSTORAGE_ADAPTER_DESCRIPTOR)calloc(header.Size, sizeof(UCHAR));
+			if (!adapterDescriptor) {
 				throw FALSE;
 			}
 
-			bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
-				sizeof(STORAGE_PROPERTY_QUERY), devData.adapterDescriptor, header.Size, &ulReturned, FALSE);
-			OutputStorageAdaptorDescriptor(&devData, fpLog);
-#ifdef WIN64
-			devData.AlignmentMask64 = (ULONG64)(devData.adapterDescriptor->AlignmentMask) & 0x00000000FFFFFFFF;
-#endif
+			bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY,
+				&query, sizeof(STORAGE_PROPERTY_QUERY), adapterDescriptor,
+				header.Size, &ulReturned, FALSE);
+			OutputIoctlStorageAdaptorDescriptor(adapterDescriptor, fpLog);
+			devData.AlignmentMask = (UINT_PTR)(adapterDescriptor->AlignmentMask);
+
 			bRet = ReadDeviceInfo(&devData, fpLog);
 			if(!bRet) {
 				throw FALSE;
@@ -170,15 +175,16 @@ int exec(_TCHAR* argv[], ExecType execType)
 					devData.bPlextorPXW8432T = TRUE;
 				}
 			}
+			ReadBufferCapacity(&devData, fpLog);
 			SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
 			bRet = ReadConfiguration(&devData, &discData, fpLog);
 			if(!bRet) {
 				throw FALSE;
 			}
-			if(discData.pusCurrentMedia == ProfileCdrom || 
-				discData.pusCurrentMedia == ProfileCdRecordable ||
-				discData.pusCurrentMedia == ProfileCdRewritable ||
-				(discData.pusCurrentMedia == ProfileInvalid && (execType == ra))) {
+			if(discData.usCurrentMedia == ProfileCdrom || 
+				discData.usCurrentMedia == ProfileCdRecordable ||
+				discData.usCurrentMedia == ProfileCdRewritable ||
+				(discData.usCurrentMedia == ProfileInvalid && (execType == ra))) {
 				TCHAR out[_MAX_PATH] = {0};
 				FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
 				if(!fpCcd) {
@@ -206,8 +212,8 @@ int exec(_TCHAR* argv[], ExecType execType)
 					throw _T("Failed to alloc memory discData.szTitle\n");
 				}
 
-				size_t isrcSize = (META_ISRC_SIZE + 1);
-				size_t textSize = (META_CDTEXT_SIZE + 1);
+				size_t isrcSize = META_ISRC_SIZE + 1;
+				size_t textSize = META_CDTEXT_SIZE + 1;
 				for(INT h = 0; h < discData.toc.LastTrack + 1; h++) {
 					if(NULL == (discData.szISRC[h] = (_TCHAR*)calloc(isrcSize, sizeof(_TCHAR)))) {
 						throw _T("Failed to alloc memory discData.szISRC[h]\n");
@@ -235,27 +241,27 @@ int exec(_TCHAR* argv[], ExecType execType)
 
 				if(execType == rd) {
 					bRet = ReadCDPartial(&devData, &discData, argv[4],
-						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC);
+						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC, FALSE);
 				}
 				else if(execType == ra) {
 					bRet = ReadCDPartial(&devData, &discData, argv[4],
-						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC);
+						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC, FALSE);
 				}
 				else if(bRet == TRUE && execType == rall) {
 					bRet = ReadCDAll(&devData, &discData, argv[4], fpLog, fpCcd);
 					fclose(fpCcd);
 				}
 			}
-			else if(discData.pusCurrentMedia == ProfileDvdRom || 
-				discData.pusCurrentMedia == ProfileDvdRecordable ||
-				discData.pusCurrentMedia == ProfileDvdRam || 
-				discData.pusCurrentMedia == ProfileDvdRewritable || 
-				discData.pusCurrentMedia == ProfileDvdRWSequential || 
-				discData.pusCurrentMedia == ProfileDvdDashRDualLayer || 
-				discData.pusCurrentMedia == ProfileDvdDashRLayerJump || 
-				discData.pusCurrentMedia == ProfileDvdPlusRW || 
-//				discData.pusCurrentMedia == ProfileInvalid ||
-				discData.pusCurrentMedia == ProfileDvdPlusR) {
+			else if(discData.usCurrentMedia == ProfileDvdRom || 
+				discData.usCurrentMedia == ProfileDvdRecordable ||
+				discData.usCurrentMedia == ProfileDvdRam || 
+				discData.usCurrentMedia == ProfileDvdRewritable || 
+				discData.usCurrentMedia == ProfileDvdRWSequential || 
+				discData.usCurrentMedia == ProfileDvdDashRDualLayer || 
+				discData.usCurrentMedia == ProfileDvdDashRLayerJump || 
+				discData.usCurrentMedia == ProfileDvdPlusRW || 
+//				discData.usCurrentMedia == ProfileInvalid ||
+				discData.usCurrentMedia == ProfileDvdPlusR) {
 				INT nDVDSectorSize = 0;
 				bRet = ReadDVDStructure(&devData, &nDVDSectorSize, fpLog);
 				if(bRet) {
@@ -273,7 +279,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 		catch(BOOL bErr) {
 			bRet = bErr;
 		}
-		FreeAndNull(devData.adapterDescriptor);
+		FreeAndNull(adapterDescriptor);
 		FreeAndNull(discData.aSessionNum);
 		for(INT i = 0; i < discData.toc.LastTrack + 1; i++) {
 			if(discData.szISRC) {

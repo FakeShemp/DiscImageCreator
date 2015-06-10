@@ -15,6 +15,7 @@ In case of GD-ROM, refer to "tested drive".
 Visual Studio 2010
 Windows Driver Kit(WDK)
 	Sample code path:C:\WinDDK\7600.16385.1\src\storage\tools\spti
+	url:http://msdn.microsoft.com/en-us/library/windows/hardware/ff561595(v=vs.85).aspx
 
 *License
 See License.txt.
@@ -115,12 +116,12 @@ TSSTcorp				TS-H492C				IB01		No		No			No				No						No
 TSSTcorp				TS-H652C(TS-H652D)		TI06		No		No			No				No						No
 TSSTcorp				TS-L162C				DE00		No		No			No				No						No
 
-**differ offset(with/without subcode reading)
+**Differ offset(with/without subcode reading)
 PX-W2410TA(PX-W2410A): +686(with), +98(without)
 PX-320A              : +686(with), +98(without)
 a bug of firmware? I don't know.
 
-**attention
+**Attention
 if you rip a GD-ROM, you should rip to internal(and/or NTSC) HDD. 
 Otherwise, if you have a supported drive, you can't only rip about 99:59:74.
 The reason is unknown.
@@ -212,3 +213,11 @@ add OS version log.
 **2013-02-03
 improved CD-TEXT analyze
 => support unicode flag
+
+**2013-02-22
+add Macintosh disc log.
+fix x64 reading.
+=>padded with a multiple of four the DataTransferLength of CDROM_READ_TOC_EX_FORMAT_FULL_TOC
+fix logic
+=>if combined offset is plus and can't read lead-out, tool doesn't work.
+  Or if combined offset is minus and can't read lead-in, tool doesn't work.

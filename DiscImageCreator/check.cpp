@@ -24,8 +24,8 @@ BOOL IsValidMSF(
 }
 
 BOOL IsValidRelativeTime(
-	CONST SUB_Q_DATA* prevSubQ,
-	CONST SUB_Q_DATA* subQ,
+	CONST PSUB_Q_DATA prevSubQ,
+	CONST PSUB_Q_DATA subQ,
 	CONST PUCHAR Subcode,
 	INT nLBA
 	)
@@ -58,8 +58,8 @@ BOOL IsValidRelativeTime(
 }
 
 BOOL IsValidAbsoluteTime(
-	CONST SUB_Q_DATA* prevSubQ,
-	CONST SUB_Q_DATA* subQ,
+	CONST PSUB_Q_DATA prevSubQ,
+	CONST PSUB_Q_DATA subQ,
 	CONST PUCHAR Subcode,
 	INT nLBA
 	)
@@ -77,9 +77,9 @@ BOOL IsValidAbsoluteTime(
 }
 
 BOOL IsValidControl(
-	CONST SUB_Q_DATA* prevPrevSubQ,
-	CONST SUB_Q_DATA* prevSubQ,
-	CONST SUB_Q_DATA* subQ,
+	CONST PSUB_Q_DATA prevPrevSubQ,
+	CONST PSUB_Q_DATA prevSubQ,
+	CONST PSUB_Q_DATA subQ,
 	UCHAR byEndCtl
 	)
 {
@@ -170,9 +170,9 @@ BOOL IsValidDataHeader(
 }
 
 BOOL IsValidIndex(
-	CONST SUB_Q_DATA* prevPrevSubQ,
-	CONST SUB_Q_DATA* prevSubQ,
-	CONST SUB_Q_DATA* subQ,
+	CONST PSUB_Q_DATA prevPrevSubQ,
+	CONST PSUB_Q_DATA prevSubQ,
+	CONST PSUB_Q_DATA subQ,
 	PBOOL bPrevIndex,
 	PBOOL bPrevPrevIndex
 	)
@@ -297,9 +297,9 @@ BOOL IsValidMCN(
 }
 
 BOOL IsValidTrackNumber(
-	CONST SUB_Q_DATA* prevPrevSubQ,
-	CONST SUB_Q_DATA* prevSubQ,
-	CONST SUB_Q_DATA* subQ,
+	CONST PSUB_Q_DATA prevPrevSubQ,
+	CONST PSUB_Q_DATA prevSubQ,
+	CONST PSUB_Q_DATA subQ,
 	UCHAR byFirstTrackNum,
 	UCHAR byLastTrackNum,
 	PBOOL bPrevTrackNum
@@ -357,6 +357,17 @@ BOOL Is3DOData(
 	return bRet;
 }
 
+BOOL IsMacData(
+	CONST PUCHAR src
+	)
+{
+	BOOL bRet = TRUE;
+	if(src[0] != 0x42 || src[1] != 0x44) {
+		bRet = FALSE;
+	}
+	return bRet;
+}
+
 BOOL CheckAndFixPSubchannel(
 	PUCHAR Subcode
 	)
@@ -386,7 +397,6 @@ BOOL CheckAndFixPSubchannel(
 
 BOOL CheckAndFixSubchannel(
 	PDISC_DATA pDiscData,
-	INT nLBA,
 	PUCHAR Subcode,
 	PSUB_Q_DATA subQ,
 	PSUB_Q_DATA prevSubQ,
@@ -397,6 +407,7 @@ BOOL CheckAndFixSubchannel(
 	PUCHAR aEndCtl,
 	PINT* aLBAStart,
 	PINT* aLBAOfDataTrack,
+	INT nLBA,
 	FILE* fpLog
 	)
 {
@@ -472,7 +483,7 @@ BOOL CheckAndFixSubchannel(
 	}
 	else if(subQ->byAdr == ADR_ENCODES_ISRC) {
 		BOOL bISRC = IsValidISRC(Subcode);
-		SetISRCToString(pDiscData, Subcode, *byCurrentTrackNum, szISRC, bISRC);
+		SetISRCToString(pDiscData, Subcode, szISRC, *byCurrentTrackNum, bISRC);
 		szISRC[12] = '\0';
 		aISRC[*byCurrentTrackNum-1] = bISRC;
 		if(!bISRC) {
@@ -603,7 +614,7 @@ BOOL CheckAndFixSubchannel(
 		subQ->byCtl = prevSubQ->byCtl;
 		Subcode[12] = (UCHAR)(subQ->byCtl << 4 | subQ->byAdr);
 	}
-	USHORT crc16 = GetCrc16CCITT(10, &Subcode[12]);
+	USHORT crc16 = GetCrc16CCITT(&Subcode[12], 10);
 	UCHAR tmp1 = (UCHAR)(crc16 >> 8 & 0xFF);
 	UCHAR tmp2 = (UCHAR)(crc16 & 0xFF);
 	if(Subcode[22] != tmp1) {

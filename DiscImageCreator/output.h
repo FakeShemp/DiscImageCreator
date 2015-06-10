@@ -2,6 +2,12 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 
+#define BOOLEAN_TO_STRING_TRUE_FALSE(_b_) \
+	( (_b_) ? _T("True") : _T("False") )
+
+#define BOOLEAN_TO_STRING_YES_NO(_b_) \
+	( (_b_) ? _T("Yes") : _T("No") )
+
 #define OutputString(str, ...) \
 		{ \
 			_tprintf(str, __VA_ARGS__); \
@@ -73,241 +79,243 @@ FILE* OpenProgrammabledFile(
 	LPCTSTR pszMode
 	);
 
-void OutputC2Error296(
-	CONST PUCHAR pBuf,
-	INT nLBA,
-	FILE* fpLog
-	);
-
-void OutputMain2352(
-	CONST PUCHAR pBuf,
-	INT nLBA,
-	FILE* fpLog
-	);
-
-void OutputDriveSpeed(
-	PCDROM_SET_SPEED pSetspeed,
-	FILE* fpLog
-	);
-
-void OutputScsiAdress(
-	PDEVICE_DATA pDevData,
-	FILE* fpLog
-	);
-
-void OutputStorageAdaptorDescriptor(
-	PDEVICE_DATA pDevData,
-	FILE* fpLog
-	);
-
-void OutputInquiryData(
-	PINQUIRYDATA pInquiry,
-	PDEVICE_DATA pDevData,
-	FILE* fpLog
-	);
-
-void OutputDVDStructureFormat(
-	CONST PUCHAR pFormat, 
-	size_t i,
-	CONST PUCHAR pStructure,
-	CONST PUSHORT pStructureLength,
-	PINT nDVDSectorSize,
-	FILE* fpLog
-	);
-
-void OutputFeatureNumber(
-	CONST PUCHAR pConf,
-	ULONG ulAllLen,
-	size_t uiSize,
-	PDEVICE_DATA pDevData,
-	FILE* fpLog
-	);
-
-void OutputFeatureProfileType(
-	FILE* fpLog,
-	USHORT usFeatureProfileType
-	);
-
-void OutputParsingSubfile(
-	LPCTSTR pszSubfile
-	);
-
-void OutputScsiStatus(
-	PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb,
+void OutputIoctlInfoScsiStatus(
+	CONST PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb,
 	PUCHAR byScsiStatus,
 	LPCTSTR pszFuncname,
 	INT nLineNum
 	);
 
-void OutputSense(
+void OutputIoctlInfoSense(
 	UCHAR byKey,
 	UCHAR byAsc,
 	UCHAR byAscq
 	);
 
-void OutputAlignSub96(
-	CONST PUCHAR pBuf,
-	INT nLBA,
+void OutputIoctlScsiAddress(
+	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	);
 
-void OutputRawSub96(
-	CONST PUCHAR pBuf,
-	INT nLBA,
+void OutputIoctlStorageAdaptorDescriptor(
+	PSTORAGE_ADAPTER_DESCRIPTOR adapterDescriptor,
 	FILE* fpLog
 	);
 
-void OutputSubcode(
+void OutputMmcInquiryData(
+	PDEVICE_DATA pDevData,
+	PINQUIRYDATA pInquiry,
+	FILE* fpLog
+	);
+
+void OutputMmcDriveSpeed(
+	PCDROM_SET_SPEED pSetspeed,
+	FILE* fpLog
+	);
+
+void OutputMmcFeatureNumber(
+	PDEVICE_DATA pDevData,
+	CONST PUCHAR pConf,
+	ULONG ulAllLen,
+	size_t uiSize,
+	FILE* fpLog
+	);
+
+void OutputMmcFeatureProfileType(
+	USHORT usFeatureProfileType,
+	FILE* fpLog
+	);
+
+void OutputMmcTocFull(
 	PDISC_DATA pDiscData,
-	INT nLBA,
-	INT nTrackNum,
-	CONST PUCHAR Subcode,
-	CONST PUCHAR SubcodeOrg,
-	FILE* fpParse
-	);
-
-void OutputTocFull(
-	CONST CDROM_TOC_FULL_TOC_DATA* fullToc,
-	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData,
+	CONST PCDROM_TOC_FULL_TOC_DATA fullToc,
+	CONST PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData,
 	size_t uiTocEntries,
-	PDISC_DATA pDiscData,
 	FILE* fpCcd,
 	FILE* fpLog
 	);
 
-void OutputCDText(
+void OutputMmcTocCDText(
 	PDISC_DATA pDiscData,
-	size_t uiTocTextEntries,
-	size_t allTextSize,
 	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	PCHAR pTmpText,
+	size_t uiTocTextEntries,
+	size_t allTextSize,
 	FILE* fpLog
 	);
 
-void OutputCDWText(
+void OutputMmcTocCDWText(
 	PDISC_DATA pDiscData,
+	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
+	PCHAR pTmpText,
 	size_t uiFirstEntries,
 	size_t uiTocTextEntries,
 	size_t allTextSize,
-	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
-	PCHAR pTmpText,
 	FILE* fpLog
 	);
 
-void OutputVolumeDescriptor(
-	INT idx,
-	CONST PUCHAR buf,
+void OutputMmcCdC2Error296(
+	CONST PUCHAR pBuf,
+	INT nLBA,
 	FILE* fpLog
 	);
 
-void OutputBootRecord(
-	INT idx,
-	CONST PUCHAR buf,
+void OutputMmcCdMain2352(
+	CONST PUCHAR pBuf,
+	INT nLBA,
 	FILE* fpLog
 	);
 
-bool OutputTagFormat(
-	INT idx,
-	CONST PUCHAR buf,
+void OutputMmcCdSub96Align(
+	CONST PUCHAR pBuf,
+	INT nLBA,
 	FILE* fpLog
 	);
 
-void OutputPrimaryVolumeDescriptorForISO9660(
-	INT idx,
-	CONST PUCHAR buf,
+void OutputMmcCdSub96Raw(
+	CONST PUCHAR pBuf,
+	INT nLBA,
 	FILE* fpLog
 	);
 
-void OutputPrimaryVolumeDescriptorForJoliet(
-	INT idx,
-	CONST PUCHAR buf,
+void OutputMmcCdSubToLog(
+	PDISC_DATA pDiscData,
+	CONST PUCHAR Subcode,
+	CONST PUCHAR SubcodeOrg,
+	INT nLBA,
+	INT nTrackNum,
+	FILE* fpParse
+	);
+
+void OutputMmcDVDStructureFormat(
+	CONST PUCHAR pFormat, 
+	CONST PUCHAR pStructure,
+	CONST PUSHORT pStructureLength,
+	PINT nDVDSectorSize,
+	size_t i,
 	FILE* fpLog
 	);
 
-void OutputVolumePartitionDescriptor(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputVolumeStructureDescriptorFormat(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputVolumeRecognitionSequence(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputBootDescriptor(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputAnchorVolumeDescriptorPointer(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputPrimaryVolumeDescriptorForUDF(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputImplementationUseVolumeDescriptor(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputPartitionDescriptor(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputLogicalVolumeDescriptor(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputUnallocatedSpaceDescriptor(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputVolumeDescriptorPointer(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputVolumeDescriptorSequence(
-	INT idx,
-	CONST PUCHAR buf,
-	FILE* fpLog
-	);
-
-void OutputCopyrightManagementInformation(
+void OutputMmcDVDCopyrightManagementInformation(
+	PUCHAR pBuf2,
 	INT nLBA,
 	INT i,
-	PUCHAR pBuf2,
+	FILE* fpLog
+	);
+
+void OutputFsVolumeDescriptor(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsBootRecord(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+bool OutputFsTagFormat(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsPrimaryVolumeDescriptorForISO9660(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsPrimaryVolumeDescriptorForJoliet(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsVolumePartitionDescriptor(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsVolumeStructureDescriptorFormat(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsVolumeRecognitionSequence(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsBootDescriptor(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsAnchorVolumeDescriptorPointer(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsPrimaryVolumeDescriptorForUDF(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsImplementationUseVolumeDescriptor(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsPartitionDescriptor(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsLogicalVolumeDescriptor(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsUnallocatedSpaceDescriptor(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsVolumeDescriptorPointer(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsVolumeDescriptorSequence(
+	CONST PUCHAR buf,
+	INT idx,
+	FILE* fpLog
+	);
+
+void OutputFsMasterDirectoryBlocks(
+	CONST PUCHAR buf,
+	INT idx,
 	FILE* fpLog
 	);
 
 void SetISRCToString(
 	PDISC_DATA pDiscData,
 	CONST PUCHAR Subcode,
-	INT nTrackNum,
 	LPTSTR pszOutString,
+	INT nTrackNum,
 	BOOL bCopy
 	);
 
@@ -340,8 +348,8 @@ void WriteCcdFileForCDText(
 	);
 
 void WriteCcdFileForCDTextEntry(
+	CONST PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	size_t uiTocTextEntries,
-	CONST CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc,
 	FILE* fpCcd
 	);
 
@@ -356,8 +364,8 @@ void WriteCcdFileForSessionPregap(
 	);
 
 void WriteCcdFileForEntry(
+	CONST PCDROM_TOC_FULL_TOC_DATA_BLOCK toc,
 	size_t a,
-	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* toc,
 	FILE* fpCcd
 	);
 
@@ -383,8 +391,8 @@ void WriteCueFileFirst(
 
 void WriteCueFile(
 	PDISC_DATA pDiscData,
-	BOOL bCDG,
 	LPCTSTR pszFilename,
+	BOOL bCDG,
 	UINT nTrackNum,
 	UCHAR byModeNum, 
 	BOOL bISRC,
@@ -402,24 +410,28 @@ void WriteCueFileForIndex(
 
 void WriteMainChannel(
 	PDISC_DATA pDiscData,
+	PUCHAR pBuf,
+	PINT* aLBAStart,
 	INT nLBA,
 	INT nFixStartLBA,
 	INT nFixEndLBA,
 	size_t uiShift,
-	PINT* aLBAStart,
-	PUCHAR pBuf,
 	FILE* fpImg
 	);
 
 void WriteSubChannel(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
-	INT nLBA,
-	UCHAR byCurrentTrackNum,
 	PUCHAR pBuf,
 	PUCHAR Subcode,
 	PUCHAR SubcodeRaw,
+	INT nLBA,
+	UCHAR byCurrentTrackNum,
 	FILE* fpSub,
 	FILE* fpParse,
 	FILE* fpCdg
+	);
+
+void WriteParsingSubfile(
+	LPCTSTR pszSubfile
 	);

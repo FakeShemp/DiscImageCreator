@@ -3,8 +3,8 @@
  */
 
 USHORT GetCrc16CCITT(
-	INT n,
-	UCHAR c[]
+	UCHAR c[],
+	INT n
 	);
 
 BOOL GetDriveOffset(
@@ -13,8 +13,8 @@ BOOL GetDriveOffset(
 	);
 
 ULONG GetFilesize(
-	FILE *fp,
-	LONG nOffset
+	LONG nOffset,
+	FILE *fp
 	);
 
 UCHAR GetMode(
@@ -22,6 +22,6 @@ UCHAR GetMode(
 	);
 
 BOOL GetWriteOffset(
-	CONST PUCHAR pBuf,
-	PDISC_DATA pDiscData
+	PDISC_DATA pDiscData,
+	CONST PUCHAR pBuf
 	);

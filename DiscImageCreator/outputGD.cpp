@@ -28,7 +28,7 @@ BOOL DescrambleDataSector(
 		if(NULL == (fpTbl = OpenProgrammabledFile(_T("scramble.bin"), _T("rb")))) {
 			throw _T("Failed to open scramble.bin\n");
 		}
-		ULONG ulFilesize = GetFilesize(fpScr, 0);
+		ULONG ulFilesize = GetFilesize(0, fpScr);
 		UCHAR bufScr[CD_RAW_SECTOR_SIZE] = {0};
 		INT nOffset = 0;
 		BOOL bRet2 = FALSE;
@@ -71,7 +71,7 @@ BOOL DescrambleDataSector(
 		fseek(fpScr, lSeekSize, SEEK_SET);
 
 		UCHAR bufDescr[CD_RAW_SECTOR_SIZE] = {0};
-		ULONG filesize = GetFilesize(fpScr, lSeekSize);
+		ULONG filesize = GetFilesize(lSeekSize, fpScr);
 		ULONG ulDecFilesize = filesize - lSeekSize;
 		ULONG ulRoop = ulDecFilesize / CD_RAW_SECTOR_SIZE;
 		for(ULONG i = 1; i <= ulRoop; i++) {
@@ -141,7 +141,7 @@ BOOL SplitDescrambledFile(
 		}
 #endif
 
-		ULONG ulFilesize = GetFilesize(fpDescr, 0);
+		ULONG ulFilesize = GetFilesize(0, fpDescr);
 		if(ulFilesize < 0x110 + 512) {
 			throw _T("Not GD-ROM data\n");
 		}
