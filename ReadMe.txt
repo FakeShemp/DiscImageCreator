@@ -240,3 +240,8 @@ added reading floppy (WIP)
 
 **2013-04-07
 added C2 error log (check only one, not re-read)
+
+**2013-06-19
+added "pre" argument for ripping index0 in track1 (for SaGaFrontier Original Soundtrack Disc3)
+added "isrc" argument for ignoring invalid ISRC (for Valis II[PCE])
+Divided log (drive, disc, error)

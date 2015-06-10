@@ -1655,7 +1655,9 @@ VOID OutputMmcTocFull(
 
 	for(size_t a = 0; a < uiTocEntries; a++) {
 		INT nTmpLBA = 0;
-		WriteCcdFileForEntry(pTocData, a, fpCcd);
+		if(fpCcd) {
+			WriteCcdFileForEntry(pTocData, a, fpCcd);
+		}
 		switch(pTocData[a].Point) {
 		case 0xA0:
 			OutputLogString(fpLog, _T("\tSession %d, FirstTrack %2d\n"), 
@@ -4327,35 +4329,28 @@ VOID WriteCcdFileForTrack(
 	if(bISRC) {
 		_ftprintf(fpCcd, _T("ISRC=%s\n"), pDiscData->szISRC[nTrackNum-1]);
 	}
-	if((byCtl & AUDIO_WITH_PREEMPHASIS) == AUDIO_WITH_PREEMPHASIS ||
-		(byCtl & DIGITAL_COPY_PERMITTED) == DIGITAL_COPY_PERMITTED ||
-		(byCtl & TWO_FOUR_CHANNEL_AUDIO) == TWO_FOUR_CHANNEL_AUDIO) {
-		_TCHAR aBuf[22] = {0};
-		_tcscat(aBuf, _T("FLAGS="));
-		switch(byCtl) {
-		case AUDIO_WITH_PREEMPHASIS:
-			_tcscat(aBuf, _T(" PRE\n"));
-			break;
-		case DIGITAL_COPY_PERMITTED:
-			_tcscat(aBuf, _T(" DCP\n"));
-			break;
-		case DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
-			_tcscat(aBuf, _T(" DCP PRE\n"));
-			break;
-		case TWO_FOUR_CHANNEL_AUDIO:
-			_tcscat(aBuf, _T(" 4CH\n"));
-			break;
-		case TWO_FOUR_CHANNEL_AUDIO | AUDIO_WITH_PREEMPHASIS:
-			_tcscat(aBuf, _T(" 4CH PRE\n"));
-			break;
-		case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED:
-			_tcscat(aBuf, _T(" 4CH DCP\n"));
-			break;
-		case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
-			_tcscat(aBuf, _T(" 4CH DCP PRE\n"));
-			break;
-		}
-		fwrite(aBuf, sizeof(_TCHAR), _tcslen(aBuf), fpCcd);
+	switch(byCtl & ~AUDIO_DATA_TRACK) {
+	case AUDIO_WITH_PREEMPHASIS:
+		_ftprintf(fpCcd, _T("FLAGS= PRE\n"));
+		break;
+	case DIGITAL_COPY_PERMITTED:
+		_ftprintf(fpCcd, _T("FLAGS= DCP\n"));
+		break;
+	case DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
+		_ftprintf(fpCcd, _T("FLAGS= DCP PRE\n"));
+		break;
+	case TWO_FOUR_CHANNEL_AUDIO:
+		_ftprintf(fpCcd, _T("FLAGS= 4CH\n"));
+		break;
+	case TWO_FOUR_CHANNEL_AUDIO | AUDIO_WITH_PREEMPHASIS:
+		_ftprintf(fpCcd, _T("FLAGS= 4CH PRE\n"));
+		break;
+	case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED:
+		_ftprintf(fpCcd, _T("FLAGS= 4CH DCP\n"));
+		break;
+	case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
+		_ftprintf(fpCcd, _T("FLAGS= 4CH DCP PRE\n"));
+		break;
 	}
 }
 
@@ -4402,7 +4397,7 @@ VOID WriteCueFile(
 	_ftprintf(fpCue, _T("FILE \"%s\" BINARY\n"), pszFilename);
 
 	if(byModeNum == DATA_BLOCK_MODE0) {
-		if(bCDG) {
+		if(bCDG == TRUE) {
 			_ftprintf(fpCue, _T("  TRACK %02d CDG\n"), nTrackNum);
 		}
 		else {
@@ -4420,39 +4415,35 @@ VOID WriteCueFile(
 		if(pDiscData->szSongWriter[nTrackNum][0] != 0) {
 			_ftprintf(fpCue, _T("    SONGWRITER \"%s\"\n"), pDiscData->szSongWriter[nTrackNum]);
 		}
-		if((byCtl & AUDIO_WITH_PREEMPHASIS) == AUDIO_WITH_PREEMPHASIS ||
-			(byCtl & DIGITAL_COPY_PERMITTED) == DIGITAL_COPY_PERMITTED ||
-			(byCtl & TWO_FOUR_CHANNEL_AUDIO) == TWO_FOUR_CHANNEL_AUDIO) {
-			_TCHAR aBuf[22] = {0};
-			_tcscat(aBuf, _T("    FLAGS"));
-			switch(byCtl) {
-			case AUDIO_WITH_PREEMPHASIS:
-				_tcscat(aBuf, _T(" PRE\n"));
-				break;
-			case DIGITAL_COPY_PERMITTED:
-				_tcscat(aBuf, _T(" DCP\n"));
-				break;
-			case DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
-				_tcscat(aBuf, _T(" DCP PRE\n"));
-				break;
-			case TWO_FOUR_CHANNEL_AUDIO:
-				_tcscat(aBuf, _T(" 4CH\n"));
-				break;
-			case TWO_FOUR_CHANNEL_AUDIO | AUDIO_WITH_PREEMPHASIS:
-				_tcscat(aBuf, _T(" 4CH PRE\n"));
-				break;
-			case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED:
-				_tcscat(aBuf, _T(" 4CH DCP\n"));
-				break;
-			case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
-				_tcscat(aBuf, _T(" 4CH DCP PRE\n"));
-				break;
-			}
-			fwrite(aBuf, sizeof(_TCHAR), _tcslen(aBuf), fpCue);
+		switch(byCtl & ~AUDIO_DATA_TRACK) {
+		case AUDIO_WITH_PREEMPHASIS:
+			_ftprintf(fpCue, _T("    FLAGS PRE\n"));
+			break;
+		case DIGITAL_COPY_PERMITTED:
+			_ftprintf(fpCue, _T("    FLAGS DCP\n"));
+			break;
+		case DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
+			_ftprintf(fpCue, _T("    FLAGS DCP PRE\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO:
+			_ftprintf(fpCue, _T("    FLAGS 4CH\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO | AUDIO_WITH_PREEMPHASIS:
+			_ftprintf(fpCue, _T("    FLAGS 4CH PRE\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED:
+			_ftprintf(fpCue, _T("    FLAGS 4CH DCP\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
+			_ftprintf(fpCue, _T("    FLAGS 4CH DCP PRE\n"));
+			break;
 		}
 	}
 	else {
 		_ftprintf(fpCue, _T("  TRACK %02d MODE%1d/2352\n"), nTrackNum, byModeNum);
+		if(bISRC) {
+			_ftprintf(fpCue, _T("    ISRC %s\n"), pDiscData->szISRC[nTrackNum-1]);
+		}
 		if((byCtl & DIGITAL_COPY_PERMITTED) == DIGITAL_COPY_PERMITTED) {
 			_ftprintf(fpCue, _T("    FLAGS DCP\n"));
 		}
@@ -4749,13 +4740,13 @@ BOOL PreserveTrackAttribution(
 		if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
 			(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
 			OutputLogString(fpLog,
-				_T("LBA %6d, Track[%02d] is data track, but this sector is audio\n"),
+				_T("LBA %6d, Track[%02d]: data track, but this sector is audio\n"),
 				nLBA, subQ->byTrackNum);
 		}
 		else if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == 0 &&
 			(subQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 			OutputLogString(fpLog,
-				_T("LBA %6d, Track[%02d] is audio track, but this sector is data\n"),
+				_T("LBA %6d, Track[%02d]: audio track, but this sector is data\n"),
 				nLBA, subQ->byTrackNum);
 		}
 
@@ -4833,7 +4824,7 @@ BOOL MergeMainChannelAndCDG(
 	)
 {
 	BOOL bRet = TRUE;
-	if(bCDG && bAudioOnly) {
+	if(bCDG == TRUE && bAudioOnly) {
 		OutputString(_T("Merging img+cdg->bin\n"));
 		FILE* fpCdg =
 			CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("rb"), 0, 0);
@@ -4881,7 +4872,7 @@ BOOL CreatingBinCueCcd(
 	BOOL bRet = TRUE;
 	TCHAR pszFileNameWithoutPath[_MAX_FNAME] = {0};
 	FILE* fpBinWithCDG = NULL;
-	if(bCDG && pDiscData->bAudioOnly) {
+	if(bCDG == TRUE && pDiscData->bAudioOnly) {
 		fpBinWithCDG = 
 			CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
 		if(fpBinWithCDG == NULL) {
@@ -4956,7 +4947,7 @@ BOOL CreatingBinCueCcd(
 			INT nPrevLba =
 				pLBAStartList[i-1][0] == -1 ? pLBAStartList[i-1][1] : pLBAStartList[i-1][0];
 			INT nWriteSectorSize = 
-				(bCDG && pDiscData->bAudioOnly) ? CD_RAW_SECTOR_WITH_SUBCODE_SIZE : CD_RAW_SECTOR_SIZE;
+				(bCDG == TRUE && pDiscData->bAudioOnly) ? CD_RAW_SECTOR_WITH_SUBCODE_SIZE : CD_RAW_SECTOR_SIZE;
 
 			if(pDiscData->nLastTrackForFullToc == pDiscData->toc.FirstTrack) {
 				uiBufsize = (size_t)pDiscData->nLength * nWriteSectorSize;
@@ -4981,7 +4972,7 @@ BOOL CreatingBinCueCcd(
 				}
 				uiBufsize = (size_t)(nLBA - nPrevLba) * nWriteSectorSize;
 			}
-			if(!(bCDG && pDiscData->bAudioOnly)) {
+			if(!(bCDG == TRUE && pDiscData->bAudioOnly)) {
 				fseek(fpImg, nPrevLba * nWriteSectorSize, SEEK_SET);
 			}
 			PUCHAR pBuf = (PUCHAR)calloc(uiBufsize, sizeof(UCHAR));
@@ -4990,7 +4981,7 @@ BOOL CreatingBinCueCcd(
 				bRet = FALSE;
 			}
 			else {
-				if(bCDG && pDiscData->bAudioOnly) {
+				if(bCDG == TRUE && pDiscData->bAudioOnly) {
 					fread(pBuf, sizeof(UCHAR), uiBufsize, fpBinWithCDG);
 				}
 				else {

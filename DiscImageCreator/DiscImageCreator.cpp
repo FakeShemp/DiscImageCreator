@@ -17,7 +17,7 @@ typedef enum _ExecType {
 	sub,
 } ExecType;
 
-int exec(_TCHAR* argv[], ExecType execType)
+int exec(_TCHAR* argv[], ExecType execType, ExtArg* extArg)
 {
 	if(execType == dec) {
 		DescrambleDataSector(argv[2], _ttoi(argv[3]));
@@ -50,22 +50,9 @@ int exec(_TCHAR* argv[], ExecType execType)
 		StartStop(&devData, STOP_UNIT_CODE, STOP_UNIT_CODE);
 	}
 	else {
-		TCHAR drive[_MAX_DRIVE] = {0};
-		TCHAR dir[_MAX_DIR] = {0};
-		TCHAR fname[_MAX_FNAME] = {0};
-		TCHAR ext[_MAX_EXT] = {0};
-		_tsplitpath(argv[4], drive, dir, fname, ext);
-		OutputString(
-			_T("Input File Name\n")
-			_T("\t path: %s\n")
-			_T("\tdrive: %s\n")
-			_T("\t  dir: %s\n")
-			_T("\tfname: %s\n")
-			_T("\t  ext: %s\n"),
-			argv[4], drive, dir, fname, ext);
-
-		FILE* fpLog = NULL;
+		LogFile logFile = {0};
 		DISC_DATA discData = {0};
+		FILE* fpCcd = NULL;
 		try {
 			bRet = ReadTestUnitReady(&devData);
 			if(!bRet) {
@@ -77,27 +64,47 @@ int exec(_TCHAR* argv[], ExecType execType)
 				bDC = TRUE;
 			}
 #ifndef _DEBUG
-			_TCHAR szLogtxt[12] = {0};
+			_TCHAR szDriveLogtxt[32] = {0};
+			_TCHAR szDiscLogtxt[32] = {0};
+			_TCHAR szErrorLogtxt[32] = {0};
 			if(bDC) {
-				_tcscpy(szLogtxt, _T("_dc.log.txt"));
+				_tcscpy(szDiscLogtxt, _T("_dc_disclog.txt"));
+				_tcscpy(szDriveLogtxt, _T("_dc_drivelog.txt"));
+				_tcscpy(szErrorLogtxt, _T("_dc_errorlog.txt"));
+			}
+			else if(execType == f) {
+				_tcscpy(szDiscLogtxt, _T("_fd_disclog.txt"));
 			}
 			else {
-				_tcscpy(szLogtxt, _T(".log.txt"));
+				_tcscpy(szDiscLogtxt, _T("_disclog.txt"));
+				_tcscpy(szDriveLogtxt, _T("_drivelog.txt"));
+				_tcscpy(szErrorLogtxt, _T("_errorlog.txt"));
 			}
-			fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T(WFLAG), 0, 0);
-
-			if(!fpLog) {
-				OutputErrorString(_T("Failed to open file %s\n"), szLogtxt);
+			logFile.fpDiscLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szDiscLogtxt, _T(WFLAG), 0, 0);
+			if(!logFile.fpDiscLog) {
+				OutputErrorString(_T("Failed to open file: %s\n"), szDiscLogtxt);
 				throw FALSE;
+			}
+			if(execType != f) {
+				logFile.fpDriveLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szDriveLogtxt, _T(WFLAG), 0, 0);
+				if(!logFile.fpDriveLog) {
+					OutputErrorString(_T("Failed to open file: %s\n"), szDriveLogtxt);
+					throw FALSE;
+				}
+				logFile.fpErrorLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szErrorLogtxt, _T(WFLAG), 0, 0);
+				if(!logFile.fpErrorLog) {
+					OutputErrorString(_T("Failed to open file: %s\n"), szErrorLogtxt);
+					throw FALSE;
+				}
 			}
 #endif
 			if(execType == f) {
-				ReadFloppy(&devData, argv[4], fpLog);
+				ReadFloppy(&devData, argv[4], logFile.fpDiscLog);
 			}
 			else {
-				ReadScsiGetAddress(&devData, fpLog);
-				ReadStorageQueryProperty(&devData, fpLog);
-				bRet = ReadInquiryData(&devData, fpLog);
+				ReadScsiGetAddress(&devData, logFile.fpDriveLog);
+				ReadStorageQueryProperty(&devData, logFile.fpDriveLog);
+				bRet = ReadInquiryData(&devData, logFile.fpDriveLog);
 				if(!bRet) {
 					throw FALSE;
 				}
@@ -105,17 +112,18 @@ int exec(_TCHAR* argv[], ExecType execType)
 				devData.pszProductId[16] = '\0';
 
 				IsPlextorDrive(&devData);
-				ReadBufferCapacity(&devData, fpLog);
-				SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
-				bRet = ReadConfiguration(&devData, &discData, fpLog);
+				ReadBufferCapacity(&devData, logFile.fpDriveLog);
+				SetCDSpeed(&devData, _ttoi(argv[3]), logFile.fpDriveLog);
+				bRet = ReadConfiguration(&devData, &discData, logFile.fpDriveLog);
 				if(!bRet) {
 					throw FALSE;
 				}
-				bRet = ReadDiscInformation(&devData, fpLog);
+
+				bRet = ReadDiscInformation(&devData, logFile.fpDiscLog);
 				if(!bRet) {
 					throw FALSE;
 				}
-				bRet = ReadTOC(&devData, &discData, fpLog);
+				bRet = ReadTOC(&devData, &discData, logFile.fpDiscLog);
 				if(!bRet) {
 					throw FALSE;
 				}
@@ -124,10 +132,12 @@ int exec(_TCHAR* argv[], ExecType execType)
 					discData.usCurrentMedia == ProfileCdRewritable ||
 					(discData.usCurrentMedia == ProfileInvalid && (execType == ra))) {
 					TCHAR out[_MAX_PATH] = {0};
-					FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
-					if(!fpCcd) {
-						OutputErrorString(_T("Failed to open file .ccd\n"));
-						throw FALSE;
+					if(execType == rall) {
+						fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
+						if(!fpCcd) {
+							OutputErrorString(_T("Failed to open file .ccd\n"));
+							throw FALSE;
+						}
 					}
 					if(&devData.bCanCDText) {
 						size_t dwTrackAllocSize = (size_t)discData.toc.LastTrack + 1;
@@ -164,16 +174,11 @@ int exec(_TCHAR* argv[], ExecType execType)
 							}
 						}
 					}
-					bRet = ReadTOCFull(&devData, &discData, fpLog, fpCcd);
+					bRet = ReadTOCFull(&devData, &discData, logFile.fpDiscLog, fpCcd);
 					if(!bRet) {
 						throw FALSE;
 					}
-					if(execType != rall) {
-						fclose(fpCcd);
-						_tremove(out);
-					}
-
-					bRet = ReadCDForSearchingOffset(&devData, &discData, fpLog);
+					bRet = ReadCDForSearchingOffset(&devData, &discData, logFile.fpDiscLog);
 
 					if(execType == rd) {
 						bRet = ReadCDPartial(&devData, &discData, argv[4],
@@ -184,8 +189,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 							_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC, FALSE);
 					}
 					else if(bRet == TRUE && execType == rall) {
-						bRet = ReadCDAll(&devData, &discData, argv[4], argv[5], fpLog, fpCcd);
-						fclose(fpCcd);
+						bRet = ReadCDAll(&devData, &discData, argv[4], extArg, &logFile, fpCcd);
 					}
 				}
 				else if(discData.usCurrentMedia == ProfileDvdRom || 
@@ -198,7 +202,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 					discData.usCurrentMedia == ProfileDvdPlusRW || 
 //					discData.usCurrentMedia == ProfileInvalid ||
 					discData.usCurrentMedia == ProfileDvdPlusR) {
-					bRet = ReadDVDStructure(&devData, &discData, fpLog);
+					bRet = ReadDVDStructure(&devData, &discData, logFile.fpDiscLog);
 					if(bRet) {
 						if(argv[5] && !_tcscmp(argv[5], _T("raw"))) {
 #if 0
@@ -206,7 +210,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 #endif
 						}
 						else {
-							bRet = ReadDVD(&devData, &discData, argv[4], argv[5], fpLog);
+							bRet = ReadDVD(&devData, &discData, argv[4], extArg, logFile.fpDiscLog);
 						}
 					}
 				}
@@ -236,15 +240,38 @@ int exec(_TCHAR* argv[], ExecType execType)
 			FreeAndNull(discData.szPerformer);
 			FreeAndNull(discData.szSongWriter);
 		}
+		FcloseAndNull(fpCcd);
 #ifndef _DEBUG
-		FcloseAndNull(fpLog);
+		FcloseAndNull(logFile.fpDiscLog);
+		if(execType != f) {
+			FcloseAndNull(logFile.fpDriveLog);
+			FcloseAndNull(logFile.fpErrorLog);
+		}
 #endif
 	}
 	CloseHandle(devData.hDevice);
 	return bRet;
 }
 
-int checkArg(int argc, _TCHAR* argv[], ExecType* execType)
+int printArg(_TCHAR* argv)
+{
+	TCHAR drive[_MAX_DRIVE] = {0};
+	TCHAR dir[_MAX_DIR] = {0};
+	TCHAR fname[_MAX_FNAME] = {0};
+	TCHAR ext[_MAX_EXT] = {0};
+	_tsplitpath(argv, drive, dir, fname, ext);
+	OutputString(
+		_T("Input File Name\n")
+		_T("\t path: %s\n")
+		_T("\tdrive: %s\n")
+		_T("\t  dir: %s\n")
+		_T("\tfname: %s\n")
+		_T("\t  ext: %s\n"),
+		argv, drive, dir, fname, ext);
+	return 1;
+}
+
+int checkArg(int argc, _TCHAR* argv[], ExecType* execType, ExtArg* extArg)
 {
 	if(argc == 1 ||
 		(1 < argc && (_tcscmp(argv[1], _T("-rall")) &&
@@ -289,12 +316,28 @@ int checkArg(int argc, _TCHAR* argv[], ExecType* execType)
 	TCHAR* endptr = NULL;
 	ULONG ul = 0;
 	LONG l = 0;
-	if((argc == 5 || argc == 6) && !_tcscmp(argv[1], _T("-rall"))) {
+	if(argc >= 5 && !_tcscmp(argv[1], _T("-rall"))) {
 		ul = _tcstoul(argv[3], &endptr, 10);
 		if(*endptr) {
 			return FALSE;
 		}
 		*execType = rall;
+		printArg(argv[4]);
+
+		for(INT i = 6; i <= argc; i++) {
+			if(!_tcscmp(argv[i-1], _T("pre"))) {
+				extArg->bPre = TRUE;
+			}
+			else if(!_tcscmp(argv[i-1], _T("c2"))) {
+				extArg->bC2 = TRUE;
+			}
+			else if(!_tcscmp(argv[i-1], _T("isrc"))) {
+				extArg->bIsrc = TRUE;
+			}
+			else if(!_tcscmp(argv[i-1], _T("cmi"))) {
+				extArg->bCmi = TRUE;
+			}
+		}
 	}
 	else if(argc == 7 && (!_tcscmp(argv[1], _T("-rd")) || !_tcscmp(argv[1], _T("-ra")))) {
 		ul = _tcstoul(argv[3], &endptr, 10);
@@ -311,13 +354,16 @@ int checkArg(int argc, _TCHAR* argv[], ExecType* execType)
 		}
 		if(!_tcscmp(argv[1], _T("-rd"))) {
 			*execType = rd;
+			printArg(argv[4]);
 		}
 		else if(!_tcscmp(argv[1], _T("-ra"))) {
 			*execType = ra;
+			printArg(argv[4]);
 		}
 	}
 	else if(argc == 5 && !_tcscmp(argv[1], _T("-f"))) {
 		*execType = f;
+		printArg(argv[4]);
 	}
 	else if(argc == 3 && !_tcscmp(argv[1], _T("-c"))) {
 		*execType = c;
@@ -331,12 +377,15 @@ int checkArg(int argc, _TCHAR* argv[], ExecType* execType)
 			return FALSE;
 		}
 		*execType = dec;
+		printArg(argv[2]);
 	}
 	else if(argc == 3 && !_tcscmp(argv[1], _T("-split"))) {
 		*execType = split;
+		printArg(argv[2]);
 	}
 	else if(argc == 3 && !_tcscmp(argv[1], _T("-sub"))) {
 		*execType = sub;
+		printArg(argv[2]);
 	}
 	else {
 		return FALSE;
@@ -348,25 +397,44 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 #ifdef _DEBUG
 	_CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif	
-	OutputString(_T("DiscImageCreator BuildDate:[%s %s]\n"), _T(__DATE__), _T(__TIME__));
-
-    OSVERSIONINFO OSver;
-    OSver.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-    GetVersionEx(&OSver);
+#endif
+	OSVERSIONINFO OSver;
+	OSver.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	GetVersionEx(&OSver);
 	OutputString(
 		_T("OS\n")
 		_T("\tMajorVersion: %d, MinorVersion: %d, BuildNumber: %d\n"),
 		OSver.dwMajorVersion, OSver.dwMinorVersion, OSver.dwBuildNumber);
+
+	OutputString(_T("AppVersion\n"));
+#ifdef WIN64
+	OutputString(_T("\tx64, "));
+#else
+	OutputString(_T("\tx86, "));
+#endif
+#ifdef UNICODE
+	OutputString(_T("Unicode build\n"));
+#else
+	OutputString(_T("Ansi build\n"));
+#endif
+	OutputString(
+		_T("BuildDate\n")
+		_T("\t%s %s\n"), _T(__DATE__), _T(__TIME__));
 	ExecType execType;
-	if(!checkArg(argc, argv, &execType)) {
+	ExtArg extArg = {0};
+	if(!checkArg(argc, argv, &execType, &extArg)) {
 		OutputString(
 			_T("Usage\n")
-//			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <c2/cmi/raw>\n")
-			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <c2/cmi>\n")
+			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <pre/c2/isrc/cmi>\n")
 			_T("\t\tRipping CD or DVD from a to z\n")
-			_T("\t\tc2:Check C2 error (Only CD)(Take twice as long)\n")
-			_T("\t\tcmi:Log Copyright Management Information (Only DVD)(Very slow)\n")
+			_T("\t\tpre: If index0 exists in track1, ripping from LBA-150 to LBA-1\n")
+			_T("\t\t\tfor SagaFrontier Original Sound Track (Disc 3)\n")
+			_T("\t\tc2: Check C2 error (Only CD)\n")
+			_T("\t\t\tTake twice as long\n")
+			_T("\t\tisrc: Ignore invalid ISRC (Only CD)\n")
+			_T("\t\t\tfor Valis II[PCE]\n")
+			_T("\t\tcmi: Log Copyright Management Information (Only DVD)\n")
+			_T("\t\t\tVery slow\n")
 //			_T("\t\traw:Ripping Raw mode (Only DVD)\n")
 			_T("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n")
 			_T("\t\tRipping CD from start to end (data) (Only CD)\n")
@@ -394,7 +462,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		ts = localtime(&now);
 		_tcsftime(buf, sizeof(buf) / sizeof(buf[0]), _T("%Y-%m-%d(%a) %H:%M:%S"), ts);
 		OutputString(_T("Start -> %s\n"), buf);
-		BOOL bRet = exec(argv, execType);
+		BOOL bRet = exec(argv, execType, &extArg);
 		if(bRet) {
 			Beep(440, 200);   // do
 			Beep(494, 200);   // re

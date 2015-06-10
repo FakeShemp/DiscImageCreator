@@ -95,6 +95,9 @@ BOOL ReadVolumeDescriptor(
 			if(IsMacData(pBuf + 1040)) {
 				OutputFsMasterDirectoryBlocks(pBuf, 1040, fpLog);
 			}
+			else if(IsMacData(pBuf + 528)) {
+				OutputFsMasterDirectoryBlocks(pBuf, 528, fpLog);
+			}
 			else {
 				aCmd[5] = 16;
 				if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, pBuf, 
@@ -115,6 +118,38 @@ BOOL ReadVolumeDescriptor(
 						return bRet;
 					}
 				}
+			}
+		}
+	}
+	return bRet;
+}
+
+BOOL CheckIndex0InTrack1(
+	PDEVICE_DATA pDevData,
+	ExtArg* extArg,
+	CONST PUCHAR aCmd,
+	ULONG ulBufLen,
+	PUCHAR pBuf,
+	PBOOL bOK
+	)
+{
+	BOOL bRet = TRUE;
+	if(extArg->bPre) {
+		UCHAR byScsiStatus = 0;
+		aCmd[5] = 0;
+
+		if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+			ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+			bRet = FALSE;
+		}
+		else {
+			UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
+			AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+			SUB_Q_DATA subQ = {0};
+			subQ.byIndex = BcdToDec(Subcode[14]);
+			if(subQ.byIndex == 0) {
+				*bOK = TRUE;
 			}
 		}
 	}
@@ -151,7 +186,7 @@ BOOL CheckCDG(
 			//  and more..
 			*bCDG = FALSE;
 		}
-		else if(nCDG > 0) {
+		else if(nCDG > 0 && nCDG != 0x200) {
 			*bCDG = TRUE;
 		}
 	}
@@ -162,7 +197,7 @@ BOOL CheckC2Error(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
-	LPCTSTR pszOption,
+	ExtArg* extArg,
 	PUCHAR pBuf,
 	INT nOffsetStart,
 	INT nOffsetEnd,
@@ -171,7 +206,7 @@ BOOL CheckC2Error(
 {
 	BOOL bRet = TRUE;
 	// read all sector with C2 pointer
-	if(pDevData->bC2ErrorData && pszOption && !_tcscmp(pszOption, _T("c2"))) {
+	if(pDevData->bC2ErrorData && extArg->bC2) {
 		FILE* fpC2 = NULL;
 		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
 		BOOL bC2Error = FALSE;
@@ -221,7 +256,7 @@ BOOL CheckC2Error(
 				}
 
 				INT nCnt = 1;
-				if(pDevData->bPlextor) {
+				if(pDevData->bPlextor && pDevData->bPlextorPX755A) {
 					// plextor:main+c2+sub
 //					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_294, Subcode);
 					fwrite(pBuf + CD_RAW_SECTOR_SIZE, 
@@ -276,8 +311,8 @@ BOOL ReadCDAll(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
-	LPCTSTR pszOption,
-	FILE* fpLog,
+	ExtArg* extArg,
+	LogFile* logFile,
 	FILE* fpCcd
 	)
 {
@@ -292,10 +327,10 @@ BOOL ReadCDAll(
 		bRet = ReadCDPartial(pDevData, pDiscData, pszOutFile, pDiscData->nLength,
 			pDiscData->nLength + pDiscData->nAdjustSectorNum - 1, READ_CD_FLAG::CDDA, FALSE, TRUE);
 		if(bRet) {
-			OutputLogString(fpLog, _T("Reading Lead-out: OK\n"));
+			OutputLogString(logFile->fpDriveLog, _T("Reading Lead-out: OK\n"));
 		}
 		else {
-			OutputLogString(fpLog, _T("Reading Lead-out: NG\n"));
+			OutputLogString(logFile->fpDriveLog, _T("Reading Lead-out: NG\n"));
 			return FALSE;
 		}
 	}
@@ -304,13 +339,16 @@ BOOL ReadCDAll(
 		bRet = ReadCDPartial(pDevData, pDiscData, pszOutFile,
 			pDiscData->nAdjustSectorNum, -1, READ_CD_FLAG::CDDA, FALSE, TRUE);
 		if(bRet) {
-			OutputLogString(fpLog, _T("Reading Lead-in: OK\n"));
+			OutputLogString(logFile->fpDriveLog, _T("Reading Lead-in: OK\n"));
 		}
 		else {
-			OutputLogString(fpLog, _T("Reading Lead-in: NG\n"));
+			OutputLogString(logFile->fpDriveLog, _T("Reading Lead-in: NG\n"));
 			return FALSE;
 		}
 	}
+#ifndef _DEBUG
+	fflush(logFile->fpDriveLog);
+#endif
 
 	FILE* fpImg = NULL;
 	if(NULL == (fpImg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".img"), _T("wb"), 0, 0))) {
@@ -379,7 +417,7 @@ BOOL ReadCDAll(
 		}
 
 		ULONG ulBufLen = 0;
-		if(pDevData->bC2ErrorData && pszOption && !_tcscmp(pszOption, _T("c2"))) {
+		if(pDevData->bC2ErrorData && extArg->bC2) {
 			ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
 		}
 		else {
@@ -399,13 +437,17 @@ BOOL ReadCDAll(
 			READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
 		aCmd[10] = READ_CD_FLAG::Raw;
 
+		BOOL bIndex0InTrack1 = FALSE;
+		if(!CheckIndex0InTrack1(pDevData, extArg, aCmd, ulBufLen, pBuf, &bIndex0InTrack1)) {
+			throw _T("Couldn't check Index0 In Track1\n");
+		}
 		BOOL bCDG = FALSE;
 		if(pDiscData->bAudioOnly) {
 			aCmd[1] = READ_CD_FLAG::CDDA;
 			if(!CheckCDG(pDevData, aCmd, ulBufLen, pBuf, &bCDG)) {
 				throw _T("");
 			}
-			if(bCDG) {
+			if(bCDG == TRUE) {
 				// memo CD+G ripping
 				// raw mode(001b) don't play CDG
 				// plextor:D8                  -> play CDG OK
@@ -420,10 +462,8 @@ BOOL ReadCDAll(
 			}
 		}
 		else {
-			ReadVolumeDescriptor(pDevData, &pDiscData->toc, aCmd, ulBufLen, pBuf, fpLog);
+			ReadVolumeDescriptor(pDevData, &pDiscData->toc, aCmd, ulBufLen, pBuf, logFile->fpDiscLog);
 			if(pDevData->bPlextor) {
-				// PX-504A don't support...
-				// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 				aCmd[0] = 0xD8;
 				aCmd[1] = 0x00;
 				aCmd[8] = 0x00;
@@ -473,6 +513,15 @@ BOOL ReadCDAll(
 			prevSubQ.nRelativeTime = 150 + pDiscData->nAdjustSectorNum - 1;
 			prevSubQ.nAbsoluteTime = 150 + pDiscData->nAdjustSectorNum - 1;
 		}
+		else {
+			prevSubQ.nAbsoluteTime = 149;
+		}
+		// read pregap of track1
+		if(bIndex0InTrack1) {
+			nOffsetStart = -150;
+			prevSubQ.nRelativeTime = pDiscData->aTocLBA[0][0] + 150;
+			prevSubQ.nAbsoluteTime = -1;
+		}
 		prevSubQ.byCtl = pEndCtlList[0];
 		prevSubQ.byAdr = ADR_ENCODES_CURRENT_POSITION;
 		prevSubQ.byTrackNum = pDiscData->toc.FirstTrack;
@@ -482,17 +531,16 @@ BOOL ReadCDAll(
 
 		BOOL bCatalog = FALSE;
 		UCHAR byCurrentTrackNum = pDiscData->toc.FirstTrack;
-		OutputLogString(fpLog, 
-			_T("\n-----------------------------------log begin------------------------------------\n"));
-		if(!CheckC2Error(pDevData, pDiscData, pszOutFile,
-			pszOption, pBuf, nOffsetStart, nOffsetEnd, fpLog)) {
-			throw _T("Could't check C2 error\n");
+
+		if(!CheckC2Error(pDevData, pDiscData, pszOutFile, extArg,
+			pBuf, nOffsetStart, nOffsetEnd, logFile->fpErrorLog)) {
+			throw _T("Couldn't check C2 error\n");
 		}
 
 		for(INT nLBA = nOffsetStart; nLBA < pDiscData->nLength + nOffsetEnd; nLBA++) {
 			if(pDiscData->nStartLBAof2ndSession != -1 && pDiscData->nLastLBAof1stSession == nLBA) {
 				INT nStartSession2 = pDiscData->nStartLBAof2ndSession - 1;
-				OutputLogString(fpLog, 
+				OutputLogString(logFile->fpErrorLog, 
 					_T("Skip from Leadout of Session 1 [%d] to Leadin of Session 2 [%d]\n"),
 					pDiscData->nLastLBAof1stSession, nStartSession2);
 				nLBA = nStartSession2;
@@ -527,6 +575,12 @@ BOOL ReadCDAll(
 				OutputErrorString(
 					_T("LBA %d Read error [L:%d]. Zero padding [%dbyte]\n"), 
 					nLBA, __LINE__, uiSize);
+				if(prevSubQ.byIndex == 0) {
+					prevSubQ.nRelativeTime--;
+				}
+				else {
+					prevSubQ.nRelativeTime++;
+				}
 				prevSubQ.nAbsoluteTime++;
 				continue;
 			}
@@ -543,11 +597,15 @@ BOOL ReadCDAll(
 				BcdToDec(Subcode[20]), BcdToDec(Subcode[19]));
 			subQ.byMode = GetMode(pBuf + uiShift);
 
-			if(0 <= nLBA && nLBA < pDiscData->nLength) {
+			INT nStart = 0;
+			if(bIndex0InTrack1) {
+				nStart = -150;
+			}
+			if(nStart <= nLBA && nLBA < pDiscData->nLength) {
 				// 2nd:Verification subchannel
-				CheckAndFixSubchannel(pDiscData, Subcode, &subQ, &prevSubQ, 
+				CheckAndFixSubchannel(extArg, pDiscData, Subcode, &subQ, &prevSubQ, 
 					&prevPrevSubQ, &byCurrentTrackNum, &bCatalog, pbISRCList,
-					pEndCtlList, pLBAStartList, pLBAOfDataTrackList, nLBA, fpLog);
+					pEndCtlList, pLBAStartList, pLBAOfDataTrackList, nLBA, logFile->fpErrorLog);
 				UCHAR SubcodeRaw[CD_RAW_READ_SUBCODE_SIZE] = {0};
 				// fix raw subchannel
 				AlignColumnSubcode(Subcode, SubcodeRaw);
@@ -556,7 +614,7 @@ BOOL ReadCDAll(
 					SubcodeRaw, nLBA, byCurrentTrackNum, fpSub, fpParse, fpCdg);
 				PreserveTrackAttribution(pDiscData, nLBA, &byCurrentTrackNum,
 					&subQ, &prevSubQ, &prevPrevSubQ, pCtlList, pModeList,
-					pLBAStartList, pLBAOfDataTrackList, fpLog);
+					pLBAStartList, pLBAOfDataTrackList, logFile->fpErrorLog);
 			}
 
 			// 4th:Write track to scrambled
@@ -572,17 +630,18 @@ BOOL ReadCDAll(
 		FcloseAndNull(fpSub);
 		FcloseAndNull(fpParse);
 
-		OutputLogString(fpLog, 
-			_T("------------------------------------log end-------------------------------------\n\n"));
-		OutputMmcTocWithPregap(pDiscData, pCtlList, pModeList, pLBAStartList, fpLog);
-
+		OutputMmcTocWithPregap(pDiscData, pCtlList, pModeList, pLBAStartList, logFile->fpDiscLog);
 		// 5th:Descramble img
 		if(NULL == (fpImg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".img"), _T("rb+"), 0, 0))) {
 			throw _T("Failed to open file .img\n");
 		}
-		if(!DescrambleMainChannel(pDiscData, pLBAOfDataTrackList, fpTbl, fpImg, fpLog)) {
+		if(!DescrambleMainChannel(pDiscData, pLBAOfDataTrackList, fpTbl, fpImg, logFile->fpDiscLog)) {
 			throw _T("Failed to DescrambleMainChannel\n");
 		}
+#ifndef _DEBUG
+		fflush(logFile->fpDiscLog);
+		fflush(logFile->fpErrorLog);
+#endif
 		FcloseAndNull(fpTbl);
 
 		if(!MergeMainChannelAndCDG(pszOutFile, bCDG, pDiscData->bAudioOnly, fpImg)) {
@@ -600,9 +659,6 @@ BOOL ReadCDAll(
 		OutputErrorString(str);
 		bRet = FALSE;
 	}
-#ifndef _DEBUG
-	fflush(fpLog);
-#endif
 	FcloseAndNull(fpImg);
 	FcloseAndNull(fpCdg);
 	FcloseAndNull(fpCue);
@@ -684,11 +740,9 @@ BOOL ReadCDForSearchingOffset(
 		INT nDriveOffset = nDriveSampleOffset * 4;
 		UCHAR byTransferLen = 2;
 		if(pDevData->bPlextor) {
-			// PX-504A don't support...
-			// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 			aCmd[0] = 0xD8;
 			aCmd[9] = byTransferLen;
-			aCmd[10] = 0x02; // 0=none, 1=Q, 2=P-W, 3=P-W only
+			aCmd[10] = 0x02; // 0=none, 1=Q(sub16[formatted]), 2=P-W(main+sub96[raw]), 3=P-W only(sub96[raw])
 		}
 		else {
 			aCmd[0] = SCSIOP_READ_CD;
@@ -818,11 +872,9 @@ BOOL ReadCDPartial(
 		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
 		UCHAR byTransferLen = 1;
 		if(pDevData->bPlextor) {
-			// PX-504A don't support...
-			// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 			aCmd[0] = 0xD8;
 			aCmd[9] = byTransferLen;
-			aCmd[10] = 0x02; // 0=none, 1=Q, 2=P-W, 3=P-W only
+			aCmd[10] = 0x02; // 0=none, 1=Q(sub16[formatted]), 2=P-W(main+sub96[raw]), 3=P-W only(sub96[raw])
 		}
 		else {
 			aCmd[0] = SCSIOP_READ_CD;
@@ -1000,7 +1052,7 @@ BOOL ReadDVD(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
-	LPCTSTR pszOption,
+	ExtArg* extArg,
 	FILE* fpLog
 	)
 {
@@ -1073,7 +1125,7 @@ BOOL ReadDVD(
 		UCHAR aCmd2[CDB10GENERIC_LENGTH] = {0};
 		PUCHAR pBuf2 = NULL;
 		size_t uiSize = 0;
-		if(pszOption && !_tcscmp(pszOption, _T("cmi"))) {
+		if(extArg->bCmi) {
 			pBuf2 = (PUCHAR)ConvParagraphBoundary(aBuf2, pDevData);
 			uiSize = sizeof(DVD_DESCRIPTOR_HEADER) + 
 				sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR);
@@ -1099,7 +1151,7 @@ BOOL ReadDVD(
 			}
 			fwrite(pBuf, sizeof(UCHAR), (size_t)CD_RAW_READ * byTransferLen, fp);
 
-			if(pszOption && !_tcscmp(pszOption, _T("cmi"))) {
+			if(extArg->bCmi) {
 				for(INT i = 0; i < byTransferLen; i++) {
 					aCmd2[2] = HIBYTE(HIWORD(nLBA + i));
 					aCmd2[3] = LOBYTE(HIWORD(nLBA + i));
@@ -1449,9 +1501,11 @@ BOOL ReadTOCFull(
 		MAKEWORD(fullToc.Length[1], fullToc.Length[0]) - sizeof(fullToc.Length);
 	size_t uiTocEntries = uiFullTocSize / sizeof(CDROM_TOC_FULL_TOC_DATA_BLOCK);
 
-	WriteCcdFileForDisc(uiTocEntries, fullToc.LastCompleteSession, fpCcd);
-	if(pDevData->bCanCDText) {
-		ReadTOCText(pDevData, pDiscData, fpLog, fpCcd);
+	if(fpCcd) {
+		WriteCcdFileForDisc(uiTocEntries, fullToc.LastCompleteSession, fpCcd);
+		if(pDevData->bCanCDText) {
+			ReadTOCText(pDevData, pDiscData, fpLog, fpCcd);
+		}
 	}
 	size_t uiFullTocStructSize = uiFullTocSize + uiFullTocHeaderSize;
 	if(pDevData->bPlextor && pDevData->bPlextorPX712A && uiFullTocStructSize > 1028) {
@@ -1488,67 +1542,67 @@ BOOL ReadTOCFull(
 		}
 		CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData = 
 			((CDROM_TOC_FULL_TOC_DATA*)pFullToc)->Descriptors;
-		size_t uiIdx = 0;
-		INT aLBA[] = {0, pDiscData->nFirstDataLBA};
-		for(size_t b = 0; b < uiTocEntries; b++) {
-			if(pTocData[b].Point < 100 && uiIdx < pTocData[b].SessionNumber) {
-				PUCHAR aBuf2 = 
-					(PUCHAR)calloc(CD_RAW_SECTOR_WITH_SUBCODE_SIZE + pDevData->AlignmentMask, sizeof(UCHAR));
-				if(!aBuf2) {
-					return FALSE;
-				}
-				UCHAR aCmd2[CDB12GENERIC_LENGTH] = {0};
-				PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf2, pDevData);
-
-				if(pDevData->bPlextor) {
-					// PX-504A don't support...
-					// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
-					aCmd2[0] = 0xD8;
-					aCmd2[9] = 0x01;
-					aCmd2[10] = 0x02; // 0=none, 1=Q, 2=P-W, 3=P-W only
-				}
-				else {
-					aCmd2[0] = SCSIOP_READ_CD;
-					aCmd2[1] = READ_CD_FLAG::All;
-					aCmd2[8] = 0x01;
-					aCmd2[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
-						READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
-					aCmd2[10] = READ_CD_FLAG::Raw;
-				}
-				UCHAR ucMode = 0;
-				for(INT nLBA = aLBA[uiIdx]; nLBA < aLBA[uiIdx] + 100; nLBA++) {
-					aCmd2[2] = HIBYTE(HIWORD(nLBA));
-					aCmd2[3] = LOBYTE(HIWORD(nLBA));
-					aCmd2[4] = HIBYTE(LOWORD(nLBA));
-					aCmd2[5] = LOBYTE(LOWORD(nLBA));
-
-					if(!ExecCommand(pDevData, aCmd2, CDB12GENERIC_LENGTH, pBuf,
-						CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)
-						|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-						OutputErrorString(_T("Can't read CD for MCN\n"));
-						break;
+		if(fpCcd) {
+			size_t uiIdx = 0;
+			INT aLBA[] = {0, pDiscData->nFirstDataLBA};
+			for(size_t b = 0; b < uiTocEntries; b++) {
+				if(pTocData[b].Point < 100 && uiIdx < pTocData[b].SessionNumber) {
+					PUCHAR aBuf2 = 
+						(PUCHAR)calloc(CD_RAW_SECTOR_WITH_SUBCODE_SIZE + pDevData->AlignmentMask, sizeof(UCHAR));
+					if(!aBuf2) {
+						return FALSE;
 					}
-					if(nLBA == aLBA[uiIdx]) {
-						ucMode = GetMode(pBuf);
-					}
-					if(pTocData[b].SessionNumber == 1) {
-						UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
-						AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+					UCHAR aCmd2[CDB12GENERIC_LENGTH] = {0};
+					PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf2, pDevData);
 
-						UCHAR byAdr = (UCHAR)(Subcode[12] & 0x0F);
-						if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
-							BOOL bMCN = IsValidMCN(Subcode);
-							_TCHAR szCatalog[META_CATALOG_SIZE+1] = {0};
-							SetMCNToString(pDiscData, Subcode, szCatalog, bMCN);
-							WriteCcdFileForDiscCatalog(pDiscData, fpCcd);
+					if(pDevData->bPlextor) {
+						aCmd2[0] = 0xD8;
+						aCmd2[9] = 0x01;
+						aCmd2[10] = 0x02; // 0=none, 1=Q(sub16[formatted]), 2=P-W(main+sub96[raw]), 3=P-W only(sub96[raw])
+					}
+					else {
+						aCmd2[0] = SCSIOP_READ_CD;
+						aCmd2[1] = READ_CD_FLAG::All;
+						aCmd2[8] = 0x01;
+						aCmd2[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
+							READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
+						aCmd2[10] = READ_CD_FLAG::Raw;
+					}
+					UCHAR ucMode = 0;
+					for(INT nLBA = aLBA[uiIdx]; nLBA < aLBA[uiIdx] + 100; nLBA++) {
+						aCmd2[2] = HIBYTE(HIWORD(nLBA));
+						aCmd2[3] = LOBYTE(HIWORD(nLBA));
+						aCmd2[4] = HIBYTE(LOWORD(nLBA));
+						aCmd2[5] = LOBYTE(LOWORD(nLBA));
+
+						if(!ExecCommand(pDevData, aCmd2, CDB12GENERIC_LENGTH, pBuf,
+							CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+							|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+							OutputErrorString(_T("Can't read CD for MCN\n"));
 							break;
 						}
+						if(nLBA == aLBA[uiIdx]) {
+							ucMode = GetMode(pBuf);
+						}
+						if(pTocData[b].SessionNumber == 1) {
+							UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
+							AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+
+							UCHAR byAdr = (UCHAR)(Subcode[12] & 0x0F);
+							if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
+								BOOL bMCN = IsValidMCN(Subcode);
+								_TCHAR szCatalog[META_CATALOG_SIZE+1] = {0};
+								SetMCNToString(pDiscData, Subcode, szCatalog, bMCN);
+								WriteCcdFileForDiscCatalog(pDiscData, fpCcd);
+								break;
+							}
+						}
 					}
+					FreeAndNull(aBuf2);
+					WriteCcdFileForSession(pTocData[b].SessionNumber, fpCcd);
+					WriteCcdFileForSessionPregap(ucMode, fpCcd);
+					uiIdx++;
 				}
-				FreeAndNull(aBuf2);
-				WriteCcdFileForSession(pTocData[b].SessionNumber, fpCcd);
-				WriteCcdFileForSessionPregap(ucMode, fpCcd);
-				uiIdx++;
 			}
 		}
 		OutputMmcTocFull(pDiscData, &fullToc, pTocData, uiTocEntries, fpCcd, fpLog);

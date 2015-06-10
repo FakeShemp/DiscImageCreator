@@ -41,9 +41,21 @@ BOOL IsValidRelativeTime(
 			}
 		}
 		else if(subQ->byIndex == 0) {
+			// SagaFrontier Original Sound Track (Disc 3)
+			// LBA[009948, 0x026DC], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-01, Index-00, RelativeTime-00:00:01, AbsoluteTime-02:14:48] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+			// LBA[009949, 0x026DD], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-01, Index-00, RelativeTime-00:00:00, AbsoluteTime-02:14:49] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+			// LBA[009950, 0x026DE], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-01, Index-01, RelativeTime-00:00:00, AbsoluteTime-02:14:50] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+			// LBA[009951, 0x026DF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-01, Index-01, RelativeTime-00:00:01, AbsoluteTime-02:14:51] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
 			if(tmpLBA != 0 && prevSubQ->byTrackNum == subQ->byTrackNum &&
 				prevSubQ->nRelativeTime != subQ->nRelativeTime + 1) {
-				bRet = FALSE;
+				// Now on Never (Nick Carter) (ZJCI-10118)
+				// LBA[000599, 0x00257], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-01, Index-00, RelativeTime-00:00:01, AbsoluteTime-00:09:74] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[000600, 0x00258], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-01, Index-01, RelativeTime-00:00:00, AbsoluteTime-00:10:00] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[000601, 0x00259], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-01, Index-01, RelativeTime-00:00:01, AbsoluteTime-00:10:01] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				if(tmpLBA != 0 && prevSubQ->byTrackNum == subQ->byTrackNum &&
+					prevSubQ->nRelativeTime != subQ->nRelativeTime) {
+					bRet = FALSE;
+				}
 			}
 		}
 		if(nLBA != 0 && tmpLBA == 0 && prevSubQ->byTrackNum == subQ->byTrackNum &&
@@ -380,6 +392,8 @@ BOOL IsPlextorDrive(
 	)
 {
 	if(!strncmp(pDevData->pszVendorId, "PLEXTOR", 7)) {
+		// PX-504A, PX-740A, PX-750A, PX-751A don't support...
+		// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 		if(!strncmp(pDevData->pszProductId, "DVDR   PX-760A", 14)) {
 			pDevData->bPlextor = TRUE;
 			pDevData->bPlextorPX760A = TRUE;
@@ -468,6 +482,7 @@ BOOL CheckAndFixPSubchannel(
 }
 
 BOOL CheckAndFixSubchannel(
+	ExtArg* extArg,
 	PDISC_DATA pDiscData,
 	PUCHAR Subcode,
 	PSUB_Q_DATA subQ,
@@ -498,7 +513,8 @@ BOOL CheckAndFixSubchannel(
 			*bCatalog = bMCN;
 		}
 		if(!bMCN) {
-			OutputLogString(fpLog, _T("LBA %6d, MCN[%s]\n"), nLBA, szCatalog);
+			OutputLogString(fpLog, _T("LBA %6d, Track[%02d]: MCN[%s]\n"),
+				nLBA, *byCurrentTrackNum, szCatalog);
 			subQ->byAdr = prevSubQ->byAdr;
 			bBadAdr = TRUE;
 		}
@@ -634,11 +650,16 @@ BOOL CheckAndFixSubchannel(
 	}
 	else if(subQ->byAdr == ADR_ENCODES_ISRC) {
 		BOOL bISRC = IsValidISRC(Subcode);
+		if(!bISRC && extArg->bIsrc) {
+			// force a invalid ISRC to valid ISRC
+			bISRC = extArg->bIsrc;
+		}
 		SetISRCToString(pDiscData, Subcode, szISRC, *byCurrentTrackNum, bISRC);
 		szISRC[12] = '\0';
 		aISRC[*byCurrentTrackNum-1] = bISRC;
 		if(!bISRC) {
-			OutputLogString(fpLog, _T("LBA %6d, ISRC[%s]\n"), nLBA, szISRC);
+			OutputLogString(fpLog, _T("LBA %6d, Track[%02d]: ISRC[%s]\n"),
+				nLBA, *byCurrentTrackNum, szISRC);
 			subQ->byAdr = prevSubQ->byAdr;
 			bBadAdr = TRUE;
 		}
@@ -656,8 +677,9 @@ BOOL CheckAndFixSubchannel(
 	}
 	else if(subQ->byAdr == ADR_NO_MODE_INFORMATION || 
 		subQ->byAdr > ADR_ENCODES_ISRC) {
-		OutputLogString(fpLog, _T("LBA %6d, Adr[%d], correct[%d]\n"), 
-			nLBA, subQ->byAdr, prevSubQ->byAdr);
+		OutputLogString(fpLog,
+			_T("LBA %6d, Track[%02d]: Adr[%d], correct[%d]\n"), 
+			nLBA, *byCurrentTrackNum, subQ->byAdr, prevSubQ->byAdr);
 		subQ->byAdr = prevSubQ->byAdr;
 		bBadAdr = TRUE;
 	}
@@ -666,10 +688,11 @@ BOOL CheckAndFixSubchannel(
 	}
 	if(subQ->byAdr == ADR_ENCODES_CURRENT_POSITION || bBadAdr) {
 		BOOL bPrevTrackNum = TRUE;
-		if(!IsValidTrackNumber(prevPrevSubQ, prevSubQ,
-			subQ, pDiscData->toc.FirstTrack, pDiscData->toc.LastTrack, &bPrevTrackNum)) {
-			OutputLogString(fpLog, _T("LBA %6d, TrackNum[%02d], correct[%02d]\n"), 
-				nLBA, subQ->byTrackNum, prevSubQ->byTrackNum);
+		if(!IsValidTrackNumber(prevPrevSubQ, prevSubQ, subQ,
+			pDiscData->toc.FirstTrack, pDiscData->toc.LastTrack, &bPrevTrackNum)) {
+			OutputLogString(fpLog,
+				_T("LBA %6d, Track[%02d]: TrackNum[%02d], correct[%02d]\n"), 
+				nLBA, *byCurrentTrackNum, subQ->byTrackNum, prevSubQ->byTrackNum);
 			// Bikkuriman Daijikai (Japan)
 			// LBA[106402, 0x19FA2], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-70, Index-01, RelativeTime-00:16:39, AbsoluteTime-23:40:52] RtoW:ZERO mode
 			// LBA[106403, 0x19FA3], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-79, Index-01, RelativeTime-00:00:00, AbsoluteTime-21:40:53] RtoW:ZERO mode
@@ -687,8 +710,9 @@ BOOL CheckAndFixSubchannel(
 			Subcode[13] = DecToBcd(subQ->byTrackNum);
 		}
 		else if(!bPrevTrackNum) {
-			OutputLogString(fpLog, _T("LBA %6d, PrevTrackNum[%02d], correct[%02d]\n"), 
-				nLBA, prevSubQ->byTrackNum, prevPrevSubQ->byTrackNum);
+			OutputLogString(fpLog,
+				_T("LBA %6d, Track[%02d]: PrevTrackNum[%02d], correct[%02d]\n"), 
+				nLBA, *byCurrentTrackNum, prevSubQ->byTrackNum, prevPrevSubQ->byTrackNum);
 			aLBAStart[prevSubQ->byTrackNum-1][prevSubQ->byIndex] = -1;
 			aLBAOfDataTrack[prevSubQ->byTrackNum-1][0] = -1;
 			prevSubQ->byTrackNum = prevPrevSubQ->byTrackNum;
@@ -696,22 +720,25 @@ BOOL CheckAndFixSubchannel(
 		BOOL bPrevIndex = TRUE;
 		BOOL bPrevPrevIndex = TRUE;
 		if(!IsValidIndex(prevPrevSubQ, prevSubQ, subQ, &bPrevIndex, &bPrevPrevIndex)) {
-			OutputLogString(fpLog, _T("LBA %6d, Index[%02d], correct[%02d]\n"), 
-				nLBA, subQ->byIndex, prevSubQ->byIndex);
+			OutputLogString(fpLog,
+				_T("LBA %6d, Track[%02d]: Index[%02d], correct[%02d]\n"), 
+				nLBA, *byCurrentTrackNum, subQ->byIndex, prevSubQ->byIndex);
 			subQ->byTrackNum = prevSubQ->byTrackNum;
 			subQ->byIndex = prevSubQ->byIndex;
 			Subcode[14] = DecToBcd(subQ->byIndex);
 		}
 		else if(!bPrevIndex) {
-			OutputLogString(fpLog, _T("LBA %6d, PrevIndex[%02d], correct[%02d]\n"), 
-				nLBA - 1 , prevSubQ->byIndex, prevPrevSubQ->byIndex);
+			OutputLogString(fpLog,
+				_T("LBA %6d, Track[%02d]: PrevIndex[%02d], correct[%02d]\n"), 
+				nLBA - 1 , *byCurrentTrackNum, prevSubQ->byIndex, prevPrevSubQ->byIndex);
 			aLBAStart[prevSubQ->byTrackNum-1][prevSubQ->byIndex] = -1;
 			prevSubQ->byTrackNum = prevPrevSubQ->byTrackNum;
 			prevSubQ->byIndex = prevPrevSubQ->byIndex;
 		}
 		else if(!bPrevPrevIndex) {
-			OutputLogString(fpLog, _T("LBA %6d, PrevPrevIndex[%02d], correct[%02d]\n"), 
-				nLBA - 1 , prevPrevSubQ->byIndex, prevSubQ->byIndex);
+			OutputLogString(fpLog,
+				_T("LBA %6d, Track[%02d]: PrevPrevIndex[%02d], correct[%02d]\n"), 
+				nLBA - 1 , *byCurrentTrackNum, prevPrevSubQ->byIndex, prevSubQ->byIndex);
 			aLBAStart[prevPrevSubQ->byTrackNum-1][prevPrevSubQ->byIndex] = -1;
 			prevPrevSubQ->byTrackNum = prevSubQ->byTrackNum;
 			prevPrevSubQ->byIndex = prevSubQ->byIndex;
@@ -732,8 +759,8 @@ BOOL CheckAndFixSubchannel(
 					subQ->nRelativeTime = prevSubQ->nRelativeTime - 1;
 				}
 				OutputLogString(fpLog, 
-					_T("LBA %6d, RelativeTime[%02d:%02d:%02d], correct[%02d:%02d:%02d]\n"), 
-					nLBA, BcdToDec(Subcode[15]), BcdToDec(Subcode[16]), 
+					_T("LBA %6d, Track[%02d]: RelativeTime[%02d:%02d:%02d], correct[%02d:%02d:%02d]\n"), 
+					nLBA, *byCurrentTrackNum, BcdToDec(Subcode[15]), BcdToDec(Subcode[16]), 
 					BcdToDec(Subcode[17]), byMinute, bySecond, byFrame);
 				Subcode[15] = DecToBcd(byMinute);
 				Subcode[16] = DecToBcd(bySecond);
@@ -743,7 +770,8 @@ BOOL CheckAndFixSubchannel(
 
 		if(Subcode[18] != 0) {
 			OutputLogString(fpLog, 
-				_T("LBA %6d, Zero[%02d], correct[0]\n"), nLBA, Subcode[18]);
+				_T("LBA %6d, Track[%02d]: Zero[%02d], correct[0]\n"),
+				nLBA, *byCurrentTrackNum, Subcode[18]);
 			Subcode[18] = 0;
 		}
 
@@ -751,8 +779,8 @@ BOOL CheckAndFixSubchannel(
 			UCHAR byFrame, bySecond, byMinute;
 			LBAtoMSF(nLBA + 150, &byFrame, &bySecond, &byMinute);
 			OutputLogString(fpLog, 
-				_T("LBA %6d, AbsoluteTime[%02d:%02d:%02d], correct[%02d:%02d:%02d]\n"), 
-				nLBA, BcdToDec(Subcode[19]), BcdToDec(Subcode[20]), 
+				_T("LBA %6d, Track[%02d]: AbsoluteTime[%02d:%02d:%02d], correct[%02d:%02d:%02d]\n"), 
+				nLBA, *byCurrentTrackNum, BcdToDec(Subcode[19]), BcdToDec(Subcode[20]), 
 				BcdToDec(Subcode[21]), byMinute, bySecond, byFrame);
 			Subcode[19] = DecToBcd(byMinute);
 			Subcode[20] = DecToBcd(bySecond);
@@ -760,8 +788,9 @@ BOOL CheckAndFixSubchannel(
 		}
 	}
 	if(!IsValidControl(prevPrevSubQ, prevSubQ, subQ, aEndCtl[subQ->byTrackNum-1])) {
-		OutputLogString(fpLog, _T("LBA %6d, Ctl[%d], correct[%d]\n"),
-			nLBA, subQ->byCtl, prevSubQ->byCtl);
+		OutputLogString(fpLog,
+			_T("LBA %6d, Track[%02d]: Ctl[%d], correct[%d]\n"),
+			nLBA, *byCurrentTrackNum, subQ->byCtl, prevSubQ->byCtl);
 		subQ->byCtl = prevSubQ->byCtl;
 		Subcode[12] = (UCHAR)(subQ->byCtl << 4 | subQ->byAdr);
 	}
@@ -769,13 +798,15 @@ BOOL CheckAndFixSubchannel(
 	UCHAR tmp1 = (UCHAR)(crc16 >> 8 & 0xFF);
 	UCHAR tmp2 = (UCHAR)(crc16 & 0xFF);
 	if(Subcode[22] != tmp1) {
-		OutputLogString(fpLog, _T("LBA %6d, Crc high[%02x], correct[%02x]\n"),
-			nLBA, Subcode[22], tmp1);
+		OutputLogString(fpLog,
+			_T("LBA %6d, Track[%02d]: Crc high[%02x], correct[%02x]\n"),
+			nLBA, *byCurrentTrackNum, Subcode[22], tmp1);
 		Subcode[22] = tmp1;
 	}
 	if(Subcode[23] != tmp2) {
-		OutputLogString(fpLog, _T("LBA %6d, Crc low[%02x], correct[%02x]\n"),
-			nLBA, Subcode[23], tmp2);
+		OutputLogString(fpLog,
+			_T("LBA %6d, Track[%02d]: Crc low[%02x], correct[%02x]\n"),
+			nLBA, *byCurrentTrackNum, Subcode[23], tmp2);
 		Subcode[23] = tmp2;
 	}
 	return TRUE;

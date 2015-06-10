@@ -5,7 +5,8 @@
 BOOL IsValidRelativeTime(
 	CONST PSUB_Q_DATA prevSubQ,
 	CONST PSUB_Q_DATA subQ,
-	CONST PUCHAR Subcode
+	CONST PUCHAR Subcode,
+	INT nLBA
 	);
 
 BOOL IsValidAbsoluteTime(
@@ -64,6 +65,7 @@ BOOL IsPlextorDrive(
 	);
 
 BOOL CheckAndFixSubchannel(
+	ExtArg* extArg,
 	PDISC_DATA pDiscData,
 	PUCHAR Subcode,
 	PSUB_Q_DATA subQ,

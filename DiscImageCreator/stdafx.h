@@ -80,6 +80,19 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 
 #define META_CATALOG_SIZE	(13)
 
+typedef struct _ExtArg {
+	BOOL bPre;
+	BOOL bC2;
+	BOOL bIsrc;
+	BOOL bCmi;
+} ExtArg;
+
+typedef struct _LogFile {
+	FILE* fpDriveLog;
+	FILE* fpDiscLog;
+	FILE* fpErrorLog;
+} LogFile;
+
 #pragma pack(1)
 __declspec(align(1)) typedef struct _DEVICE_DATA {
 	HANDLE hDevice;

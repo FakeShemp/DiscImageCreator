@@ -61,8 +61,8 @@ BOOL ReadCDAll(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
-	LPCTSTR pszOption,
-	FILE* fpLog,
+	ExtArg* extArg,
+	LogFile* logFile,
 	FILE* fpCcd
 	);
 
@@ -103,7 +103,7 @@ BOOL ReadDVD(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
-	LPCTSTR pszOption,
+	ExtArg* extArg,
 	FILE* fpLog
 	);
 
