@@ -14,7 +14,7 @@ VOID OutputFsVolumeRecognitionSequence(
 	);
 
 VOID OutputMmcDVDStructureFormat(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	BYTE byFormatCode,
 	WORD wFormatLength,
 	LPBYTE lpFormat,

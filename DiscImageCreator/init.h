@@ -7,21 +7,21 @@
 
 BOOL InitC2ErrorData(
 	PEXT_ARG pExtArg,
-	PDISC_DATA pDiscData,
-	PC2_ERROR_DATA c2ErrorData,
-	PC2_ERROR_DATA_PER_SECTOR* c2ErrorDataPerSector,
+	PDISC pDisc,
+	PC2_ERROR pC2Error,
+	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector,
 	DWORD dwAllBufLen
 	);
 
 BOOL InitLBAPerTrack(
 	PEXEC_TYPE pExecType,
-	PDISC_DATA* pDiscData
+	PDISC* pDisc
 	);
 
 BOOL InitTocFullData(
 	PEXEC_TYPE pExecType,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA* pDiscData
+	PDEVICE pDevice,
+	PDISC* pDisc
 	);
 
 #ifndef _DEBUG
@@ -32,19 +32,19 @@ BOOL InitLogFile(
 #endif
 
 VOID Terminatec2ErrorDataPerSector(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PEXT_ARG pExtArg,
-	PC2_ERROR_DATA_PER_SECTOR* c2ErrorDataPerSector
+	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector
 	);
 
 VOID TerminateLBAPerTrack(
-	PDISC_DATA* pDiscData
+	PDISC* pDisc
 	);
 
 VOID TerminateTocFullData(
 	PEXEC_TYPE pExecType,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA* pDiscData
+	PDEVICE pDevice,
+	PDISC* pDisc
 	);
 
 #ifndef _DEBUG

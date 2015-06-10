@@ -7,24 +7,24 @@
 #define DVD_RAW_READ	(2064)
 
 BOOL ReadDVD(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
+	PDEVICE pDevice,
+	PDISC pDisc,
 	PEXT_ARG pExtArg,
 	LPCTSTR pszPath
 	);
 
 BOOL ReadDVDForCMI(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData
+	PDEVICE pDevice,
+	PDISC pDisc
 	);
 
 BOOL ReadDVDRaw(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	LPCSTR szVendorId,
 	LPCTSTR pszPath
 	);
 
 BOOL ReadDVDStructure(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData
+	PDEVICE pDevice,
+	PDISC pDisc
 	);

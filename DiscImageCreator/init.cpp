@@ -8,21 +8,21 @@
 
 BOOL InitC2ErrorData(
 	PEXT_ARG pExtArg,
-	PDISC_DATA pDiscData,
-	PC2_ERROR_DATA pC2ErrorData,
-	PC2_ERROR_DATA_PER_SECTOR* c2ErrorDataPerSector,
+	PDISC pDisc,
+	PC2_ERROR pC2Error,
+	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector,
 	DWORD dwAllBufLen
 	)
 {
 	BOOL bRet = TRUE;
-	if (NULL == (*c2ErrorDataPerSector = (PC2_ERROR_DATA_PER_SECTOR)
-		calloc(pExtArg->dwMaxC2ErrorNum, sizeof(C2_ERROR_DATA_PER_SECTOR)))) {
+	if (NULL == (*pC2ErrorPerSector = (PC2_ERROR_PER_SECTOR)
+		calloc(pExtArg->dwMaxC2ErrorNum, sizeof(C2_ERROR_PER_SECTOR)))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
-	pC2ErrorData->sC2Offset =
-		(SHORT)((pDiscData->MAIN_CHANNEL.nCombinedOffset - CD_RAW_READ_SUBCODE_SIZE) / CHAR_BIT);
-	if (pDiscData->MAIN_CHANNEL.nCombinedOffset > 0) {
+	pC2Error->sC2Offset =
+		(SHORT)((pDisc->MAIN.nCombinedOffset - CD_RAW_READ_SUBCODE_SIZE) / CHAR_BIT);
+	if (pDisc->MAIN.nCombinedOffset > 0) {
 		//	Nonomura Byouin no Hitobito
 		//	 Combined Offset(Byte)   1680, (Samples)   420
 		//	-   Drive Offset(Byte)    120, (Samples)    30
@@ -36,7 +36,7 @@ BOOL InitC2ErrorData(
 		//	----------------------------------------------
 		//	       CD Offset(Byte)   5016, (Samples)  1254
 		//	Need overread sector: 3
-		pC2ErrorData->cSlideSectorNum = (CHAR)(abs(pDiscData->MAIN_CHANNEL.nAdjustSectorNum));
+		pC2Error->cSlideSectorNum = (CHAR)(abs(pDisc->MAIN.nAdjustSectorNum));
 	}
 	else {
 		// Anesan
@@ -52,43 +52,43 @@ BOOL InitC2ErrorData(
 		//	----------------------------------------------
 		//	       CD Offset(Byte)  -2832, (Samples)  -708
 		//	Need overread sector: -2
-		INT nSlideNum = pDiscData->MAIN_CHANNEL.nCombinedOffset / CD_RAW_SECTOR_SIZE;
+		INT nSlideNum = pDisc->MAIN.nCombinedOffset / CD_RAW_SECTOR_SIZE;
 		if (nSlideNum == 0) {
-			pC2ErrorData->cSlideSectorNum = -1;
+			pC2Error->cSlideSectorNum = -1;
 		}
 		else {
-			pC2ErrorData->cSlideSectorNum = (CHAR)(nSlideNum);
+			pC2Error->cSlideSectorNum = (CHAR)(nSlideNum);
 		}
 	}
 	try {
 		for (UINT n = 0; n < pExtArg->dwMaxC2ErrorNum; n++) {
-			OutputString(_T("\rAllocating memory for C2 error: %u/%u"), 
+			OutputString(_T("\rAllocating memory for C2 errors: %u/%u"), 
 				n + 1, pExtArg->dwMaxC2ErrorNum);
-			if (NULL == ((*c2ErrorDataPerSector)[n].lpErrorBytePos = 
+			if (NULL == ((*pC2ErrorPerSector)[n].lpErrorBytePos = 
 				(PSHORT)calloc(CD_RAW_SECTOR_SIZE, sizeof(WORD)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				OutputString(_T("\n"));
 				throw FALSE;
 			}
-			if (NULL == ((*c2ErrorDataPerSector)[n].lpErrorBytePosBackup = 
+			if (NULL == ((*pC2ErrorPerSector)[n].lpErrorBytePosBackup = 
 				(PSHORT)calloc(CD_RAW_SECTOR_SIZE, sizeof(WORD)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				OutputString(_T("\n"));
 				throw FALSE;
 			}
-			if (NULL == ((*c2ErrorDataPerSector)[n].lpBufC2NoneSector = 
+			if (NULL == ((*pC2ErrorPerSector)[n].lpBufC2NoneSector = 
 				(LPBYTE)calloc(dwAllBufLen, sizeof(BYTE)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				OutputString(_T("\n"));
 				throw FALSE;
 			}
-			if (NULL == ((*c2ErrorDataPerSector)[n].lpBufC2NoneSectorBackup = 
+			if (NULL == ((*pC2ErrorPerSector)[n].lpBufC2NoneSectorBackup = 
 				(LPBYTE)calloc(dwAllBufLen, sizeof(BYTE)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				OutputString(_T("\n"));
 				throw FALSE;
 			}
-			(*c2ErrorDataPerSector)[n].bErrorFlag = RETURNED_C2_ERROR_NO_1ST;
+			(*pC2ErrorPerSector)[n].bErrorFlag = RETURNED_C2_ERROR_NO_1ST;
 		}
 		OutputString(_T("\n"));
 	}
@@ -100,17 +100,17 @@ BOOL InitC2ErrorData(
 
 BOOL InitLBAPerTrack(
 	PEXEC_TYPE pExecType,
-	PDISC_DATA* pDiscData
+	PDISC* pDisc
 	)
 {
 	size_t dwTrackAllocSize = 
-		*pExecType == gd ? 100 : (size_t)(*pDiscData)->SCSI.toc.LastTrack + 1;
-	if (NULL == ((*pDiscData)->SCSI.lpFirstLBAListOnToc = 
+		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
+	if (NULL == ((*pDisc)->SCSI.lpFirstLBAListOnToc = 
 		(LPINT)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
-	if (NULL == ((*pDiscData)->SCSI.lpLastLBAListOnToc = 
+	if (NULL == ((*pDisc)->SCSI.lpLastLBAListOnToc = 
 		(LPINT)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
@@ -120,37 +120,37 @@ BOOL InitLBAPerTrack(
 
 BOOL InitTocFullData(
 	PEXEC_TYPE pExecType,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA* pDiscData
+	PDEVICE pDevice,
+	PDISC* pDisc
 	)
 {
 	BOOL bRet = TRUE;
 	size_t dwTrackAllocSize = 
-		*pExecType == gd ? 100 : (size_t)(*pDiscData)->SCSI.toc.LastTrack + 1;
-	if (NULL == ((*pDiscData)->SCSI.lpSessionNumList = 
+		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
+	if (NULL == ((*pDisc)->SCSI.lpSessionNumList = 
 		(LPBYTE)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
 	try {
-		if (pDevData->bCanCDText || *pExecType == gd) {
-			if (NULL == ((*pDiscData)->SUB_CHANNEL.pszISRC = 
-				(LPTSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
+		if (pDevice->bCanCDText || *pExecType == gd) {
+			if (NULL == ((*pDisc)->SUB.pszISRC = 
+				(LPSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
-			if (NULL == ((*pDiscData)->SCSI.pszTitle = 
-				(LPTSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
+			if (NULL == ((*pDisc)->SCSI.pszTitle = 
+				(LPSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
-			if (NULL == ((*pDiscData)->SCSI.pszPerformer = 
-				(LPTSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
+			if (NULL == ((*pDisc)->SCSI.pszPerformer = 
+				(LPSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
-			if (NULL == ((*pDiscData)->SCSI.pszSongWriter = 
-				(LPTSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
+			if (NULL == ((*pDisc)->SCSI.pszSongWriter = 
+				(LPSTR*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
@@ -158,23 +158,23 @@ BOOL InitTocFullData(
 			size_t isrcSize = META_ISRC_SIZE;
 			size_t textSize = META_CDTEXT_SIZE;
 			for (size_t h = 0; h < dwTrackAllocSize; h++) {
-				if (NULL == ((*pDiscData)->SUB_CHANNEL.pszISRC[h] = 
-					(LPTSTR)calloc(isrcSize, sizeof(_TCHAR)))) {
+				if (NULL == ((*pDisc)->SUB.pszISRC[h] = 
+					(LPSTR)calloc(isrcSize, sizeof(CHAR)))) {
 					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 					throw FALSE;
 				}
-				if (NULL == ((*pDiscData)->SCSI.pszTitle[h] = 
-					(LPTSTR)calloc(textSize, sizeof(_TCHAR)))) {
+				if (NULL == ((*pDisc)->SCSI.pszTitle[h] = 
+					(LPSTR)calloc(textSize, sizeof(CHAR)))) {
 					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 					throw FALSE;
 				}
-				if (NULL == ((*pDiscData)->SCSI.pszPerformer[h] = 
-					(LPTSTR)calloc(textSize, sizeof(_TCHAR)))) {
+				if (NULL == ((*pDisc)->SCSI.pszPerformer[h] = 
+					(LPSTR)calloc(textSize, sizeof(CHAR)))) {
 					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 					throw FALSE;
 				}
-				if (NULL == ((*pDiscData)->SCSI.pszSongWriter[h] = 
-					(LPTSTR)calloc(textSize, sizeof(_TCHAR)))) {
+				if (NULL == ((*pDisc)->SCSI.pszSongWriter[h] = 
+					(LPSTR)calloc(textSize, sizeof(CHAR)))) {
 					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 					throw FALSE;
 				}
@@ -259,53 +259,53 @@ BOOL InitLogFile(
 #endif
 
 VOID Terminatec2ErrorDataPerSector(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PEXT_ARG pExtArg,
-	PC2_ERROR_DATA_PER_SECTOR* c2ErrorDataPerSector
+	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector
 	)
 {
-	if (*c2ErrorDataPerSector && pDevData->bC2ErrorData && pExtArg->bC2) {
+	if (*pC2ErrorPerSector && pDevice->bC2ErrorData && pExtArg->bC2) {
 		for (UINT i = 0; i < pExtArg->dwMaxC2ErrorNum; i++) {
-			OutputString(_T("\rFree memory for C2 error: %u/%u"), 
+			OutputString(_T("\rFreeing allocated memory for C2 errors: %u/%u"), 
 				i + 1, pExtArg->dwMaxC2ErrorNum);
-			FreeAndNull((*c2ErrorDataPerSector)[i].lpErrorBytePos);
-			FreeAndNull((*c2ErrorDataPerSector)[i].lpErrorBytePosBackup);
-			FreeAndNull((*c2ErrorDataPerSector)[i].lpBufC2NoneSector);
-			FreeAndNull((*c2ErrorDataPerSector)[i].lpBufC2NoneSectorBackup);
+			FreeAndNull((*pC2ErrorPerSector)[i].lpErrorBytePos);
+			FreeAndNull((*pC2ErrorPerSector)[i].lpErrorBytePosBackup);
+			FreeAndNull((*pC2ErrorPerSector)[i].lpBufC2NoneSector);
+			FreeAndNull((*pC2ErrorPerSector)[i].lpBufC2NoneSectorBackup);
 		}
 		OutputString(_T("\n"));
-		FreeAndNull(*c2ErrorDataPerSector);
+		FreeAndNull(*pC2ErrorPerSector);
 	}
 }
 
 VOID TerminateLBAPerTrack(
-	PDISC_DATA* pDiscData
+	PDISC* pDisc
 	)
 {
-	FreeAndNull((*pDiscData)->SCSI.lpFirstLBAListOnToc);
-	FreeAndNull((*pDiscData)->SCSI.lpLastLBAListOnToc);
+	FreeAndNull((*pDisc)->SCSI.lpFirstLBAListOnToc);
+	FreeAndNull((*pDisc)->SCSI.lpLastLBAListOnToc);
 }
 
 VOID TerminateTocFullData(
 	PEXEC_TYPE pExecType,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA* pDiscData
+	PDEVICE pDevice,
+	PDISC* pDisc
 	)
 {
 	size_t dwTrackAllocSize = 
-		*pExecType == gd ? 100 : (size_t)(*pDiscData)->SCSI.toc.LastTrack + 1;
-	FreeAndNull((*pDiscData)->SCSI.lpSessionNumList);
-	if (pDevData->bCanCDText || *pExecType == gd) {
+		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
+	FreeAndNull((*pDisc)->SCSI.lpSessionNumList);
+	if (pDevice->bCanCDText || *pExecType == gd) {
 		for (size_t i = 0; i < dwTrackAllocSize; i++) {
-			FreeAndNull((*pDiscData)->SUB_CHANNEL.pszISRC[i]);
-			FreeAndNull((*pDiscData)->SCSI.pszTitle[i]);
-			FreeAndNull((*pDiscData)->SCSI.pszPerformer[i]);
-			FreeAndNull((*pDiscData)->SCSI.pszSongWriter[i]);
+			FreeAndNull((*pDisc)->SUB.pszISRC[i]);
+			FreeAndNull((*pDisc)->SCSI.pszTitle[i]);
+			FreeAndNull((*pDisc)->SCSI.pszPerformer[i]);
+			FreeAndNull((*pDisc)->SCSI.pszSongWriter[i]);
 		}
-		FreeAndNull((*pDiscData)->SUB_CHANNEL.pszISRC);
-		FreeAndNull((*pDiscData)->SCSI.pszTitle);
-		FreeAndNull((*pDiscData)->SCSI.pszPerformer);
-		FreeAndNull((*pDiscData)->SCSI.pszSongWriter);
+		FreeAndNull((*pDisc)->SUB.pszISRC);
+		FreeAndNull((*pDisc)->SCSI.pszTitle);
+		FreeAndNull((*pDisc)->SCSI.pszPerformer);
+		FreeAndNull((*pDisc)->SCSI.pszSongWriter);
 	}
 }
 

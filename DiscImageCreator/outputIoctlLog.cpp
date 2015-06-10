@@ -2993,7 +2993,7 @@ VOID OutputIoctlSenseData(
 	BYTE byAscq = pSenseData->AdditionalSenseCodeQualifier;
 
 	OutputErrorString(
-		_T("SenseData Key:Asc:Ascq %02x:%02x:%02x, "), byKey, byAsc, byAscq);
+		_T("SenseData Key-Asc-Ascq: %02x-%02x-%02x, "), byKey, byAsc, byAscq);
 	OutputIoctlSenseKey(byKey);
 	OutputIoctlAdditionalSenseCode(byAsc, byAscq);
 #ifdef _DEBUG
@@ -3041,7 +3041,7 @@ VOID OutputIoctlScsiStatus(
 	)
 {
 	OutputErrorString(
-		_T("\nScsiStatus: %02x-"), byScsiStatus);
+		_T("ScsiStatus: %02x, "), byScsiStatus);
 	switch (byScsiStatus) {
 	case SCSISTAT_GOOD:
 		OutputErrorString(_T("GOOD\n"));
@@ -3077,7 +3077,7 @@ VOID OutputIoctlScsiStatus(
 }
 
 VOID OutputIoctlScsiAddress(
-	PDEVICE_DATA pDevData
+	PDEVICE pDevice
 	)
 {
 	OutputDriveLogA(
@@ -3087,11 +3087,11 @@ VOID OutputIoctlScsiAddress(
 		"\t    PathId: %u\n"
 		"\t  TargetId: %u\n"
 		"\t       Lun: %u\n",
-		pDevData->address.Length,
-		pDevData->address.PortNumber,
-		pDevData->address.PathId,
-		pDevData->address.TargetId,
-		pDevData->address.Lun);
+		pDevice->address.Length,
+		pDevice->address.PortNumber,
+		pDevice->address.PathId,
+		pDevice->address.TargetId,
+		pDevice->address.Lun);
 }
 
 VOID OutputIoctlStorageAdaptorDescriptor(
@@ -3116,10 +3116,10 @@ VOID OutputIoctlStorageAdaptorDescriptor(
 		pAdapterDescriptor->MaximumTransferLength,
 		pAdapterDescriptor->MaximumPhysicalPages,
 		pAdapterDescriptor->AlignmentMask,
-		BOOLEAN_TO_STRING_TRUE_FALSE(pAdapterDescriptor->AdapterUsesPio),
-		BOOLEAN_TO_STRING_TRUE_FALSE(pAdapterDescriptor->AdapterScansDown),
-		BOOLEAN_TO_STRING_TRUE_FALSE(pAdapterDescriptor->CommandQueueing),
-		BOOLEAN_TO_STRING_TRUE_FALSE(pAdapterDescriptor->AcceleratedTransfer));
+		BOOLEAN_TO_STRING_TRUE_FALSE_A(pAdapterDescriptor->AdapterUsesPio),
+		BOOLEAN_TO_STRING_TRUE_FALSE_A(pAdapterDescriptor->AdapterScansDown),
+		BOOLEAN_TO_STRING_TRUE_FALSE_A(pAdapterDescriptor->CommandQueueing),
+		BOOLEAN_TO_STRING_TRUE_FALSE_A(pAdapterDescriptor->AcceleratedTransfer));
 	switch (pAdapterDescriptor->BusType) {
 	case STORAGE_BUS_TYPE::BusTypeUnknown:
 		OutputDriveLogA("BusTypeUnknown\n");

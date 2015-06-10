@@ -168,7 +168,7 @@ BYTE GetMode(
 }
 
 BOOL GetWriteOffset(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPBYTE lpBuf
 	)
 {
@@ -179,8 +179,8 @@ BOOL GetWriteOffset(
 			BYTE ss = BcdToDec((BYTE)(lpBuf[i + 13] ^ 0x80));
 			BYTE sf = BcdToDec((BYTE)(lpBuf[i + 14]));
 			INT tmpLBA = MSFtoLBA(sm, ss, sf) - 150;
-			pDiscData->MAIN_CHANNEL.nCombinedOffset = 
-				CD_RAW_SECTOR_SIZE * -(tmpLBA - pDiscData->SCSI.nFirstLBAofDataTrack) + i;
+			pDisc->MAIN.nCombinedOffset = 
+				CD_RAW_SECTOR_SIZE * -(tmpLBA - pDisc->SCSI.nFirstLBAofDataTrack) + i;
 			bRet = TRUE;
 			break;
 		}

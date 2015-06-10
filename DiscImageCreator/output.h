@@ -13,18 +13,20 @@
 #endif
 
 #define BOOLEAN_TO_STRING_TRUE_FALSE(_b_) \
-	( (_b_) ? "True" : "False" )
+	((_b_) ? _T("True") : _T("False"))
+
+#define BOOLEAN_TO_STRING_TRUE_FALSE_A(_b_) \
+	((_b_) ? "True" : "False")
 
 #define BOOLEAN_TO_STRING_YES_NO(_b_) \
-	( (_b_) ? "Yes" : "No" )
+	((_b_) ? _T("Yes") : _T("No"))
+
+#define BOOLEAN_TO_STRING_YES_NO_A(_b_) \
+	((_b_) ? "Yes" : "No")
 
 #define OutputString(str, ...) \
 { \
 	_tprintf(str, __VA_ARGS__); \
-}
-#define OutputStringA(str, ...) \
-{ \
-	printf(str, __VA_ARGS__); \
 }
 #ifdef _DEBUG
 extern _TCHAR logBuffer[2048];
@@ -44,10 +46,6 @@ extern CHAR logBufferA[2048];
 #define OutputErrorString(str, ...) \
 { \
 	OutputDebugStringEx(str, __VA_ARGS__); \
-}
-#define OutputErrorStringA(str, ...) \
-{ \
-	OutputDebugStringExA(str, __VA_ARGS__); \
 }
 #define OutputDiscLog(str, ...) \
 { \
@@ -95,10 +93,6 @@ extern _LOG_FILE g_LogFile;
 #define OutputErrorString(str, ...) \
 { \
 	_ftprintf(stderr, str, __VA_ARGS__); \
-}
-#define OutputErrorStringA(str, ...) \
-{ \
-	fprintf(stderr, str, __VA_ARGS__); \
 }
 #define OutputDiscLog(str, ...) \
 { \
@@ -228,7 +222,7 @@ VOID WriteCcdFileForDiscCDTextLength(
 	);
 
 VOID WriteCcdFileForDiscCatalog(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	FILE* fpCcd
 	);
 
@@ -257,16 +251,22 @@ VOID WriteCcdFileForEntry(
 
 VOID WriteMainChannel(
 	PEXT_ARG pExtArg,
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPBYTE lpBuf,
 	INT nLBA,
 	FILE* fpImg
 	);
 
-VOID WriteSubChannel(
-	PDISC_DATA pDiscData,
-	PDEVICE_DATA pTransferData,
+VOID WriteC2(
+	PDISC pDisc,
 	LPBYTE lpBuf,
+	INT nLBA,
+	FILE* fpC2
+	);
+
+VOID WriteSubChannel(
+	PDISC pDisc,
+	LPBYTE lpSubcodeRaw,
 	LPBYTE lpSubcode,
 	INT nLBA,
 	BYTE byCurrentTrackNum,
@@ -288,13 +288,13 @@ BOOL SplitFileForGD(
 
 VOID DescrambleMainChannel(
 	PEXT_ARG pExtArg,
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	FILE* fpTbl,
 	FILE* fpImg
 	);
 
 BOOL CreateBinCueCcd(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPCTSTR pszPath,
 	LPCTSTR pszImgName,
 	BOOL lpCatalog,

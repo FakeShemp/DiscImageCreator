@@ -148,11 +148,12 @@ fixed create file
   if subdirectory don't exist, create it. (re-fix)
 
 *2014-01-10
-http://www.mediafire.com/download/rex9fufshe16k3u/
+http://www.mediafire.com/?rex9fufshe16k3u/
 refactoring
 fixed StorageQueryProperty log
 
 *2014-06-21
+http://www.mediafire.com/?dv2wb1qp2h2yie1/
 rewrote many code
 - changed: argment format
 - added: reset command (for PLEXTOR only)
@@ -186,3 +187,18 @@ rewrote many code
 - fixed: transfer length (because speed down gd-rom ripping)
 - fixed: c2 error fix logic
 - fixed: check CD+G per track (for [MCD]WonderMega Collection)
+
+*2014-10-17
+- added: eject command (eject the tray)
+- added: start command (spin up the disc)
+- added: /f option of cd command (But I don't know whether or not a cache is clear.)
+- added: Output log of mode sense (page code: 0x2a)
+- added: fix AFrame of Adr 2,3 of SubQ(=MCN, ISRC)
+- improved: fix Adr 2 of SubQ(check whether or not adr is correct.)
+- improved: fix Adr 2 of SubQ(Sub[19] & 0x0f => 0 and Sub[20] => 0)
+- improved: Adr fixing logic
+- improved: fix weird tracknum of subchannel
+- improved: DC ripping speed
+- fixed: c2 file size
+- fixed: C2 rereading doesn't work
+- fixed: /m option

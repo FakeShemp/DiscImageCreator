@@ -173,9 +173,9 @@ VOID LittleToBig(
 // http://msdn.microsoft.com/ja-jp/library/83ythb65.aspx
 // http://senbee.seesaa.net/article/19124170.html
 LPVOID ConvParagraphBoundary(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	LPBYTE pv
 	)
 {
-	return (LPVOID)(((UINT_PTR)pv + pDevData->AlignmentMask) & ~pDevData->AlignmentMask);
+	return (LPVOID)(((UINT_PTR)pv + pDevice->AlignmentMask) & ~pDevice->AlignmentMask);
 }

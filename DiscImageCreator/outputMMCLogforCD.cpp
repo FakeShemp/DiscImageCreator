@@ -542,18 +542,18 @@ VOID OutputFsPceBootSector(
 }
 
 VOID OutputMmcTocWithPregap(
-	PDISC_DATA pDiscData
+	PDISC pDisc
 	)
 {
 	OutputDiscLogA("TOC with pregap\n");
-	for (UINT r = 0; r < pDiscData->SCSI.toc.LastTrack; r++) {
+	for (UINT r = 0; r < pDisc->SCSI.toc.LastTrack; r++) {
 		OutputDiscLogA(
 			"\tTrack %2u, Ctl %u, Mode %u", r + 1,
-			pDiscData->SUB_CHANNEL.lpCtlList[r], pDiscData->SUB_CHANNEL.lpModeList[r]);
+			pDisc->SUB.lpCtlList[r], pDisc->SUB.lpModeList[r]);
 		for (UINT k = 0; k < MAXIMUM_NUMBER_INDEXES; k++) {
-			if (pDiscData->SUB_CHANNEL.lpFirstLBAListOnSub[r][k] != -1) {
+			if (pDisc->SUB.lpFirstLBAListOnSub[r][k] != -1) {
 				OutputDiscLogA(", Index%u %6d", k,
-					pDiscData->SUB_CHANNEL.lpFirstLBAListOnSub[r][k]);
+					pDisc->SUB.lpFirstLBAListOnSub[r][k]);
 			}
 			else if (k == 0) {
 				OutputDiscLogA(",              ");
@@ -565,7 +565,7 @@ VOID OutputMmcTocWithPregap(
 
 VOID OutputMmcCDOffset(
 	PEXT_ARG pExtArg,
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	BOOL bGetDrive,
 	INT nDriveSampleOffset,
 	INT nDriveOffset
@@ -576,18 +576,18 @@ VOID OutputMmcCDOffset(
 		OutputDiscLogA(
 			"(Drive offset data referes to http://www.accuraterip.com)");
 	}
-	if (pExtArg->bAdd && pDiscData->SCSI.bAudioOnly) {
-		pDiscData->MAIN_CHANNEL.nCombinedOffset += pExtArg->nAudioCDOffsetNum * 4;
+	if (pExtArg->bAdd && pDisc->SCSI.bAudioOnly) {
+		pDisc->MAIN.nCombinedOffset += pExtArg->nAudioCDOffsetNum * 4;
 		OutputDiscLogA(
 			"\n"
 			"\t       Combined Offset(Byte) %6d, (Samples) %5d\n"
 			"\t-         Drive Offset(Byte) %6d, (Samples) %5d\n"
 			"\t----------------------------------------------------\n"
 			"\t User Specified Offset(Byte) %6d, (Samples) %5d\n",
-			pDiscData->MAIN_CHANNEL.nCombinedOffset, pDiscData->MAIN_CHANNEL.nCombinedOffset / 4,
+			pDisc->MAIN.nCombinedOffset, pDisc->MAIN.nCombinedOffset / 4,
 			nDriveOffset, nDriveSampleOffset,
-			pDiscData->MAIN_CHANNEL.nCombinedOffset - nDriveOffset,
-			(pDiscData->MAIN_CHANNEL.nCombinedOffset - nDriveOffset) / 4);
+			pDisc->MAIN.nCombinedOffset - nDriveOffset,
+			(pDisc->MAIN.nCombinedOffset - nDriveOffset) / 4);
 	}
 	else {
 		OutputDiscLogA(
@@ -596,10 +596,10 @@ VOID OutputMmcCDOffset(
 			"\t-   Drive Offset(Byte) %6d, (Samples) %5d\n"
 			"\t----------------------------------------------\n"
 			"\t       CD Offset(Byte) %6d, (Samples) %5d\n",
-			pDiscData->MAIN_CHANNEL.nCombinedOffset, pDiscData->MAIN_CHANNEL.nCombinedOffset / 4,
+			pDisc->MAIN.nCombinedOffset, pDisc->MAIN.nCombinedOffset / 4,
 			nDriveOffset, nDriveSampleOffset,
-			pDiscData->MAIN_CHANNEL.nCombinedOffset - nDriveOffset,
-			(pDiscData->MAIN_CHANNEL.nCombinedOffset - nDriveOffset) / 4);
+			pDisc->MAIN.nCombinedOffset - nDriveOffset,
+			(pDisc->MAIN.nCombinedOffset - nDriveOffset) / 4);
 	}
 }
 
@@ -683,9 +683,9 @@ VOID OutputMmcCDSub96Raw(
 }
 
 VOID OutputMmcCDSubToLog(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPBYTE lpSubcode,
-	LPBYTE lpSubcodeOrg,
+	LPBYTE lpSubcodeRaw,
 	INT nLBA,
 	INT byTrackNum,
 	FILE* fpParse
@@ -784,16 +784,30 @@ VOID OutputMmcCDSubToLog(
 				lpSubcode[17], lpSubcode[19], lpSubcode[20], lpSubcode[21]);
 		}
 		break;
-	case ADR_ENCODES_MEDIA_CATALOG:
+	case ADR_ENCODES_MEDIA_CATALOG: {
+		_TCHAR str[META_CATALOG_SIZE] = { 0 };
+#ifdef UNICODE
+		MultiByteToWideChar(CP_ACP, 0,
+			pDisc->SUB.szCatalog, META_CATALOG_SIZE, str, META_CATALOG_SIZE);
+#else
+		strncpy(str, pDisc->SUB.szCatalog, META_CATALOG_SIZE);
+#endif
 		_sntprintf(str2, BufSize,
-			_T("Media Catalog Number  [%13s], AbsTime[     :%02x], "),
-			pDiscData->SUB_CHANNEL.szCatalog, lpSubcode[21]);
+			_T("Media Catalog Number  [%13s], AbsTime[     :%02x], "), str, lpSubcode[21]);
 		break;
-	case ADR_ENCODES_ISRC:
+	}
+	case ADR_ENCODES_ISRC: {
+		_TCHAR str[META_ISRC_SIZE] = { 0 };
+#ifdef UNICODE
+		MultiByteToWideChar(CP_ACP, 0,
+			pDisc->SUB.pszISRC[byTrackNum - 1], META_ISRC_SIZE, str, META_ISRC_SIZE);
+#else
+		strncpy(str, pDisc->SUB.pszISRC[byTrackNum - 1], META_ISRC_SIZE);
+#endif
 		_sntprintf(str2, BufSize,
-			_T("Itn Std Recording Code [%12s], AbsTime[     :%02x], "),
-			pDiscData->SUB_CHANNEL.pszISRC[byTrackNum - 1], lpSubcode[21]);
+			_T("Itn Std Recording Code [%12s], AbsTime[     :%02x], "), str, lpSubcode[21]);
 		break;
+	}
 	case 5:
 		if (lpSubcode[14] == 0xB0) {
 			_sntprintf(str2, BufSize,
@@ -833,13 +847,13 @@ VOID OutputMmcCDSubToLog(
 		break;
 	}
 
-	SUB_R_TO_W_DATA scRW[4] = { 0 };
+	SUB_R_TO_W scRW[4] = { 0 };
 	BYTE tmpCode[24] = { 0 };
 	_TCHAR str3[128] = { 0 };
 	_tcsncat(str3, _T("RtoW["), 5);
 	for (INT i = 0; i < 4; i++) {
 		for (INT j = 0; j < 24; j++) {
-			tmpCode[j] = (BYTE)(*(lpSubcodeOrg + (i * 24 + j)) & 0x3F);
+			tmpCode[j] = (BYTE)(*(lpSubcodeRaw + (i * 24 + j)) & 0x3F);
 		}
 		memcpy(&scRW[i], tmpCode, sizeof(scRW[i]));
 		switch (scRW[i].command) {

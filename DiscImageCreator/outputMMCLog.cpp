@@ -32,18 +32,13 @@ VOID OutputMmcDiscInformation(
 	)
 {
 	LPCSTR lpDiscStatus[] = {
-		"Empty Disc", "Incomplete Disc",
-		"Finalized Disc", "Others"
+		"Empty", "Incomplete", "Complete", "Others"
 	};
 	LPCSTR lpStateOfLastSession[] = {
-		"Empty Session", "Incomplete Session",
-		"Reserved / Damaged Session", "Complete Session"
+		"Empty", "Incomplete", "Reserved / Damaged", "Complete"
 	};
 	LPCSTR lpBGFormatStatus[] = {
-		"The disc is neither CD-RW nor DVD+RW",
-		"A background format was started",
-		"A background format is in progress",
-		"Background formatting has completed"
+		"None", "Incomplete", "Running", "Complete"
 	};
 	OutputDiscLogA(
 		"DiscInformation\n"
@@ -62,27 +57,27 @@ VOID OutputMmcDiscInformation(
 		"\t                        Disc Type: ",
 		lpDiscStatus[pDiscInformation->DiscStatus],
 		lpStateOfLastSession[pDiscInformation->LastSessionStatus],
-		BOOLEAN_TO_STRING_YES_NO(pDiscInformation->Erasable),
+		BOOLEAN_TO_STRING_YES_NO_A(pDiscInformation->Erasable),
 		pDiscInformation->FirstTrackNumber,
 		pDiscInformation->NumberOfSessionsLsb,
 		pDiscInformation->LastSessionFirstTrackLsb,
 		pDiscInformation->LastSessionLastTrackLsb,
 		lpBGFormatStatus[pDiscInformation->MrwStatus],
-		BOOLEAN_TO_STRING_YES_NO(pDiscInformation->MrwDirtyBit),
-		BOOLEAN_TO_STRING_YES_NO(pDiscInformation->URU),
-		BOOLEAN_TO_STRING_YES_NO(pDiscInformation->DBC_V),
-		BOOLEAN_TO_STRING_YES_NO(pDiscInformation->DID_V));
+		BOOLEAN_TO_STRING_YES_NO_A(pDiscInformation->MrwDirtyBit),
+		BOOLEAN_TO_STRING_YES_NO_A(pDiscInformation->URU),
+		BOOLEAN_TO_STRING_YES_NO_A(pDiscInformation->DBC_V),
+		BOOLEAN_TO_STRING_YES_NO_A(pDiscInformation->DID_V));
 	switch (pDiscInformation->DiscType) {
-	case 0:
+	case DISK_TYPE_CDDA:
 		OutputDiscLogA("CD-DA or CD-ROM Disc\n");
 		break;
-	case 0x10:
+	case DISK_TYPE_CDI:
 		OutputDiscLogA("CD-I Disc\n");
 		break;
-	case 0x20:
+	case DISK_TYPE_XA:
 		OutputDiscLogA("CD-ROM XA Disc\n");
 		break;
-	case 0xff:
+	case DISK_TYPE_UNDEFINED:
 		OutputDiscLogA("Undefined\n");
 		break;
 	default:
@@ -208,8 +203,8 @@ VOID OutputMmcFeatureCore(
 	OutputDriveLogA(
 		"\t\t  DeviceBusyEvent: %s\n"
 		"\t\t         INQUIRY2: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pCore->DeviceBusyEvent),
-		BOOLEAN_TO_STRING_YES_NO(pCore->INQUIRY2));
+		BOOLEAN_TO_STRING_YES_NO_A(pCore->DeviceBusyEvent),
+		BOOLEAN_TO_STRING_YES_NO_A(pCore->INQUIRY2));
 }
 
 VOID OutputMmcFeatureMorphing(
@@ -220,8 +215,8 @@ VOID OutputMmcFeatureMorphing(
 		"\tFeatureMorphing\n"
 		"\t\tAsynchronous: %s\n"
 		"\t\t     OCEvent: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pMorphing->Asynchronous),
-		BOOLEAN_TO_STRING_YES_NO(pMorphing->OCEvent));
+		BOOLEAN_TO_STRING_YES_NO_A(pMorphing->Asynchronous),
+		BOOLEAN_TO_STRING_YES_NO_A(pMorphing->OCEvent));
 }
 
 VOID OutputMmcFeatureRemovableMedium(
@@ -234,9 +229,9 @@ VOID OutputMmcFeatureRemovableMedium(
 		"\t\tDefaultToPrevent: %s\n"
 		"\t\t           Eject: %s\n"
 		"\t\tLoadingMechanism: ",
-		BOOLEAN_TO_STRING_YES_NO(pRemovableMedium->Lockable),
-		BOOLEAN_TO_STRING_YES_NO(pRemovableMedium->DefaultToPrevent),
-		BOOLEAN_TO_STRING_YES_NO(pRemovableMedium->Eject));
+		BOOLEAN_TO_STRING_YES_NO_A(pRemovableMedium->Lockable),
+		BOOLEAN_TO_STRING_YES_NO_A(pRemovableMedium->DefaultToPrevent),
+		BOOLEAN_TO_STRING_YES_NO_A(pRemovableMedium->Eject));
 	switch (pRemovableMedium->LoadingMechanism) {
 	case 0:
 		OutputDriveLogA("Caddy/Slot type loading mechanism\n");
@@ -272,10 +267,10 @@ VOID OutputMmcFeatureWriteProtect(
 		"\t\tSupportsPersistentWriteProtect: %s\n"
 		"\t\t               WriteInhibitDCB: %s\n"
 		"\t\t           DiscWriteProtectPAC: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pWriteProtect->SupportsSWPPBit),
-		BOOLEAN_TO_STRING_YES_NO(pWriteProtect->SupportsPersistentWriteProtect),
-		BOOLEAN_TO_STRING_YES_NO(pWriteProtect->WriteInhibitDCB),
-		BOOLEAN_TO_STRING_YES_NO(pWriteProtect->DiscWriteProtectPAC));
+		BOOLEAN_TO_STRING_YES_NO_A(pWriteProtect->SupportsSWPPBit),
+		BOOLEAN_TO_STRING_YES_NO_A(pWriteProtect->SupportsPersistentWriteProtect),
+		BOOLEAN_TO_STRING_YES_NO_A(pWriteProtect->WriteInhibitDCB),
+		BOOLEAN_TO_STRING_YES_NO_A(pWriteProtect->DiscWriteProtectPAC));
 }
 
 VOID OutputMmcFeatureRandomReadable(
@@ -290,7 +285,7 @@ VOID OutputMmcFeatureRandomReadable(
 		MAKELONG(MAKEWORD(pRandomReadable->LogicalBlockSize[3], pRandomReadable->LogicalBlockSize[2]),
 			MAKEWORD(pRandomReadable->LogicalBlockSize[1], pRandomReadable->LogicalBlockSize[0])),
 		MAKEWORD(pRandomReadable->Blocking[1], pRandomReadable->Blocking[0]),
-		BOOLEAN_TO_STRING_YES_NO(pRandomReadable->ErrorRecoveryPagePresent));
+		BOOLEAN_TO_STRING_YES_NO_A(pRandomReadable->ErrorRecoveryPagePresent));
 }
 
 VOID OutputMmcFeatureMultiRead(
@@ -316,9 +311,9 @@ VOID OutputMmcFeatureCdRead(
 		"\t\t          CDText: %s\n"
 		"\t\t     C2ErrorData: %s\n"
 		"\t\tDigitalAudioPlay: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pCDRead->CDText),
-		BOOLEAN_TO_STRING_YES_NO(pCDRead->C2ErrorData),
-		BOOLEAN_TO_STRING_YES_NO(pCDRead->DigitalAudioPlay));
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRead->CDText),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRead->C2ErrorData),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRead->DigitalAudioPlay));
 }
 
 VOID OutputMmcFeatureDvdRead(
@@ -329,8 +324,8 @@ VOID OutputMmcFeatureDvdRead(
 		"\tFeatureDvdRead\n"
 		"\t\t  Multi110: %s\n"
 		"\t\t DualDashR: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDVDRead->Multi110),
-		BOOLEAN_TO_STRING_YES_NO(pDVDRead->DualDashR));
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRead->Multi110),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRead->DualDashR));
 }
 
 VOID OutputMmcFeatureRandomWritable(
@@ -348,7 +343,7 @@ VOID OutputMmcFeatureRandomWritable(
 		MAKELONG(MAKEWORD(pRandomWritable->LogicalBlockSize[3], pRandomWritable->LogicalBlockSize[2]),
 			MAKEWORD(pRandomWritable->LogicalBlockSize[1], pRandomWritable->LogicalBlockSize[0])),
 		MAKEWORD(pRandomWritable->Blocking[1], pRandomWritable->Blocking[0]),
-		BOOLEAN_TO_STRING_YES_NO(pRandomWritable->ErrorRecoveryPagePresent));
+		BOOLEAN_TO_STRING_YES_NO_A(pRandomWritable->ErrorRecoveryPagePresent));
 }
 
 VOID OutputMmcFeatureIncrementalStreamingWritable(
@@ -363,9 +358,9 @@ VOID OutputMmcFeatureIncrementalStreamingWritable(
 		"\t\tTrackRessourceInformation: %s\n"
 		"\t\t        NumberOfLinkSizes: %u\n",
 		MAKEWORD(pIncremental->DataTypeSupported[1], pIncremental->DataTypeSupported[0]),
-		BOOLEAN_TO_STRING_YES_NO(pIncremental->BufferUnderrunFree),
-		BOOLEAN_TO_STRING_YES_NO(pIncremental->AddressModeReservation),
-		BOOLEAN_TO_STRING_YES_NO(pIncremental->TrackRessourceInformation),
+		BOOLEAN_TO_STRING_YES_NO_A(pIncremental->BufferUnderrunFree),
+		BOOLEAN_TO_STRING_YES_NO_A(pIncremental->AddressModeReservation),
+		BOOLEAN_TO_STRING_YES_NO_A(pIncremental->TrackRessourceInformation),
 		pIncremental->NumberOfLinkSizes);
 	for (INT i = 0; i < pIncremental->NumberOfLinkSizes; i++) {
 		OutputDriveLogA(
@@ -398,11 +393,11 @@ VOID OutputMmcFeatureFormattable(
 		"\t\tSpareAreaExpansion: %s\n"
 		"\t\tRENoSpareAllocated: %s\n"
 		"\t\t   RRandomWritable: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pFormattable->FullCertification),
-		BOOLEAN_TO_STRING_YES_NO(pFormattable->QuickCertification),
-		BOOLEAN_TO_STRING_YES_NO(pFormattable->SpareAreaExpansion),
-		BOOLEAN_TO_STRING_YES_NO(pFormattable->RENoSpareAllocated),
-		BOOLEAN_TO_STRING_YES_NO(pFormattable->RRandomWritable));
+		BOOLEAN_TO_STRING_YES_NO_A(pFormattable->FullCertification),
+		BOOLEAN_TO_STRING_YES_NO_A(pFormattable->QuickCertification),
+		BOOLEAN_TO_STRING_YES_NO_A(pFormattable->SpareAreaExpansion),
+		BOOLEAN_TO_STRING_YES_NO_A(pFormattable->RENoSpareAllocated),
+		BOOLEAN_TO_STRING_YES_NO_A(pFormattable->RRandomWritable));
 }
 
 VOID OutputMmcFeatureDefectManagement(
@@ -412,7 +407,7 @@ VOID OutputMmcFeatureDefectManagement(
 	OutputDriveLogA(
 		"\tFeatureDefectManagement\n"
 		"\t\tSupplimentalSpareArea: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDefect->SupplimentalSpareArea));
+		BOOLEAN_TO_STRING_YES_NO_A(pDefect->SupplimentalSpareArea));
 }
 
 VOID OutputMmcFeatureWriteOnce(
@@ -427,7 +422,7 @@ VOID OutputMmcFeatureWriteOnce(
 		MAKELONG(MAKEWORD(pWriteOnce->LogicalBlockSize[3], pWriteOnce->LogicalBlockSize[2]),
 			MAKEWORD(pWriteOnce->LogicalBlockSize[1], pWriteOnce->LogicalBlockSize[0])),
 		MAKEWORD(pWriteOnce->Blocking[1], pWriteOnce->Blocking[0]),
-		BOOLEAN_TO_STRING_YES_NO(pWriteOnce->ErrorRecoveryPagePresent));
+		BOOLEAN_TO_STRING_YES_NO_A(pWriteOnce->ErrorRecoveryPagePresent));
 }
 
 VOID OutputMmcFeatureRestrictedOverwrite(
@@ -467,9 +462,9 @@ VOID OutputMmcFeatureMrw(
 		"\t\t       Write: %s\n"
 		"\t\t DvdPlusRead: %s\n"
 		"\t\tDvdPlusWrite: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pMrw->Write),
-		BOOLEAN_TO_STRING_YES_NO(pMrw->DvdPlusRead),
-		BOOLEAN_TO_STRING_YES_NO(pMrw->DvdPlusWrite));
+		BOOLEAN_TO_STRING_YES_NO_A(pMrw->Write),
+		BOOLEAN_TO_STRING_YES_NO_A(pMrw->DvdPlusRead),
+		BOOLEAN_TO_STRING_YES_NO_A(pMrw->DvdPlusWrite));
 }
 
 VOID OutputMmcFeatureEnhancedDefectReporting(
@@ -481,7 +476,7 @@ VOID OutputMmcFeatureEnhancedDefectReporting(
 		"\t\t       DRTDMSupported: %s\n"
 		"\t\tNumberOfDBICacheZones: %u\n"
 		"\t\t      NumberOfEntries: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(pEnhanced->DRTDMSupported),
+		BOOLEAN_TO_STRING_YES_NO_A(pEnhanced->DRTDMSupported),
 		pEnhanced->NumberOfDBICacheZones,
 		MAKEWORD(pEnhanced->NumberOfEntries[1], pEnhanced->NumberOfEntries[0]));
 }
@@ -495,9 +490,9 @@ VOID OutputMmcFeatureDvdPlusRW(
 		"\t\t     Write: %s\n"
 		"\t\t CloseOnly: %s\n"
 		"\t\tQuickStart: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDVDPLUSRW->Write),
-		BOOLEAN_TO_STRING_YES_NO(pDVDPLUSRW->CloseOnly),
-		BOOLEAN_TO_STRING_YES_NO(pDVDPLUSRW->QuickStart));
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPLUSRW->Write),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPLUSRW->CloseOnly),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPLUSRW->QuickStart));
 }
 
 VOID OutputMmcFeatureDvdPlusR(
@@ -507,7 +502,7 @@ VOID OutputMmcFeatureDvdPlusR(
 	OutputDriveLogA(
 		"\tFeatureDvdPlusR\n"
 		"\t\tWrite: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDVDPLUSR->Write));
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPLUSR->Write));
 }
 
 VOID OutputMmcFeatureRigidRestrictedOverwrite(
@@ -520,10 +515,10 @@ VOID OutputMmcFeatureRigidRestrictedOverwrite(
 		"\t\t            Intermediate: %s\n"
 		"\t\t    DefectStatusDataRead: %s\n"
 		"\t\tDefectStatusDataGenerate: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDVDRWRestricted->Blank),
-		BOOLEAN_TO_STRING_YES_NO(pDVDRWRestricted->Intermediate),
-		BOOLEAN_TO_STRING_YES_NO(pDVDRWRestricted->DefectStatusDataRead),
-		BOOLEAN_TO_STRING_YES_NO(pDVDRWRestricted->DefectStatusDataGenerate));
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRWRestricted->Blank),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRWRestricted->Intermediate),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRWRestricted->DefectStatusDataRead),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRWRestricted->DefectStatusDataGenerate));
 }
 
 VOID OutputMmcFeatureCdTrackAtOnce(
@@ -539,12 +534,12 @@ VOID OutputMmcFeatureCdTrackAtOnce(
 		"\t\t      RWSubchannelRawOk: %s\n"
 		"\t\t     BufferUnderrunFree: %s\n"
 		"\t\t      DataTypeSupported: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(pCDTrackAtOnce->RWSubchannelsRecordable),
-		BOOLEAN_TO_STRING_YES_NO(pCDTrackAtOnce->CdRewritable),
-		BOOLEAN_TO_STRING_YES_NO(pCDTrackAtOnce->TestWriteOk),
-		BOOLEAN_TO_STRING_YES_NO(pCDTrackAtOnce->RWSubchannelPackedOk),
-		BOOLEAN_TO_STRING_YES_NO(pCDTrackAtOnce->RWSubchannelRawOk),
-		BOOLEAN_TO_STRING_YES_NO(pCDTrackAtOnce->BufferUnderrunFree),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDTrackAtOnce->RWSubchannelsRecordable),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDTrackAtOnce->CdRewritable),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDTrackAtOnce->TestWriteOk),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDTrackAtOnce->RWSubchannelPackedOk),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDTrackAtOnce->RWSubchannelRawOk),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDTrackAtOnce->BufferUnderrunFree),
 		MAKEWORD(pCDTrackAtOnce->DataTypeSupported[1], pCDTrackAtOnce->DataTypeSupported[0]));
 }
 
@@ -562,13 +557,13 @@ VOID OutputMmcFeatureCdMastering(
 		"\t\t        SessionAtOnceOk: %s\n"
 		"\t\t     BufferUnderrunFree: %s\n"
 		"\t\t  MaximumCueSheetLength: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(pCDMastering->RWSubchannelsRecordable),
-		BOOLEAN_TO_STRING_YES_NO(pCDMastering->CdRewritable),
-		BOOLEAN_TO_STRING_YES_NO(pCDMastering->TestWriteOk),
-		BOOLEAN_TO_STRING_YES_NO(pCDMastering->RawRecordingOk),
-		BOOLEAN_TO_STRING_YES_NO(pCDMastering->RawMultiSessionOk),
-		BOOLEAN_TO_STRING_YES_NO(pCDMastering->SessionAtOnceOk),
-		BOOLEAN_TO_STRING_YES_NO(pCDMastering->BufferUnderrunFree),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDMastering->RWSubchannelsRecordable),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDMastering->CdRewritable),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDMastering->TestWriteOk),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDMastering->RawRecordingOk),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDMastering->RawMultiSessionOk),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDMastering->SessionAtOnceOk),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDMastering->BufferUnderrunFree),
 		MAKELONG(MAKEWORD(0, pCDMastering->MaximumCueSheetLength[2]),
 			MAKEWORD(pCDMastering->MaximumCueSheetLength[1], pCDMastering->MaximumCueSheetLength[0])));
 }
@@ -583,10 +578,10 @@ VOID OutputMmcFeatureDvdRecordableWrite(
 		"\t\t         TestWrite: %s\n"
 		"\t\t        RDualLayer: %s\n"
 		"\t\tBufferUnderrunFree: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDVDRecordable->DVD_RW),
-		BOOLEAN_TO_STRING_YES_NO(pDVDRecordable->TestWrite),
-		BOOLEAN_TO_STRING_YES_NO(pDVDRecordable->RDualLayer),
-		BOOLEAN_TO_STRING_YES_NO(pDVDRecordable->BufferUnderrunFree));
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRecordable->DVD_RW),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRecordable->TestWrite),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRecordable->RDualLayer),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDRecordable->BufferUnderrunFree));
 }
 
 VOID OutputMmcFeatureLayerJumpRecording(
@@ -617,14 +612,14 @@ VOID OutputMmcFeatureCDRWMediaWriteSupport(
 		"\t\tSubtype 5: %s\n"
 		"\t\tSubtype 6: %s\n"
 		"\t\tSubtype 7: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype0),
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype1),
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype2),
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype3),
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype4),
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype5),
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype6),
-		BOOLEAN_TO_STRING_YES_NO(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype7));
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype0),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype1),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype2),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype3),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype4),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype5),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype6),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDRWMediaWrite->CDRWMediaSubtypeSupport.Subtype7));
 }
 
 VOID OutputMmcFeatureDvdPlusRWDualLayer(
@@ -636,9 +631,9 @@ VOID OutputMmcFeatureDvdPlusRWDualLayer(
 		"\t\t     Write: %s\n"
 		"\t\t CloseOnly: %s\n"
 		"\t\tQuickStart: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDVDPlusRWDL->Write),
-		BOOLEAN_TO_STRING_YES_NO(pDVDPlusRWDL->CloseOnly),
-		BOOLEAN_TO_STRING_YES_NO(pDVDPlusRWDL->QuickStart));
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPlusRWDL->Write),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPlusRWDL->CloseOnly),
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPlusRWDL->QuickStart));
 }
 
 VOID OutputMmcFeatureDvdPlusRDualLayer(
@@ -648,7 +643,7 @@ VOID OutputMmcFeatureDvdPlusRDualLayer(
 	OutputDriveLogA(
 		"\tFeatureDvdPlusRDualLayer\n"
 		"\t\tWrite: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pDVDPlusRDL->Write));
+		BOOLEAN_TO_STRING_YES_NO_A(pDVDPlusRDL->Write));
 }
 
 VOID OutputMmcFeatureHybridDisc(
@@ -658,7 +653,7 @@ VOID OutputMmcFeatureHybridDisc(
 	OutputDriveLogA(
 		"\tFeatureHybridDisc\n"
 		"\t\tResetImmunity: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pHybridDisc->ResetImmunity));
+		BOOLEAN_TO_STRING_YES_NO_A(pHybridDisc->ResetImmunity));
 }
 
 VOID OutputMmcFeaturePowerManagement(
@@ -682,7 +677,7 @@ VOID OutputMmcFeatureSMART(
 	OutputDriveLogA(
 		"\tFeatureSMART\n"
 		"\t\tFaultFailureReportingPagePresent: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pSmart->FaultFailureReportingPagePresent));
+		BOOLEAN_TO_STRING_YES_NO_A(pSmart->FaultFailureReportingPagePresent));
 }
 
 VOID OutputMmcFeatureEmbeddedChanger(
@@ -694,8 +689,8 @@ VOID OutputMmcFeatureEmbeddedChanger(
 		"\t\tSupportsDiscPresent: %s\n"
 		"\t\t  SideChangeCapable: %s\n"
 		"\t\t  HighestSlotNumber: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(pEmbedded->SupportsDiscPresent),
-		BOOLEAN_TO_STRING_YES_NO(pEmbedded->SideChangeCapable),
+		BOOLEAN_TO_STRING_YES_NO_A(pEmbedded->SupportsDiscPresent),
+		BOOLEAN_TO_STRING_YES_NO_A(pEmbedded->SideChangeCapable),
 		pEmbedded->HighestSlotNumber);
 }
 
@@ -709,9 +704,9 @@ VOID OutputMmcFeatureCDAudioAnalogPlay(
 		"\t\tSeperateChannelMute: %s\n"
 		"\t\t      ScanSupported: %s\n"
 		"\t\tNumerOfVolumeLevels: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(pCDAudio->SeperateVolume),
-		BOOLEAN_TO_STRING_YES_NO(pCDAudio->SeperateChannelMute),
-		BOOLEAN_TO_STRING_YES_NO(pCDAudio->ScanSupported),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDAudio->SeperateVolume),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDAudio->SeperateChannelMute),
+		BOOLEAN_TO_STRING_YES_NO_A(pCDAudio->ScanSupported),
 		MAKEWORD(pCDAudio->NumerOfVolumeLevels[1], pCDAudio->NumerOfVolumeLevels[0]));
 }
 
@@ -722,7 +717,7 @@ VOID OutputMmcFeatureMicrocodeUpgrade(
 	OutputDriveLogA(
 		"\tFeatureMicrocodeUpgrade\n"
 		"\t\tM5: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pMicrocode->M5));
+		BOOLEAN_TO_STRING_YES_NO_A(pMicrocode->M5));
 }
 
 VOID OutputMmcFeatureTimeout(
@@ -733,7 +728,7 @@ VOID OutputMmcFeatureTimeout(
 		"\tFeatureTimeout\n"
 		"\t\t    Group3: %s\n"
 		"\t\tUnitLength: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(pTimeOut->Group3),
+		BOOLEAN_TO_STRING_YES_NO_A(pTimeOut->Group3),
 		MAKEWORD(pTimeOut->UnitLength[1], pTimeOut->UnitLength[0]));
 }
 
@@ -758,11 +753,11 @@ VOID OutputMmcFeatureRealTimeStreaming(
 		"\t\t       WriteSpeedInMP2A: %s\n"
 		"\t\t             SetCDSpeed: %s\n"
 		"\t\tReadBufferCapacityBlock: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(pRealTimeStreaming->StreamRecording),
-		BOOLEAN_TO_STRING_YES_NO(pRealTimeStreaming->WriteSpeedInGetPerf),
-		BOOLEAN_TO_STRING_YES_NO(pRealTimeStreaming->WriteSpeedInMP2A),
-		BOOLEAN_TO_STRING_YES_NO(pRealTimeStreaming->SetCDSpeed),
-		BOOLEAN_TO_STRING_YES_NO(pRealTimeStreaming->ReadBufferCapacityBlock));
+		BOOLEAN_TO_STRING_YES_NO_A(pRealTimeStreaming->StreamRecording),
+		BOOLEAN_TO_STRING_YES_NO_A(pRealTimeStreaming->WriteSpeedInGetPerf),
+		BOOLEAN_TO_STRING_YES_NO_A(pRealTimeStreaming->WriteSpeedInMP2A),
+		BOOLEAN_TO_STRING_YES_NO_A(pRealTimeStreaming->SetCDSpeed),
+		BOOLEAN_TO_STRING_YES_NO_A(pRealTimeStreaming->ReadBufferCapacityBlock));
 }
 
 VOID OutputMmcFeatureLogicalUnitSerialNumber(
@@ -841,7 +836,7 @@ VOID OutputMmcFeatureAACS(
 		"\t\tBindingNonceBlockCount: %u\n"
 		"\t\t         NumberOfAGIDs: %u\n"
 		"\t\t           AACSVersion: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(pAACS->BindingNonceGeneration),
+		BOOLEAN_TO_STRING_YES_NO_A(pAACS->BindingNonceGeneration),
 		pAACS->BindingNonceBlockCount,
 		pAACS->NumberOfAGIDs,
 		pAACS->AACSVersion);
@@ -902,7 +897,7 @@ VOID OutputMmcFeatureReserved(
 }
 
 VOID OutputMmcFeatureNumber(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	LPBYTE lpConf,
 	DWORD dwAllLen
 	)
@@ -934,7 +929,7 @@ VOID OutputMmcFeatureNumber(
 			break;
 		case FeatureCdRead:
 			OutputMmcFeatureCdRead((PFEATURE_DATA_CD_READ)&lpConf[n]);
-			SetMmcFeatureCdRead((PFEATURE_DATA_CD_READ)&lpConf[n], pDevData);
+			SetMmcFeatureCdRead((PFEATURE_DATA_CD_READ)&lpConf[n], pDevice);
 			break;
 		case FeatureDvdRead:
 			OutputMmcFeatureDvdRead((PFEATURE_DATA_DVD_READ)&lpConf[n]);
@@ -1135,7 +1130,7 @@ VOID OutputMmcFeatureProfileType(
 }
 
 VOID OutputMmcInquiryData(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PINQUIRYDATA pInquiry
 	)
 {
@@ -1191,25 +1186,25 @@ VOID OutputMmcInquiryData(
 		"\t      LinkedCommands: %s\n"
 		"\t  RelativeAddressing: %s\n",
 		pInquiry->DeviceTypeModifier,
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->RemovableMedia),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->RemovableMedia),
 		pInquiry->Versions,
 		pInquiry->ResponseDataFormat,
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->HiSupport),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->NormACA),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->TerminateTask),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->AERC),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->HiSupport),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->NormACA),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->TerminateTask),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->AERC),
 		pInquiry->AdditionalLength,
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->MediumChanger),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->MultiPort),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->EnclosureServices),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->SoftReset),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->CommandQueue),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->LinkedCommands),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->RelativeAddressing));
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->MediumChanger),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->MultiPort),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->EnclosureServices),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->SoftReset),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->CommandQueue),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->LinkedCommands),
+		BOOLEAN_TO_STRING_YES_NO_A(pInquiry->RelativeAddressing));
 
-	strncpy(pDevData->szVendorId, 
+	strncpy(pDevice->szVendorId, 
 		(PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId));
-	strncpy(pDevData->szProductId, 
+	strncpy(pDevice->szProductId, 
 		(PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId));
 	OutputDriveLogA(
 		"\t            VendorId: %.8s\n"
@@ -1220,4 +1215,137 @@ VOID OutputMmcInquiryData(
 		pInquiry->ProductId,
 		pInquiry->ProductRevisionLevel,
 		pInquiry->VendorSpecific);
+}
+
+VOID OutputMmcModeSense10(
+	PDEVICE pDevice,
+	PSENSE pModesense
+	)
+{
+	OutputDriveLogA(
+		"ModeParmeterHeader10\n"
+		"\t         ModeDataLength: %u\n"
+		"\t             MediumType: %u\n"
+		"\tDeviceSpecificParameter: %u\n"
+		"\t  BlockDescriptorLength: %u\n"
+		, MAKEWORD(pModesense->header.ModeDataLength[1], pModesense->header.ModeDataLength[0])
+		, pModesense->header.MediumType
+		, pModesense->header.DeviceSpecificParameter
+		, MAKEWORD(pModesense->header.BlockDescriptorLength[1], pModesense->header.BlockDescriptorLength[0])
+		);
+	OutputDriveLogA(
+		"ModeSense10 (CDVD Capabilities & Mechanism Status Page)\n"
+		"\t              PageCode: %#04x\n"
+		"\t                 PSBit: %s\n"
+		"\t            PageLength: %u\n"
+		"\t               CDRRead: %s\n"
+		"\t               CDERead: %s\n"
+		"\t               Method2: %s\n"
+		"\t            DVDROMRead: %s\n"
+		"\t              DVDRRead: %s\n"
+		"\t            DVDRAMRead: %s\n"
+		"\t              CDRWrite: %s\n"
+		"\t              CDEWrite: %s\n"
+		"\t             TestWrite: %s\n"
+		"\t             DVDRWrite: %s\n"
+		"\t           DVDRAMWrite: %s\n"
+		"\t             AudioPlay: %s\n"
+		"\t             Composite: %s\n"
+		"\t        DigitalPortOne: %s\n"
+		"\t        DigitalPortTwo: %s\n"
+		"\t            Mode2Form1: %s\n"
+		"\t            Mode2Form2: %s\n"
+		"\t          MultiSession: %s\n"
+		"\t    BufferUnderrunFree: %s\n"
+		"\t                  CDDA: %s\n"
+		"\t          CDDAAccurate: %s\n"
+		"\t           RWSupported: %s\n"
+		"\t       RWDeinterleaved: %s\n"
+		"\t            C2Pointers: %s\n"
+		"\t                  ISRC: %s\n"
+		"\t                   UPC: %s\n"
+		"\t    ReadBarCodeCapable: %s\n"
+		"\t                  Lock: %s\n"
+		"\t             LockState: %s\n"
+		"\t         PreventJumper: %s\n"
+		"\t                 Eject: %s\n"
+		"\t  LoadingMechanismType: "
+		, pModesense->cdvd.PageCode, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.PSBit)
+		, pModesense->cdvd.PageLength, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.CDRRead)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.CDERead), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.Method2)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.DVDROMRead), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.DVDRRead)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.DVDRAMRead), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.CDRWrite)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.CDEWrite), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.TestWrite)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.DVDRWrite), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.DVDRAMWrite)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.AudioPlay), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.Composite)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.DigitalPortOne), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.DigitalPortTwo)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.Mode2Form1), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.Mode2Form2)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.MultiSession), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.BufferUnderrunFree)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.CDDA), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.CDDAAccurate)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.RWSupported), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.RWDeinterleaved)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.C2Pointers), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.ISRC)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.UPC), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.ReadBarCodeCapable)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.Lock), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.LockState)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.PreventJumper), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.Eject));
+
+	switch (pModesense->cdvd.LoadingMechanismType) {
+	case LOADING_MECHANISM_CADDY:
+		OutputDriveLogA("caddy\n")
+			break;
+	case LOADING_MECHANISM_TRAY:
+		OutputDriveLogA("tray\n")
+			break;
+	case LOADING_MECHANISM_POPUP:
+		OutputDriveLogA("popup\n")
+			break;
+	case LOADING_MECHANISM_INDIVIDUAL_CHANGER:
+		OutputDriveLogA("individual changer\n")
+			break;
+	case LOADING_MECHANISM_CARTRIDGE_CHANGER:
+		OutputDriveLogA("cartridge changer\n")
+			break;
+	default:
+		OutputDriveLogA("unknown\n")
+			break;
+	}
+	WORD rsm = MAKEWORD(pModesense->cdvd.ReadSpeedMaximum[1], pModesense->cdvd.ReadSpeedMaximum[0]);
+	WORD rsc = MAKEWORD(pModesense->cdvd.ReadSpeedCurrent[1], pModesense->cdvd.ReadSpeedCurrent[0]);
+	WORD wsm = MAKEWORD(pModesense->cdvd.WriteSpeedMaximum[1], pModesense->cdvd.WriteSpeedMaximum[0]);
+	WORD wsc = MAKEWORD(pModesense->cdvd.WriteSpeedCurrent[1], pModesense->cdvd.WriteSpeedCurrent[0]);
+	WORD bs = MAKEWORD(pModesense->cdvd.BufferSize[1], pModesense->cdvd.BufferSize[0]);
+	OutputDriveLogA(
+		"\t        SeparateVolume: %s\n"
+		"\t   SeperateChannelMute: %s\n"
+		"\t   SupportsDiskPresent: %s\n"
+		"\t       SWSlotSelection: %s\n"
+		"\t     SideChangeCapable: %s\n"
+		"\t    RWInLeadInReadable: %s\n"
+		"\t      ReadSpeedMaximum: %u (%ux)\n"
+		"\t    NumberVolumeLevels: %u\n"
+		"\t            BufferSize: %u\n"
+		"\t      ReadSpeedCurrent: %u (%ux)\n"
+		"\t                   BCK: %s\n"
+		"\t                   RCK: %s\n"
+		"\t                  LSBF: %s\n"
+		"\t                Length: %u\n"
+		"\t     WriteSpeedMaximum: %u (%ux)\n"
+		"\t     WriteSpeedCurrent: %u (%ux)\n"
+		"\tCopyManagementRevision: %u\n"
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.SeparateVolume)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.SeperateChannelMute)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.SupportsDiskPresent)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.SWSlotSelection)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.SideChangeCapable)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.RWInLeadInReadable)
+		, rsm, rsm / 174
+		, MAKEWORD(pModesense->cdvd.NumberVolumeLevels[1], pModesense->cdvd.NumberVolumeLevels[0])
+		, bs
+		, rsc, rsc / 174
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.BCK), BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.RCK)
+		, BOOLEAN_TO_STRING_YES_NO_A(pModesense->cdvd.LSBF), pModesense->cdvd.Length
+		, wsm, wsm / 174
+		, wsc, wsc / 174
+		, MAKEWORD(pModesense->cdvd.CopyManagementRevision[1], pModesense->cdvd.CopyManagementRevision[0])
+		);
+	pDevice->wDriveBufSize = bs;
 }

@@ -12,8 +12,8 @@
 #include "outputMMCLogforDVD.h"
 
 BOOL ReadDVD(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
+	PDEVICE pDevice,
+	PDISC pDisc,
 	PEXT_ARG pExtArg,
 	LPCTSTR pszPath
 	)
@@ -28,16 +28,16 @@ BOOL ReadDVD(
 	LPBYTE pBuf = NULL;
 	try {
 		if (NULL == (pBuf = (LPBYTE)calloc(
-			pDevData->uiMaxTransferLength + pDevData->AlignmentMask, sizeof(BYTE)))) {
+			pDevice->uiMaxTransferLength + pDevice->AlignmentMask, sizeof(BYTE)))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			throw FALSE;
 		}
-		LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevData, pBuf);
+		LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevice, pBuf);
 
-		UINT uiTransferLen = pDevData->uiMaxTransferLength / DISC_RAW_READ;
+		UINT uiTransferLen = pDevice->uiMaxTransferLength / DISC_RAW_READ;
 		CDB::_READ12 cdb = { 0 };
 		cdb.OperationCode = SCSIOP_READ12;
-		cdb.LogicalUnitNumber = pDevData->address.Lun;
+		cdb.LogicalUnitNumber = pDevice->address.Lun;
 		cdb.TransferLength[0] = HIBYTE(HIWORD(uiTransferLen));
 		cdb.TransferLength[1] = LOBYTE(HIWORD(uiTransferLen));
 		cdb.TransferLength[2] = HIBYTE(LOWORD(uiTransferLen));
@@ -50,16 +50,16 @@ BOOL ReadDVD(
 		}
 
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, lpBuf,
-			pDevData->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf,
+			pDevice->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			OutputErrorString(_T("This drive doesn't support streaming\n"));
 			cdb.Streaming = FALSE;
 		}
 
 		if (cdb.ForceUnitAccess == FALSE && cdb.Streaming == FALSE) {
-			if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, lpBuf,
-				pDevData->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+			if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf,
+				pDevice->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw FALSE;
 			}
@@ -71,8 +71,8 @@ BOOL ReadDVD(
 		}
 
 		cdb.LogicalBlock[3] = 32;
-		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, lpBuf, 
-			pDevData->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf, 
+			pDevice->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
 		}
@@ -85,16 +85,16 @@ BOOL ReadDVD(
 
 		cdb.LogicalBlock[2] = 1;
 		cdb.LogicalBlock[3] = 0;
-		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, lpBuf, 
-			pDevData->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf, 
+			pDevice->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
 		}
 		OutputFsVolumeDescriptorSequence(lpBuf, 0);
 
-		for (INT nLBA = 0; nLBA < pDiscData->SCSI.nAllLength; nLBA += uiTransferLen) {
-			if (pDiscData->SCSI.nAllLength - nLBA < (INT)uiTransferLen) {
-				uiTransferLen = (UINT)(pDiscData->SCSI.nAllLength - nLBA);
+		for (INT nLBA = 0; nLBA < pDisc->SCSI.nAllLength; nLBA += uiTransferLen) {
+			if (pDisc->SCSI.nAllLength - nLBA < (INT)uiTransferLen) {
+				uiTransferLen = (UINT)(pDisc->SCSI.nAllLength - nLBA);
 				cdb.TransferLength[0] = HIBYTE(HIWORD(uiTransferLen));
 				cdb.TransferLength[1] = LOBYTE(HIWORD(uiTransferLen));
 				cdb.TransferLength[2] = HIBYTE(LOWORD(uiTransferLen));
@@ -104,14 +104,14 @@ BOOL ReadDVD(
 			cdb.LogicalBlock[1] = LOBYTE(HIWORD(nLBA));
 			cdb.LogicalBlock[2] = HIBYTE(LOWORD(nLBA));
 			cdb.LogicalBlock[3] = LOBYTE(LOWORD(nLBA));
-			if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, lpBuf, 
-				pDevData->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+			if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, lpBuf, 
+				pDevice->uiMaxTransferLength, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw FALSE;
 			}
 			fwrite(lpBuf, sizeof(BYTE), (size_t)DISC_RAW_READ * uiTransferLen, fp);
 			OutputString(_T("\rCreating iso(LBA) %8u/%8u"),
-				nLBA + uiTransferLen - 1, pDiscData->SCSI.nAllLength - 1);
+				nLBA + uiTransferLen - 1, pDisc->SCSI.nAllLength - 1);
 		}
 		OutputString(_T("\n"));
 	}
@@ -124,8 +124,8 @@ BOOL ReadDVD(
 }
 
 BOOL ReadDVDRaw(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
+	PDEVICE pDevice,
+	PDISC pDisc,
 	LPCSTR szVendorId,
 	LPCTSTR pszPath
 	)
@@ -141,11 +141,11 @@ BOOL ReadDVDRaw(
 	BOOL bRet = TRUE;
 	try {
 		if (NULL == (pBuf = (LPBYTE)calloc(DVD_RAW_READ *
-			uiTransferLen + pDevData->AlignmentMask, sizeof(BYTE)))) {
+			uiTransferLen + pDevice->AlignmentMask, sizeof(BYTE)))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			throw FALSE;
 		}
-		LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevData, pBuf);
+		LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevice, pBuf);
 		BYTE cdblen = CDB12GENERIC_LENGTH;
 		BYTE lpCmd[CDB12GENERIC_LENGTH] = { 0 };
 		if (szVendorId && !strncmp(szVendorId, "PLEXTER", 7)) {
@@ -167,9 +167,9 @@ BOOL ReadDVDRaw(
 			lpCmd[11] = LOBYTE(LOWORD(DVD_RAW_READ * uiTransferLen));
 		}
 
-		for (INT nLBA = 0; nLBA < pDiscData->SCSI.nAllLength; nLBA += uiTransferLen) {
-			if (pDiscData->SCSI.nAllLength - nLBA < (INT)uiTransferLen) {
-				uiTransferLen = (UINT)(pDiscData->SCSI.nAllLength - nLBA);
+		for (INT nLBA = 0; nLBA < pDisc->SCSI.nAllLength; nLBA += uiTransferLen) {
+			if (pDisc->SCSI.nAllLength - nLBA < (INT)uiTransferLen) {
+				uiTransferLen = (UINT)(pDisc->SCSI.nAllLength - nLBA);
 				if (szVendorId && !strncmp(szVendorId, "PLEXTER", 7)) {
 					lpCmd[6] = LOBYTE(HIWORD(DVD_RAW_READ * uiTransferLen));
 					lpCmd[7] = HIBYTE(LOWORD(DVD_RAW_READ * uiTransferLen));
@@ -192,7 +192,7 @@ BOOL ReadDVDRaw(
 				lpCmd[9] = LOBYTE(LOWORD(nLBA));
 			}
 			BYTE byScsiStatus = 0;
-			if (!ScsiPassThroughDirect(pDevData, lpCmd, cdblen, lpBuf, 
+			if (!ScsiPassThroughDirect(pDevice, lpCmd, cdblen, lpBuf, 
 				(DWORD)DVD_RAW_READ * uiTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw FALSE;
@@ -200,7 +200,7 @@ BOOL ReadDVDRaw(
 
 			fwrite(lpBuf, sizeof(BYTE), (size_t)DVD_RAW_READ * uiTransferLen, fp);
 			OutputString(_T("\rCreating raw(LBA) %8u/%8u"), 
-				nLBA + uiTransferLen - 1, pDiscData->SCSI.nAllLength - 1);
+				nLBA + uiTransferLen - 1, pDisc->SCSI.nAllLength - 1);
 		}
 		OutputString(_T("\n"));
 	}
@@ -239,8 +239,8 @@ BOOL ReadDVDRaw(
 }
 
 BOOL ReadDVDForCMI(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData
+	PDEVICE pDevice,
+	PDISC pDisc
 	)
 {
 	CONST WORD wSize = 
@@ -256,13 +256,13 @@ BOOL ReadDVDForCMI(
 
 	BOOL bRet = TRUE;
 	BYTE byScsiStatus = 0;
-	for (INT nLBA = 0; nLBA < pDiscData->SCSI.nAllLength; nLBA++) {
+	for (INT nLBA = 0; nLBA < pDisc->SCSI.nAllLength; nLBA++) {
 		cdb.RMDBlockNumber[0] = HIBYTE(HIWORD(nLBA));
 		cdb.RMDBlockNumber[1] = LOBYTE(HIWORD(nLBA));
 		cdb.RMDBlockNumber[2] = HIBYTE(LOWORD(nLBA));
 		cdb.RMDBlockNumber[3] = LOBYTE(LOWORD(nLBA));
 
-		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, pBuf, 
+		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, pBuf, 
 			wSize, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			bRet = FALSE;
@@ -271,15 +271,15 @@ BOOL ReadDVDForCMI(
 		OutputMmcDVDCopyrightManagementInformation(
 			(PDVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR)(pBuf + sizeof(DVD_DESCRIPTOR_HEADER)), nLBA);
 		OutputString(
-			_T("\rOutputting CMI log(LBA) %8u/%8u"), nLBA, pDiscData->SCSI.nAllLength - 1);
+			_T("\rOutputting CMI log(LBA) %8u/%8u"), nLBA, pDisc->SCSI.nAllLength - 1);
 	}
 	OutputString(_T("\n"));
 	return bRet;
 }
 
 BOOL ReadDVDStructure(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData
+	PDEVICE pDevice,
+	PDISC pDisc
 	)
 {
 	CONST WORD wMaxDVDStructureSize = 
@@ -293,7 +293,7 @@ BOOL ReadDVDStructure(
 	cdb.AllocationLength[1] = LOBYTE(wMaxDVDStructureSize);
 
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH,
+	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH,
 		pBuf, wMaxDVDStructureSize, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -316,31 +316,31 @@ BOOL ReadDVDStructure(
 		OutputDriveLogA(
 			"\t\tFormatCode: %02x, Sendable: %3s, Readable: %3s, FormatLength: %u\n", 
 			pEntry->FormatCode,
-			BOOLEAN_TO_STRING_YES_NO(pEntry->Sendable),
-			BOOLEAN_TO_STRING_YES_NO(pEntry->Readable),
+			BOOLEAN_TO_STRING_YES_NO_A(pEntry->Sendable),
+			BOOLEAN_TO_STRING_YES_NO_A(pEntry->Readable),
 			wFormatLen);
 
 		if (wFormatLen == 0 || pEntry->FormatCode == 0x05 || pEntry->FormatCode == 0xff) {
 			continue;
 		}
 		else if ((0x08 <= pEntry->FormatCode && pEntry->FormatCode <= 0x0B) &&
-			pDiscData->SCSI.wCurrentMedia != ProfileDvdRam) {
+			pDisc->SCSI.wCurrentMedia != ProfileDvdRam) {
 			continue;
 		}
 		else if (((0x0C <= pEntry->FormatCode && 
 			pEntry->FormatCode <= 0x11) || pEntry->FormatCode == 0x30) &&
-			((pDiscData->SCSI.wCurrentMedia != ProfileDvdRecordable) &&
-			(pDiscData->SCSI.wCurrentMedia != ProfileDvdRWSequential) &&
-			(pDiscData->SCSI.wCurrentMedia != ProfileDvdPlusRW) &&
-			(pDiscData->SCSI.wCurrentMedia != ProfileDvdPlusR))) {
+			((pDisc->SCSI.wCurrentMedia != ProfileDvdRecordable) &&
+			(pDisc->SCSI.wCurrentMedia != ProfileDvdRWSequential) &&
+			(pDisc->SCSI.wCurrentMedia != ProfileDvdPlusRW) &&
+			(pDisc->SCSI.wCurrentMedia != ProfileDvdPlusR))) {
 			continue;
 		}
 		else if ((0x20 <= pEntry->FormatCode && pEntry->FormatCode <= 0x24) &&
-			pDiscData->SCSI.wCurrentMedia != ProfileDvdDashRDualLayer) {
+			pDisc->SCSI.wCurrentMedia != ProfileDvdDashRDualLayer) {
 			continue;
 		}
 		else if ((pEntry->FormatCode == 0xC0) &&
-			pDiscData->SCSI.wCurrentMedia != ProfileDvdRewritable) {
+			pDisc->SCSI.wCurrentMedia != ProfileDvdRewritable) {
 			continue;
 		}
 
@@ -354,32 +354,32 @@ BOOL ReadDVDStructure(
 		cdb.AllocationLength[0] = HIBYTE(wFormatLen);
 		cdb.AllocationLength[1] = LOBYTE(wFormatLen);
 
-		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, 
+		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, 
 			lpFormat, wFormatLen, &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 			byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			OutputErrorString(_T("Failure - Format %02x\n"), pEntry->FormatCode);
 		}
 		else {
-			OutputMmcDVDStructureFormat(pDiscData, pEntry->FormatCode, 
+			OutputMmcDVDStructureFormat(pDisc, pEntry->FormatCode, 
 				wFormatLen - sizeof(DVD_DESCRIPTOR_HEADER), 
 				lpFormat + sizeof(DVD_DESCRIPTOR_HEADER), &byLayerNum, 0,
-				pDevData->bSuccessReadToc);
+				pDevice->bSuccessReadToc);
 			if (byLayerNum == 1 &&
 				(pEntry->FormatCode == 0 || pEntry->FormatCode == 0x01 || 
 				pEntry->FormatCode == 0x04 || pEntry->FormatCode == 0x10 || 
 				pEntry->FormatCode == 0x12 || pEntry->FormatCode == 0x15)) {
 				cdb.LayerNumber = byLayerNum;
 
-				if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, 
+				if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, 
 					lpFormat, wFormatLen, &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 					byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 					OutputErrorString(_T("Failure - Format %02x\n"), pEntry->FormatCode);
 				}
 				else {
-					OutputMmcDVDStructureFormat(pDiscData, pEntry->FormatCode,
+					OutputMmcDVDStructureFormat(pDisc, pEntry->FormatCode,
 						wFormatLen - sizeof(DVD_DESCRIPTOR_HEADER), 
 						lpFormat + sizeof(DVD_DESCRIPTOR_HEADER), &byLayerNum,
-						1, pDevData->bSuccessReadToc);
+						1, pDevice->bSuccessReadToc);
 				}
 			}
 		}

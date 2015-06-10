@@ -5,7 +5,7 @@ It works on Windows PC (WinXP or higher).
 
 *Recommend Drive
 CD: PLEXTOR
- (not OEM Drive - PX-708, PX-712, PX-716, PX-755, PX-760, Premium, PX-5224, PX-4824)
+ (not OEM Drive -> PX-708, PX-712, PX-716, PX-755, PX-760, Premium, PX-5224, PX-4824)
  (Drives must be able to rip by scrambled mode and read lead-out and read lead-in.) 
 GD: http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
  and TSSTcorp(TS-H353A, TS-H352C, TS-H192C)
@@ -48,13 +48,14 @@ Thank's redump.org users.
 ============================= Ripping information =============================
 *Preparation
 . Download and install Visual C++ Redistributable Packages.
+  http://www.microsoft.com/en-us/download/details.aspx?id=40784
 . EccEdc checking tool
   http://www.mediafire.com/download/g2cbic87c48bqan/
   Put it to directory of DiscImageCreator.exe.
   (If EccEdc doesn't exist, DiscImageCreator works.)
 
 *Ripping Guide for CD, DVD, Floppy
-Run exe without args in detail.
+Run exe without args to get detail info.
 
 *Ripping Guide for GD-ROM
 **Plan1
@@ -65,12 +66,12 @@ http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
    (a disc with a hacked TOC of 99 mins audio, burn it with CloneCD or Alcohol 52/120%). 
    http://www.mediafire.com/?2nygv2oyzzz
 2. insert the audio trap disc to a supported drive.
-3. run below. (stop disc)
+3. run below. (stop spinning disc)
    DiscImageCreator.exe stop [DriveLetter]
 4. use a pin to press the escape eject button, so the tray will eject (or remove
    the drive cover).
 5. insert the gdrom and gently push the tray back (or put the drive cover back on).
-6. run below. (rip gdrom)
+6. run below. (start rippping gdrom)
    DiscImageCreator.exe gd [DriveLetter] [DriveSpeed(0-72)] foo.bin
 
 ========================== Supported/Unsupported Disc =========================
@@ -162,6 +163,6 @@ TSSTcorp				TS-H652C(TS-H652D)		TI06		No		No			No				No						No
 TSSTcorp				TS-L162C				DE00		No		No			No				No						No
 
 **Attention
-if you rip a GD-ROM, you should rip to internal(and/or NTSC) HDD. 
+if you rip a GD-ROM, you should rip to internal(and/or NTFS) HDD. 
 Otherwise, if you have a supported drive, you can't only rip about 99:59:74.
 The reason is unknown.

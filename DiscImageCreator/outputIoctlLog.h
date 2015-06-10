@@ -13,7 +13,7 @@ VOID OutputIoctlScsiStatus(
 	);
 
 VOID OutputIoctlScsiAddress(
-	PDEVICE_DATA pDevData
+	PDEVICE pDevice
 	);
 
 VOID OutputIoctlStorageAdaptorDescriptor(

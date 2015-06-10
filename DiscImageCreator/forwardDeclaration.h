@@ -1,6 +1,6 @@
 /*
-* This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
-*/
+ * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
+ */
 #pragma once
 
 #define DRIVE_VENDER_ID_SIZE	(8)
@@ -38,13 +38,13 @@ struct _LOG_FILE;
 typedef struct _LOG_FILE LOG_FILE;
 struct _EXT_ARG;
 typedef struct _EXT_ARG *PEXT_ARG;
-struct _DEVICE_DATA;
-typedef struct _DEVICE_DATA *PDEVICE_DATA;
-struct _DISC_DATA;
-typedef struct _DISC_DATA *PDISC_DATA;
-struct _SUB_Q_DATA;
-typedef struct _SUB_Q_DATA *PSUB_Q_DATA;
-struct _C2_ERROR_DATA_PER_SECTOR;
-typedef struct _C2_ERROR_DATA_PER_SECTOR *PC2_ERROR_DATA_PER_SECTOR;
+struct _DEVICE;
+typedef struct _DEVICE *PDEVICE;
+struct _DISC;
+typedef struct _DISC *PDISC;
+struct _SUB_Q;
+typedef struct _SUB_Q *PSUB_Q;
+struct _C2_ERROR_PER_SECTOR;
+typedef struct _C2_ERROR_PER_SECTOR *PC2_ERROR_PER_SECTOR;
 struct _READ_CD_FLAG;
 typedef struct _READ_CD_FLAG READ_CD_FLAG, *PREAD_CD_FLAG;

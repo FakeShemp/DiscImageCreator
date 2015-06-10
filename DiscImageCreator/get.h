@@ -33,7 +33,7 @@ BYTE GetMode(
 	);
 
 BOOL GetWriteOffset(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPBYTE lpBuf
 	);
 

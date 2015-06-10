@@ -17,7 +17,7 @@ VOID OutputMmcDriveSpeed(
 	);
 
 VOID OutputMmcFeatureNumber(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	LPBYTE lpConf,
 	DWORD dwAllLen
 	);
@@ -27,6 +27,11 @@ VOID OutputMmcFeatureProfileType(
 	);
 
 VOID OutputMmcInquiryData(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PINQUIRYDATA pInquiry
+	);
+
+VOID OutputMmcModeSense10(
+	PDEVICE pDevice,
+	PSENSE pModesense
 	);

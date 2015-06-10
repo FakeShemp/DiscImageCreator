@@ -12,41 +12,46 @@
 BOOL ReadCDAll(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
+	PDEVICE pDevice,
+	PDISC pDisc,
 	LPCTSTR pszPath,
 	FILE* fpCcd
 	);
 
+BOOL ReadCDForCheckingSubPtoW(
+	PDEVICE pDevice,
+	PEXEC_TYPE pExecType
+	);
+
 BOOL ReadCDForCheckingCDG(
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData
+	PDEVICE pDevice,
+	PDISC pDisc
 	);
 
 BOOL ReadCDForCheckingIndex0InTrack1(
 	PEXT_ARG pExtArg,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData
+	PDEVICE pDevice,
+	PDISC pDisc
 	);
 
 BOOL ReadCDForCheckingReadInOut(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
+	PDEVICE pDevice,
+	PDISC pDisc,
 	LPCTSTR pszPath,
-	READ_CD_FLAG::SECTOR_TYPE flg
+	READ_CD_FLAG::EXPECTED_SECTOR_TYPE flg
 	);
 
 BOOL ReadCDForSearchingOffset(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData
+	PDEVICE pDevice,
+	PDISC pDisc
 	);
 
 BOOL ReadCDForVolumeDescriptor(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PCDROM_TOC pToc,
 	INT nFirstLBAofDataTrack
 	);
@@ -54,11 +59,16 @@ BOOL ReadCDForVolumeDescriptor(
 BOOL ReadCDPartial(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
-	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
+	PDEVICE pDevice,
+	PDISC pDisc,
 	LPCTSTR pszPath,
 	INT nStart,
 	INT nEnd,
-	READ_CD_FLAG::SECTOR_TYPE flg,
+	READ_CD_FLAG::EXPECTED_SECTOR_TYPE flg,
 	BOOL bCheckReading
+	);
+
+BOOL ReadCDForFlushingDriveCache(
+	PDEVICE pDevice,
+	INT nLBA
 	);

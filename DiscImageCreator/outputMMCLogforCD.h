@@ -1,6 +1,6 @@
 /*
-* This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
-*/
+ * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
+ */
 #pragma once
 #include "enum.h"
 
@@ -42,12 +42,12 @@ VOID OutputFsPceBootSector(
 	);
 
 VOID OutputMmcTocWithPregap(
-	PDISC_DATA pDiscData
+	PDISC pDisc
 	);
 
 VOID OutputMmcCDOffset(
 	PEXT_ARG pExtArg,
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	BOOL bGetDrive,
 	INT nDriveSampleOffset,
 	INT nDriveOffset
@@ -76,9 +76,9 @@ VOID OutputMmcCDSub96Raw(
 	);
 
 VOID OutputMmcCDSubToLog(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPBYTE lpSubcode,
-	LPBYTE lpSubcodeOrg,
+	LPBYTE lpSubcodeRaw,
 	INT nLBA,
 	INT byTrackNum,
 	FILE* fpParse

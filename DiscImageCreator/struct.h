@@ -15,6 +15,11 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 	SENSE_DATA SenseData;
 } SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER, *PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER;
 
+typedef struct _SENSE {
+	_declspec(align(4)) MODE_PARAMETER_HEADER10 header;
+	_declspec(align(4)) CDVD_CAPABILITIES_PAGE cdvd;
+} SENSE, *PSENSE;
+
 typedef struct _LOG_FILE {
 	FILE* fpDrive;
 	FILE* fpDisc;
@@ -38,32 +43,33 @@ typedef struct _EXT_ARG {
 	DWORD dwRereadSpeedNum;
 } EXT_ARG, *PEXT_ARG;
 
-typedef struct _DEVICE_DATA {
+typedef struct _DEVICE {
 	HANDLE hDevice;
 	SCSI_ADDRESS address;
 	UINT_PTR AlignmentMask;
 	UINT uiMaxTransferLength;
 	CHAR szVendorId[DRIVE_VENDER_ID_SIZE];
 	CHAR szProductId[DRIVE_PRODUCT_ID_SIZE];
+	WORD wDriveBufSize;
 	BOOL bCanCDText;
 	BOOL bC2ErrorData;
 	BOOL bSuccessReadToc;
 	BYTE byPlexType;
-	struct TRANSFER_DATA {
+	struct _TRANSFER {
 		UINT uiTransferLen;
 		DWORD dwBufLen;
 		DWORD dwAllBufLen;
 		DWORD dwAdditionalBufLen; // for PX-4824
 		DWORD dwBufC2Offset;
 		DWORD dwBufSubOffset;
-	} TRANSFER_DATA;
-} DEVICE_DATA, *PDEVICE_DATA;
+	} TRANSFER, *PTRANSFER;
+} DEVICE, *PDEVICE;
 
 // Don't define value of BYTE(1byte) or SHOUT(2byte) before CDROM_TOC structure
 // Because Paragraph Boundary (under 4bit of start address of buffer must 0)
 // reference
 // http://msdn.microsoft.com/ja-jp/library/aa290049(v=vs.71).aspx
-typedef struct _DISC_DATA {
+typedef struct _DISC {
 	struct _SCSI {
 		_declspec(align(4)) CDROM_TOC toc; // get at CDROM_READ_TOC_EX_FORMAT_TOC
 		BOOL bAudioOnly;			// get at CDROM_READ_TOC_EX_FORMAT_TOC
@@ -79,16 +85,16 @@ typedef struct _DISC_DATA {
 		INT nFirstLBAofLeadout;		// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
 		INT nFirstLBAof2ndSession;	// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
 		BOOL bCdi;					// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
-		LPTSTR* pszTitle;			// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
-		LPTSTR* pszPerformer;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
-		LPTSTR* pszSongWriter;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
+		LPSTR* pszTitle;			// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
+		LPSTR* pszPerformer;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
+		LPSTR* pszSongWriter;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
 	} SCSI;
-	struct _SUB_CHANNEL {
+	struct _SUB {
 		BOOL bDesync;
 		BOOL bIndex0InTrack1;
-		_TCHAR szCatalog[META_CATALOG_SIZE];
+		CHAR szCatalog[META_CATALOG_SIZE];
 		// 0 origin, max is last track num.
-		LPTSTR* pszISRC;
+		LPSTR* pszISRC;
 		// 0 origin, max is last track num.
 		// toc indexes in priority. single ptr: LBA per track. double ptr: LBA per index
 		LPINT* lpFirstLBAListOnSub;
@@ -109,8 +115,8 @@ typedef struct _DISC_DATA {
 		LPBOOL lpISRCList;
 		// 0 origin, max is last track num.
 		LPBYTE lpRtoWList;
-	} SUB_CHANNEL;
-	struct _MAIN_CHANNEL {
+	} SUB;
+	struct _MAIN {
 		INT nAdjustSectorNum;
 		INT nCombinedOffset;
 		UINT uiMainDataSlideSize;
@@ -120,10 +126,10 @@ typedef struct _DISC_DATA {
 		INT nFixEndLBA;
 		INT nFixFirstLBAofLeadout;		// for sliding offset
 		INT nFixFirstLBAof2ndSession;	// for sliding offset
-	} MAIN_CHANNEL;
-} DISC_DATA, *PDISC_DATA;
+	} MAIN;
+} DISC, *PDISC;
 
-typedef struct _SUB_Q_DATA {
+typedef struct _SUB_Q {
 	BYTE byCtl : 4;		// 13th byte
 	BYTE byAdr : 4;		// 13th byte
 	BYTE byTrackNum;	// 14th byte
@@ -131,23 +137,23 @@ typedef struct _SUB_Q_DATA {
 	BYTE byMode;		// 16th byte
 	INT nRelativeTime;	// 17th - 19th byte
 	INT nAbsoluteTime;	// 20th - 22nd byte
-} SUB_Q_DATA, *PSUB_Q_DATA;
+} SUB_Q, *PSUB_Q;
 
 // EN 60908:1999 Page25-
-typedef struct _SubcodeRtoW {
+typedef struct _SUB_R_TO_W {
 	CHAR command;
 	CHAR instruction;
 	CHAR parityQ[2];
 	CHAR data[16];
 	CHAR parityP[4];
-} SUB_R_TO_W_DATA, *PSUB_R_TO_W_DATA;
+} SUB_R_TO_W, *PSUB_R_TO_W;
 
-typedef struct _C2_ERROR_DATA {
+typedef struct _C2_ERROR {
 	SHORT sC2Offset;
 	CHAR cSlideSectorNum;
-} C2_ERROR_DATA, *PC2_ERROR_DATA;
+} C2_ERROR, *PC2_ERROR;
 
-typedef struct _C2_ERROR_DATA_PER_SECTOR {
+typedef struct _C2_ERROR_PER_SECTOR {
 	BOOL bErrorFlag;
 	BOOL bErrorFlagBackup;
 	INT nErrorLBANum;
@@ -158,4 +164,4 @@ typedef struct _C2_ERROR_DATA_PER_SECTOR {
 	PSHORT lpErrorBytePosBackup;
 	LPBYTE lpBufC2NoneSector;
 	LPBYTE lpBufC2NoneSectorBackup;
-} C2_ERROR_DATA_PER_SECTOR, *PC2_ERROR_DATA_PER_SECTOR;
+} C2_ERROR_PER_SECTOR, *PC2_ERROR_PER_SECTOR;

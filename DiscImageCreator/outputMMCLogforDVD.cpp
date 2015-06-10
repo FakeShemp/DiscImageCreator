@@ -1,6 +1,6 @@
 /*
-* This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
-*/
+ * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
+ */
 #include "stdafx.h"
 #include "struct.h"
 #include "output.h"
@@ -520,7 +520,7 @@ VOID OutputFsVolumeDescriptorSequence(
 // end for DVD
 
 VOID OutputMmcDVDLayerDescriptor(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	PDVD_FULL_LAYER_DESCRIPTOR dvdLayer,
 	LPBYTE lpLayerNum,
 	UINT uiNum,
@@ -612,7 +612,7 @@ VOID OutputMmcDVDLayerDescriptor(
 		dwSector = dwEndSector - dwStartSector + 1;
 	}
 	if (!bSuccesssReadToc) {
-		pDiscData->SCSI.nAllLength += dwSector;
+		pDisc->SCSI.nAllLength += dwSector;
 	}
 	OutputDiscLogA("\n");
 	OutputDiscLogA(
@@ -729,13 +729,13 @@ VOID OutputMmcDVDRamMediumStatus(
 		"\t\t                    MediaInCartridge: %s\n"
 		"\t\t              DiscTypeIdentification: %x\n"
 		"\t\tMediaSpecificWriteInhibitInformation: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(dvdRamMeium->PersistentWriteProtect),
-		BOOLEAN_TO_STRING_YES_NO(dvdRamMeium->CartridgeWriteProtect),
-		BOOLEAN_TO_STRING_YES_NO(dvdRamMeium->MediaSpecificWriteInhibit),
-		BOOLEAN_TO_STRING_YES_NO(dvdRamMeium->CartridgeNotSealed),
-		BOOLEAN_TO_STRING_YES_NO(dvdRamMeium->MediaInCartridge),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdRamMeium->PersistentWriteProtect),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdRamMeium->CartridgeWriteProtect),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdRamMeium->MediaSpecificWriteInhibit),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdRamMeium->CartridgeNotSealed),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdRamMeium->MediaInCartridge),
 		dvdRamMeium->DiscTypeIdentification,
-		BOOLEAN_TO_STRING_YES_NO(dvdRamMeium->MediaSpecificWriteInhibitInformation));
+		BOOLEAN_TO_STRING_YES_NO_A(dvdRamMeium->MediaSpecificWriteInhibitInformation));
 }
 
 VOID OutputMmcDVDRamSpareArea(
@@ -765,7 +765,7 @@ VOID OutputMmcDVDRamRecordingType(
 	OutputDiscLogA(
 		"\tDvdRamRecordingType\n"
 		"\t\tRealTimeData: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(dvdRamRecording->RealTimeData));
+		BOOLEAN_TO_STRING_YES_NO_A(dvdRamRecording->RealTimeData));
 }
 
 VOID OutputMmcDVDRmdLastBorderOut(
@@ -878,7 +878,7 @@ VOID OutputMmcDVDDualLayerRecordingInformation(
 		"\tDvdDualLayerRecordingInformation\n"
 		"\t\tLayer0SectorsImmutable: %s\n"
 		"\t\t         Layer0Sectors: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(dvdDualLayer->Layer0SectorsImmutable),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdDualLayer->Layer0SectorsImmutable),
 		MAKELONG(MAKEWORD(dvdDualLayer->Layer0Sectors[3], dvdDualLayer->Layer0Sectors[2]),
 		MAKEWORD(dvdDualLayer->Layer0Sectors[1], dvdDualLayer->Layer0Sectors[0])));
 }
@@ -890,7 +890,7 @@ VOID OutputMmcDVDDualLayerMiddleZone(
 		"\tDvdDualLayerMiddleZoneStartAddress\n"
 		"\t\t                   InitStatus: %s\n"
 		"\t\tShiftedMiddleAreaStartAddress: %u\n",
-		BOOLEAN_TO_STRING_YES_NO(dvdDualLayerMiddle->InitStatus),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdDualLayerMiddle->InitStatus),
 		MAKELONG(MAKEWORD(dvdDualLayerMiddle->ShiftedMiddleAreaStartAddress[3],
 		dvdDualLayerMiddle->ShiftedMiddleAreaStartAddress[2]),
 		MAKEWORD(dvdDualLayerMiddle->ShiftedMiddleAreaStartAddress[1],
@@ -1014,8 +1014,8 @@ VOID OutputMmcDVDDiscControlBlockList(
 		"\tDVD_DISC_CONTROL_BLOCK_LIST\n"
 		"\t\tReadabldDCBs: %s\n"
 		"\t\tWritableDCBs: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(dvdDiscCtrlBlkList->ReadabldDCBs),
-		BOOLEAN_TO_STRING_YES_NO(dvdDiscCtrlBlkList->WritableDCBs));
+		BOOLEAN_TO_STRING_YES_NO_A(dvdDiscCtrlBlkList->ReadabldDCBs),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdDiscCtrlBlkList->WritableDCBs));
 	OutputDiscLogA(
 		"\t\tDVD_DISC_CONTROL_BLOCK_LIST_DCB: ");
 	for (WORD k = 0; k < wFormatLength - sizeof(DVD_DISC_CONTROL_BLOCK_LIST); k++) {
@@ -1045,10 +1045,10 @@ VOID OutputMmcDVDWriteProtectionStatus(
 		"\t\t       MediaPersistentWriteProtect: %s\n"
 		"\t\t             CartridgeWriteProtect: %s\n"
 		"\t\t         MediaSpecificWriteProtect: %s\n",
-		BOOLEAN_TO_STRING_YES_NO(dvdWrite->SoftwareWriteProtectUntilPowerdown),
-		BOOLEAN_TO_STRING_YES_NO(dvdWrite->MediaPersistentWriteProtect),
-		BOOLEAN_TO_STRING_YES_NO(dvdWrite->CartridgeWriteProtect),
-		BOOLEAN_TO_STRING_YES_NO(dvdWrite->MediaSpecificWriteProtect));
+		BOOLEAN_TO_STRING_YES_NO_A(dvdWrite->SoftwareWriteProtectUntilPowerdown),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdWrite->MediaPersistentWriteProtect),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdWrite->CartridgeWriteProtect),
+		BOOLEAN_TO_STRING_YES_NO_A(dvdWrite->MediaSpecificWriteProtect));
 }
 
 VOID OutputMmcDVDAACSVolumeIdentifier(
@@ -1097,7 +1097,7 @@ VOID OutputMmcDVDListOfRecognizedFormatLayers(
 }
 
 VOID OutputMmcDVDStructureFormat(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	BYTE byFormatCode,
 	WORD wFormatLength,
 	LPBYTE lpFormat,
@@ -1109,7 +1109,7 @@ VOID OutputMmcDVDStructureFormat(
 	switch (byFormatCode) {
 	case DvdPhysicalDescriptor:
 	case 0x10:
-		OutputMmcDVDLayerDescriptor(pDiscData,
+		OutputMmcDVDLayerDescriptor(pDisc,
 			(PDVD_FULL_LAYER_DESCRIPTOR)lpFormat, lpLayerNum, uiNum, bSuccesssReadToc);
 		break;
 	case DvdCopyrightDescriptor:

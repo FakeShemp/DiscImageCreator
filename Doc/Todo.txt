@@ -9,3 +9,7 @@
 
 . cue file for multisession disc
   SESSION directives
+
+. fix subcode in gd-rom in high density area.
+
+. dat file (Still not sorting correctly.)

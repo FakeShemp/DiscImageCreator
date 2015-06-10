@@ -5,12 +5,11 @@
 #include "forwardDeclaration.h"
 
 BOOL CheckMainChannel(
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPBYTE lpBuf,
-	PSUB_Q_DATA pNextSubQ,
-	PSUB_Q_DATA pSubQ,
-	PSUB_Q_DATA pPrevSubQ,
-	PSUB_Q_DATA pPrevPrevSubQ,
+	PSUB_Q pSubQ,
+	PSUB_Q pPrevSubQ,
+	PSUB_Q pPrevPrevSubQ,
 	BYTE CurrentTrackNum,
 	INT nLBA
 	);
@@ -22,12 +21,12 @@ BOOL CheckLibCryptSector(
 
 BOOL CheckAndFixSubChannel(
 	PEXT_ARG pExtArg,
-	PDISC_DATA pDiscData,
+	PDISC pDisc,
 	LPBYTE lpSubcode,
-	PSUB_Q_DATA pNextSubQ,
-	PSUB_Q_DATA pSubQ,
-	PSUB_Q_DATA pPrevSubQ,
-	PSUB_Q_DATA pPrevPrevSubQ,
+	PSUB_Q pNextSubQ,
+	PSUB_Q pSubQ,
+	PSUB_Q pPrevSubQ,
+	PSUB_Q pPrevPrevSubQ,
 	LPBYTE lpCurrentTrackNum,
 	LPBOOL lpCatalog,
 	INT nLBA,
@@ -35,15 +34,15 @@ BOOL CheckAndFixSubChannel(
 	);
 
 BOOL CheckC2Error(
-	PC2_ERROR_DATA pC2ErrorData,
-	PC2_ERROR_DATA_PER_SECTOR pC2ErrorDataPerSector,
-	PDEVICE_DATA pTransferData,
+	PC2_ERROR pC2Error,
+	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
+	PDEVICE pTransferData,
 	LPBYTE lpBuf,
 	UINT uiC2ErrorLBACnt
 	);
 
 BOOL CheckByteError(
-	PC2_ERROR_DATA_PER_SECTOR pC2ErrorDataPerSector,
+	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
 	LPBYTE lpBuf,
 	UINT i
 	);
@@ -61,7 +60,7 @@ BOOL IsValidMacDataHeader(
 	);
 
 BOOL IsValidPlextorDrive(
-	PDEVICE_DATA pDevData
+	PDEVICE pDevice
 	);
 
 BOOL IsValidSubQMcn(

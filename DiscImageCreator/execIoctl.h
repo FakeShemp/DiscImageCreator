@@ -5,16 +5,16 @@
 #include "forwardDeclaration.h"
 
 BOOL DiskGetMediaTypes(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	LPCTSTR pszPath
 	);
 
 BOOL ScsiGetAddress(
-	PDEVICE_DATA pDevData
+	PDEVICE pDevice
 	);
 
 BOOL ScsiPassThroughDirect(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PVOID lpCdbCmd,
 	BYTE byCdbCmdLength,
 	PVOID pvBuffer,
@@ -25,6 +25,6 @@ BOOL ScsiPassThroughDirect(
 	);
 
 BOOL StorageQueryProperty(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PBOOL pBusTypeUSB
 	);

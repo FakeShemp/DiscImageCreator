@@ -9,7 +9,7 @@
 
 // TODO: プログラムに必要な追加ヘッダーをここで参照してください。
 
-#pragma warning(disable:4514 4711 4820)
+#pragma warning(disable:4514 4710 4711 4820)
 #pragma warning(push)
 #pragma warning(disable:4324 4365 4668)
 #include <stddef.h>
@@ -17,10 +17,16 @@
 #include <shlwapi.h>
 #include <tchar.h>
 #include <time.h>
+#if 0
 #include <TlHelp32.h>
+#endif
 #include <windows.h>
 #include <winioctl.h>
 #include <WinSock.h>
+#ifdef UNICODE
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 // SPTI(need Windows Driver Kit(wdk))
 #include <ntddcdrm.h> // inc\api

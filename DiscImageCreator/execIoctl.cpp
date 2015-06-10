@@ -8,7 +8,7 @@
 #include "outputIoctlLog.h"
 
 BOOL DiskGetMediaTypes(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	LPCTSTR pszPath
 	)
 {
@@ -21,11 +21,11 @@ BOOL DiskGetMediaTypes(
 
 	DISK_GEOMETRY geom[20] = { 0 };
 	DWORD dwReturned = 0;
-	BOOL bRet = DeviceIoControl(pDevData->hDevice, IOCTL_DISK_GET_MEDIA_TYPES, 
+	BOOL bRet = DeviceIoControl(pDevice->hDevice, IOCTL_DISK_GET_MEDIA_TYPES, 
 		NULL, 0, &geom, sizeof(geom), &dwReturned, 0);
 	if (bRet) {
 		OutputIoctlFloppyInfo(geom, dwReturned / sizeof(DISK_GEOMETRY));
-		bRet = DeviceIoControl(pDevData->hDevice, IOCTL_DISK_GET_DRIVE_GEOMETRY, 
+		bRet = DeviceIoControl(pDevice->hDevice, IOCTL_DISK_GET_DRIVE_GEOMETRY, 
 			NULL, 0, &geom, sizeof(DISK_GEOMETRY), &dwReturned, 0);
 		if (bRet) {
 			OutputIoctlFloppyInfo(geom, 1);
@@ -38,7 +38,7 @@ BOOL DiskGetMediaTypes(
 				return FALSE;
 			}
 			DWORD dwBytesRead = 0;
-			bRet = ReadFile(pDevData->hDevice, lpBuf, dwFloppySize, &dwBytesRead, 0);
+			bRet = ReadFile(pDevice->hDevice, lpBuf, dwFloppySize, &dwBytesRead, 0);
 			if (bRet) {
 				fwrite(lpBuf, sizeof(BYTE), dwFloppySize, fp);
 			}
@@ -56,15 +56,15 @@ BOOL DiskGetMediaTypes(
 }
 
 BOOL ScsiGetAddress(
-	PDEVICE_DATA pDevData
+	PDEVICE pDevice
 	)
 {
 	DWORD dwReturned = 0;
-	BOOL bRet = DeviceIoControl(pDevData->hDevice, IOCTL_SCSI_GET_ADDRESS,
-		&pDevData->address, sizeof(SCSI_ADDRESS), &pDevData->address,
+	BOOL bRet = DeviceIoControl(pDevice->hDevice, IOCTL_SCSI_GET_ADDRESS,
+		&pDevice->address, sizeof(SCSI_ADDRESS), &pDevice->address,
 		sizeof(SCSI_ADDRESS), &dwReturned, NULL);
 	if (bRet) {
-		OutputIoctlScsiAddress(pDevData);
+		OutputIoctlScsiAddress(pDevice);
 	}
 	else {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
@@ -74,7 +74,7 @@ BOOL ScsiGetAddress(
 }
 
 BOOL ScsiPassThroughDirect(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PVOID lpCdb,
 	BYTE byCdbLength,
 	PVOID pvBuffer,
@@ -86,9 +86,9 @@ BOOL ScsiPassThroughDirect(
 {
 	SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb = { 0 };
 	swb.ScsiPassThroughDirect.Length = sizeof(SCSI_PASS_THROUGH_DIRECT);
-	swb.ScsiPassThroughDirect.PathId = pDevData->address.PathId;
-	swb.ScsiPassThroughDirect.TargetId = pDevData->address.TargetId;
-	swb.ScsiPassThroughDirect.Lun = pDevData->address.Lun;
+	swb.ScsiPassThroughDirect.PathId = pDevice->address.PathId;
+	swb.ScsiPassThroughDirect.TargetId = pDevice->address.TargetId;
+	swb.ScsiPassThroughDirect.Lun = pDevice->address.Lun;
 	swb.ScsiPassThroughDirect.CdbLength = byCdbLength;
 	swb.ScsiPassThroughDirect.SenseInfoLength = SENSE_BUFFER_SIZE;
 	swb.ScsiPassThroughDirect.DataIn = SCSI_IOCTL_DATA_IN;
@@ -103,13 +103,15 @@ BOOL ScsiPassThroughDirect(
 	DWORD dwReturned = 0;
 	BOOL bRet = TRUE;
 	SetLastError(NO_ERROR);
-	if (!DeviceIoControl(pDevData->hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT,
+	if (!DeviceIoControl(pDevice->hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT,
 		&swb, dwLength, &swb, dwLength, &dwReturned, NULL)) {
 		OutputLastErrorNumAndString(pszFuncName, lLineNum);
 		bRet = FALSE;
 	}
 	else if (swb.ScsiPassThroughDirect.ScsiStatus >= SCSISTAT_CHECK_CONDITION &&
-		swb.SenseData.SenseKey > SCSI_SENSE_NO_SENSE) {
+		swb.SenseData.SenseKey >= SCSI_SENSE_NO_SENSE) {
+		OutputString(_T("[F:%s][L:%d] OperationCode: %#04x\n"),
+			pszFuncName, lLineNum, swb.ScsiPassThroughDirect.Cdb[0]);
 		OutputIoctlScsiStatus(swb.ScsiPassThroughDirect.ScsiStatus);
 		OutputIoctlSenseData(&swb.SenseData);
 	}
@@ -118,7 +120,7 @@ BOOL ScsiPassThroughDirect(
 }
 
 BOOL StorageQueryProperty(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	PBOOL pBusTypeUSB
 	)
 {
@@ -128,7 +130,7 @@ BOOL StorageQueryProperty(
 
 	STORAGE_DESCRIPTOR_HEADER header = { 0 };
 	DWORD dwReturned = 0;
-	if (!DeviceIoControl(pDevData->hDevice, IOCTL_STORAGE_QUERY_PROPERTY,
+	if (!DeviceIoControl(pDevice->hDevice, IOCTL_STORAGE_QUERY_PROPERTY,
 		&query, sizeof(STORAGE_PROPERTY_QUERY), &header,
 		sizeof(STORAGE_DESCRIPTOR_HEADER), &dwReturned, FALSE)) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
@@ -140,13 +142,13 @@ BOOL StorageQueryProperty(
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
-	BOOL bRet = DeviceIoControl(pDevData->hDevice, IOCTL_STORAGE_QUERY_PROPERTY,
+	BOOL bRet = DeviceIoControl(pDevice->hDevice, IOCTL_STORAGE_QUERY_PROPERTY,
 		&query, sizeof(STORAGE_PROPERTY_QUERY), adapterDescriptor,
 		header.Size, &dwReturned, FALSE);
 	if (bRet) {
 		OutputIoctlStorageAdaptorDescriptor(adapterDescriptor, pBusTypeUSB);
-		pDevData->uiMaxTransferLength = adapterDescriptor->MaximumTransferLength;
-		pDevData->AlignmentMask = (UINT_PTR)(adapterDescriptor->AlignmentMask);
+		pDevice->uiMaxTransferLength = adapterDescriptor->MaximumTransferLength;
+		pDevice->AlignmentMask = (UINT_PTR)(adapterDescriptor->AlignmentMask);
 	}
 	else {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);

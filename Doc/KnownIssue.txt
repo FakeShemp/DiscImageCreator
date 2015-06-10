@@ -6,11 +6,6 @@
   PLEXTOR PX-W2410TA: +686(with), +98(without)
   PLEXTOR PX-320A   : +686(with), +98(without)
 
-. FUA ripping for CD.
-  FUA flag can enable at READXX (READ12, READ16..) command.
-  But READ_CD command (include d8 command) doesn't exist this flag.
-  This app is using d8 command in case of PLEXTOR drive, other is using READ_CD.
-
 . extension (Windows specification)
   with extension
   Input File Name

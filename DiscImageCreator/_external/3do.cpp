@@ -12,7 +12,7 @@
 #include "../output.h"
 #include "../struct.h"
 
-int read_data(PDEVICE_DATA pDevData, CDB::_READ_CD* cdb, char *bufadr, unsigned long blkadr)
+int read_data(PDEVICE pDevice, CDB::_READ_CD* cdb, char *bufadr, unsigned long blkadr)
 {
 	BYTE byScsiStatus = 0;
 	cdb->StartingLBA[0] = HIBYTE(HIWORD(blkadr));
@@ -20,7 +20,7 @@ int read_data(PDEVICE_DATA pDevData, CDB::_READ_CD* cdb, char *bufadr, unsigned 
 	cdb->StartingLBA[2] = HIBYTE(LOWORD(blkadr));
 	cdb->StartingLBA[3] = LOBYTE(LOWORD(blkadr));
 	CDB::_READ_CD in = *cdb;
-	if (!ScsiPassThroughDirect(pDevData, &in, CDB12GENERIC_LENGTH, bufadr,
+	if (!ScsiPassThroughDirect(pDevice, &in, CDB12GENERIC_LENGTH, bufadr,
 		DISC_RAW_READ, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -28,7 +28,7 @@ int read_data(PDEVICE_DATA pDevData, CDB::_READ_CD* cdb, char *bufadr, unsigned 
 	return TRUE;
 }
 
-void RecuseDir(PDEVICE_DATA pDevData, CDB::_READ_CD* cdb, char* Current, unsigned long top)
+void RecuseDir(PDEVICE pDevice, CDB::_READ_CD* cdb, char* Current, unsigned long top)
 {
 	unsigned int	cur;
 	unsigned long	root, dpage;
@@ -48,7 +48,7 @@ void RecuseDir(PDEVICE_DATA pDevData, CDB::_READ_CD* cdb, char* Current, unsigne
 	OutputDiscLogA("\tFile name                 Ext  Size(byte)\n");
 	OutputDiscLogA("\t------------------------------------------\n");
 	for (;;) {
-		read_data(pDevData, cdb, bufadr, root);
+		read_data(pDevice, cdb, bufadr, root);
 		cur = 0;
 
 		dirhead = (struct TDO_DirHead *)bufadr;
@@ -85,7 +85,7 @@ void RecuseDir(PDEVICE_DATA pDevData, CDB::_READ_CD* cdb, char* Current, unsigne
 
 	root = top;
 	for (;;) {
-		read_data(pDevData, cdb, bufadr, root);
+		read_data(pDevice, cdb, bufadr, root);
 		cur = 0;
 
 		dirhead = (struct TDO_DirHead *)bufadr;
@@ -107,7 +107,7 @@ void RecuseDir(PDEVICE_DATA pDevData, CDB::_READ_CD* cdb, char* Current, unsigne
 
 			if ((ftype & 0x000000ff) == 7) {
 				sprintf(Path, "%s%s/", Current, entbody->FileName);
-				RecuseDir(pDevData, cdb, Path, blk);
+				RecuseDir(pDevice, cdb, Path, blk);
 			}
 
 			if (ftype & 0xff000000) break;

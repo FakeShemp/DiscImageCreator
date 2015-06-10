@@ -42,6 +42,6 @@ VOID LittleToBig(
 	);
 
 LPVOID ConvParagraphBoundary(
-	PDEVICE_DATA pDevData,
+	PDEVICE pDevice,
 	LPBYTE pv
 	);

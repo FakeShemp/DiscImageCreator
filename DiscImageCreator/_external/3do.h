@@ -49,7 +49,7 @@ struct	TDO_EntTail	{
 };
 
 void RecuseDir(
-	PDEVICE_DATA pDevData, 
+	PDEVICE pDevice, 
 	CDB::_READ_CD* cdb, 
 	char* Current, 
 	unsigned long top
