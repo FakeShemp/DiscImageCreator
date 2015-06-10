@@ -54,8 +54,8 @@ FILE* CreateOrOpenFileW(
 	LPTSTR pszFileNameWithoutPathAndExt,
 	LPCTSTR pszExt,
 	LPCTSTR pszMode,
-	INT nTrackNum,
-	INT nMaxTrackNum
+	UINT nTrackNum,
+	UINT nMaxTrackNum
 	);
 
 FILE* CreateOrOpenFileA(
@@ -179,9 +179,18 @@ void OutputCDText(
 	PDISC_DATA pDiscData,
 	size_t uiTocTextEntries,
 	size_t allTextSize,
-	CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc,
-	CHAR* pTmpText,
-	PCD_TEXT_INFO pInfo,
+	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
+	PCHAR pTmpText,
+	FILE* fpLog
+	);
+
+void OutputCDWText(
+	PDISC_DATA pDiscData,
+	size_t uiFirstEntries,
+	size_t uiTocTextEntries,
+	size_t allTextSize,
+	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
+	PCHAR pTmpText,
 	FILE* fpLog
 	);
 
@@ -354,7 +363,7 @@ void WriteCcdFileForEntry(
 
 void WriteCcdFileForTrack(
 	PDISC_DATA pDiscData,
-	INT nTrackNum,
+	UINT nTrackNum,
 	UCHAR byModeNum,
 	BOOL bISRC,
 	FILE* fpCcd
@@ -376,7 +385,7 @@ void WriteCueFile(
 	PDISC_DATA pDiscData,
 	BOOL bCDG,
 	LPCTSTR pszFilename,
-	INT nTrackNum,
+	UINT nTrackNum,
 	UCHAR byModeNum, 
 	BOOL bISRC,
 	UCHAR byCtl,

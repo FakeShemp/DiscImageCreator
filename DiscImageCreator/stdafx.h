@@ -84,9 +84,7 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 	#define AFLAG "a"
 #endif
 
-#define META_CATALOG_SIZE		(13)
-#define META_ISRC_SIZE			(12)
-#define META_STRING_SIZE		(80)
+#define META_CATALOG_SIZE	(13)
 
 #pragma pack(1)
 __declspec(align(1)) typedef struct _DEVICE_DATA {
@@ -99,6 +97,20 @@ __declspec(align(1)) typedef struct _DEVICE_DATA {
 	CHAR pszVendorId[8+1];
 	CHAR pszProductId[16+1];
 	BOOL bPlextor;
+	BOOL bPlextorPX760A;
+	BOOL bPlextorPX755A;
+	BOOL bPlextorPX716A;
+	BOOL bPlextorPX712A;
+	BOOL bPlextorPX708A;
+	BOOL bPlextorPX320A;
+	BOOL bPlextorPXW5232A;
+	BOOL bPlextorPXW5224A;
+	BOOL bPlextorPXW4824A;
+	BOOL bPlextorPXW4012A;
+	BOOL bPlextorPXW2410A;
+	BOOL bPlextorPXW1610A;
+	BOOL bPlextorPXW1210A;
+	BOOL bPlextorPXW8432T;
 	BOOL bCanCDText;
 	BOOL bC2ErrorData;
 } DEVICE_DATA, *PDEVICE_DATA;
@@ -106,7 +118,7 @@ __declspec(align(1)) typedef struct _DEVICE_DATA {
 typedef struct _DISC_DATA {
 	CDROM_TOC toc;
 	USHORT pusCurrentMedia;
-	INT* aSessionNum;
+	UINT* aSessionNum;
 	INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2];
 	INT nFirstDataLBA;
 	INT nLastLBAof1stSession;
@@ -123,6 +135,9 @@ typedef struct _DISC_DATA {
 } DISC_DATA, *PDISC_DATA;
 # pragma pack ()
 
+#ifdef _DEBUG
+#include <crtdbg.h>
+#endif
 #include "convert.h"
 #include "execMMC.h"
 #include "check.h"

@@ -13,6 +13,8 @@
 #define HEADER_SIZE				(4)
 #define SUBHEADER_SIZE			(8)
 
+#define META_ISRC_SIZE			(12)
+#define META_CDTEXT_SIZE		(80)
 
 typedef struct _READ_CD_FLAG {
 	enum _SectorType {
@@ -42,10 +44,6 @@ typedef struct _READ_CD_FLAG {
 		Pack = 1 << 2
 	} SubData;
 } READ_CD_FLAG;
-
-typedef struct _CD_TEXT_INFO {
-	CHAR Text[META_STRING_SIZE+1];
-} CD_TEXT_INFO, *PCD_TEXT_INFO;
 
 #pragma pack(1)
 __declspec(align(1)) typedef struct _SUB_Q_DATA {

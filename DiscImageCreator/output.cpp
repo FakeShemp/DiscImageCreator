@@ -10,8 +10,8 @@ FILE* CreateOrOpenFileW(
 	LPTSTR pszFileNameWithoutPathAndExt,
 	LPCTSTR pszExt,
 	LPCTSTR pszMode,
-	INT nTrackNum,
-	INT nMaxTrackNum
+	UINT nTrackNum,
+	UINT nMaxTrackNum
 	)
 {
 	TCHAR szDstPath[_MAX_PATH] = {0};
@@ -296,14 +296,14 @@ void OutputInquiryData(
 	TCHAR buf2[16] = {0};
 	TCHAR buf3[4] = {0};
 	TCHAR buf4[20] = {0};
-	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId), buf1, sizeof(buf1));
-	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId), buf2, sizeof(buf2));
-	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->ProductRevisionLevel, sizeof(pInquiry->ProductRevisionLevel), buf3, sizeof(buf3));
-	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->VendorSpecific, sizeof(pInquiry->VendorSpecific), buf4, sizeof(buf4));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)pInquiry->VendorId,
+		sizeof(pInquiry->VendorId) / sizeof(pInquiry->VendorId[0]), buf1, sizeof(buf1) / sizeof(buf1[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)pInquiry->ProductId,
+		sizeof(pInquiry->ProductId) / sizeof(pInquiry->ProductId[0]), buf2, sizeof(buf2) / sizeof(buf2[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)pInquiry->ProductRevisionLevel,
+		sizeof(pInquiry->ProductRevisionLevel) / sizeof(pInquiry->ProductRevisionLevel[0]), buf3, sizeof(buf3) / sizeof(buf3[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)pInquiry->VendorSpecific,
+		sizeof(pInquiry->VendorSpecific) / sizeof(pInquiry->VendorSpecific[0]), buf4, sizeof(buf4) / sizeof(buf4[0]));
 	OutputLogString(fpLog,
 		_T("\t            VendorId: %.8s\n")
 		_T("\t           ProductId: %.16s\n")
@@ -1148,61 +1148,74 @@ void OutputParsingSubfile(
 			_T(__FUNCTION__), __LINE__);
 		return;
 	}
-	ULONG datasize = GetFilesize(fpSub, 0);
-	PUCHAR data = (PUCHAR)malloc(datasize);
-	if(!data) {
-		OutputErrorString(_T("Cannot alloc memory [F:%s][L:%d]\n"), 
-			_T(__FUNCTION__), __LINE__);
-		return;
-	}
-	fread(data, sizeof(char), datasize, fpSub);
-	FcloseAndNull(fpSub);
 
-	// TODO:RtoW don't use in present
-	UCHAR SubcodeRtoW[CD_RAW_READ_SUBCODE_SIZE] = {0};
+	PUCHAR data = NULL;
 	DISC_DATA discData = {0};
-	UCHAR byTrackNum = 1;
-
-	if(NULL == (discData.szISRC = (_TCHAR**)malloc(101 * sizeof(_INT)))) {
-		return;
-	}
-	for(INT h = 0; h < 100 + 1; h++) {
-		if(NULL == (discData.szISRC[h] = (_TCHAR*)malloc((META_ISRC_SIZE + 1) * sizeof(_TCHAR)))) {
-			return;
+	try {
+		ULONG datasize = GetFilesize(fpSub, 0);
+		data = (PUCHAR)calloc(datasize, sizeof(UCHAR));
+		if(!data) {
+			OutputErrorString(_T("Cannot alloc memory [F:%s][L:%d]\n"), 
+				_T(__FUNCTION__), __LINE__);
+			throw;
 		}
-	}
+		fread(data, sizeof(char), datasize, fpSub);
+		FcloseAndNull(fpSub);
 
-	for(INT i = 0, j = 0; i < (INT)datasize; i+=CD_RAW_READ_SUBCODE_SIZE, j++) {
-		UCHAR byAdr = (UCHAR)(data[i+12] & 0x0F);
-		if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
-			SetMCNToString(&discData, &data[i], discData.szCatalog, FALSE);
-			discData.szCatalog[13] = '\0';
+		// TODO:RtoW don't use in present
+		UCHAR SubcodeRtoW[CD_RAW_READ_SUBCODE_SIZE] = {0};
+		UCHAR byTrackNum = 1;
+
+		if(NULL == (discData.szISRC = (_TCHAR**)calloc(101, sizeof(_INT)))) {
+			OutputErrorString(_T("Cannot alloc memory [F:%s][L:%d]\n"), 
+				_T(__FUNCTION__), __LINE__);
+			throw;
 		}
-		else if(byAdr == ADR_ENCODES_ISRC) {
-			if(0 < byTrackNum && byTrackNum < 100 + 1) {
-				SetISRCToString(&discData, &data[i], byTrackNum, discData.szISRC[byTrackNum-1], FALSE);
-				discData.szISRC[byTrackNum-1][12] = '\0';
+		for(INT h = 0; h < 100 + 1; h++) {
+			if(NULL == (discData.szISRC[h] = (_TCHAR*)calloc((META_ISRC_SIZE + 1), sizeof(_TCHAR)))) {
+				OutputErrorString(_T("Cannot alloc memory [F:%s][L:%d]\n"), 
+					_T(__FUNCTION__), __LINE__);
+				throw;
 			}
 		}
-		else {
-			byTrackNum = BcdToDec(data[i+13]);
+
+		for(INT i = 0, j = 0; i < (INT)datasize; i+=CD_RAW_READ_SUBCODE_SIZE, j++) {
+			UCHAR byAdr = (UCHAR)(data[i+12] & 0x0F);
+			if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
+				SetMCNToString(&discData, &data[i], discData.szCatalog, FALSE);
+				discData.szCatalog[13] = '\0';
+			}
+			else if(byAdr == ADR_ENCODES_ISRC) {
+				if(0 < byTrackNum && byTrackNum < 100 + 1) {
+					SetISRCToString(&discData, &data[i], byTrackNum, discData.szISRC[byTrackNum-1], FALSE);
+					discData.szISRC[byTrackNum-1][12] = '\0';
+				}
+			}
+			else {
+				byTrackNum = BcdToDec(data[i+13]);
+			}
+			if(0 < byTrackNum && byTrackNum < 100 + 1) {
+				OutputSubcode(&discData, j, byTrackNum, &data[i], SubcodeRtoW, fpParse);
+			}
+			else {
+				_TCHAR str[128] = {0};
+				_stprintf(str, 
+					_T("LBA[%06d, 0x%05X], Unknown, TOC[TrackNum-%02x, Index-%02x, RelativeTime-%02x:%02x:%02x, AbsoluteTime-%02x:%02x:%02x] RtoW:ZERO mode\n"),
+					j, j, data[i+13], data[i+14], data[i+15], data[i+16], data[i+17], data[i+19], data[i+20], data[i+21]);
+				fwrite(str, sizeof(_TCHAR), _tcslen(str), fpParse);
+			}
+			OutputString(_T("\rParse sub(Size) %6d/%6d"), i, datasize);
 		}
-		if(0 < byTrackNum && byTrackNum < 100 + 1) {
-			OutputSubcode(&discData, j, byTrackNum, &data[i], SubcodeRtoW, fpParse);
-		}
-		else {
-			_TCHAR str[128] = {0};
-			_stprintf(str, 
-				_T("LBA[%06d, 0x%05X], Unknown, TOC[TrackNum-%02x, Index-%02x, RelativeTime-%02x:%02x:%02x, AbsoluteTime-%02x:%02x:%02x] RtoW:ZERO mode\n"),
-				j, j, data[i+13], data[i+14], data[i+15], data[i+16], data[i+17], data[i+19], data[i+20], data[i+21]);
-			fwrite(str, sizeof(_TCHAR), _tcslen(str), fpParse);
-		}
-		OutputString(_T("\rParse sub(Size) %6d/%6d"), i, datasize);
+		OutputString(_T("\n"));
 	}
-	OutputString(_T("\n"));
+	catch(LPTSTR) {
+	}
+	FcloseAndNull(fpSub);
 	FcloseAndNull(fpParse);
 	for(INT i = 0; i < 100 + 1; i++) {
-		FreeAndNull(discData.szISRC[i]);
+		if(discData.szISRC) {
+			FreeAndNull(discData.szISRC[i]);
+		}
 	}
 	FreeAndNull(discData.szISRC);
 
@@ -1883,9 +1896,8 @@ void OutputCDText(
 	PDISC_DATA pDiscData,
 	size_t uiTocTextEntries,
 	size_t allTextSize,
-	CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc,
-	CHAR* pTmpText,
-	PCD_TEXT_INFO pInfo,
+	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
+	PCHAR pTmpText,
 	FILE* fpLog
 	)
 {
@@ -1916,76 +1928,86 @@ void OutputCDText(
 	UCHAR bySizeInfoIdx = 0;
 
 	for(size_t t = 0; t < uiTocTextEntries; t++) {
+		UCHAR bRet = 0;
+		for(INT k = 0; k < 12; k++) {
+			if(pDesc[t].Text[k] == 0) {
+				bRet++;
+				if(k < 11 && pDesc[t].Text[k+1] == 0) {
+					bRet--;
+				}
+			}
+		}
+
 		if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ALBUM_NAME) {
-			byAlbumCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byAlbumCnt += bRet;
+			}
 			byAlbumIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_PERFORMER) {
-			if((UCHAR)(pDesc[t].TrackNumber) >= byPerformerCnt + 1) {
-				// Offspring - Conspiracy of One
-				// Entry 22=81 00 16 00 4f 46 46 53 50 52 49 4e 47 00 00 00
-				// Entry 23=81 03 17 00 00 00 00 00 00 00 00 00 00 00 00 00
-				// Entry 24=81 0f 18 00 00 00 00 00 00 00 00 00 00 00 00 00
-				BOOL bRet = FALSE;
-				for(INT k = 0; k < 12; k++) {
-					if(pDesc[t].Text[k] != 0) {
-						bRet = TRUE;
-						break;
-					}
-				}
-				if(bRet) {
-					byPerformerCnt++;
-				}
-			}
-			else {
-				byPerformerCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byPerformerCnt += bRet;
 			}
 			byPerformerIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SONGWRITER) {
-			bySongwriterCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				bySongwriterCnt += bRet;
+			}
 			bySongwriterIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_COMPOSER) {
-			byComposerCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byComposerCnt += bRet;
+			}
 			byComposerIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ARRANGER) {
-			byArrangerCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byArrangerCnt += bRet;
+			}
 			byArrangerIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_MESSAGES) {
-			byMessagesCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byMessagesCnt += bRet;
+			}
 			byMessagesIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_DISC_ID) {
-			byDiscIdCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byDiscIdCnt += bRet;
+			}
 			byDiscIdIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_GENRE) {
-			byGenreCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byGenreCnt += bRet;
+			}
 			byGenreIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO) {
-			byTocInfoCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			byTocInfoCnt++;
 			byTocInfoIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO2) {
-			byTocInfo2Cnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			byTocInfo2Cnt++;
 			byTocInfo2Idx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_UPC_EAN) {
-			byUpcEanCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			if(bRet) {
+				byUpcEanCnt += bRet;
+			}
 			byUpcEanIdx = pDesc[t].SequenceNumber;
 		}
 		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SIZE_INFO) {
-			bySizeInfoCnt = (UCHAR)(pDesc[t].TrackNumber + 1);
+			bySizeInfoCnt++;
 			bySizeInfoIdx = pDesc[t].SequenceNumber;
 		}
 		if(pDesc[t].PackType != CDROM_CD_TEXT_PACK_TOC_INFO &&
 			pDesc[t].PackType != CDROM_CD_TEXT_PACK_TOC_INFO2 &&
 			pDesc[t].PackType != CDROM_CD_TEXT_PACK_SIZE_INFO) {
-			memcpy(pTmpText + 12 * t, (CHAR*)(pDesc[t].Text), 12);
+			memcpy(pTmpText + 12 * t, (pDesc[t].Text), 12);
 		}
 	}
 
@@ -1993,25 +2015,27 @@ void OutputCDText(
 	INT nTitleCnt = 0;
 	INT nPerformerCnt = 0;
 	INT nSongwriterCnt = 0;
-	for(size_t z = 0; z <= pDesc[uiTocTextEntries-1].SequenceNumber; z++) {
+	for(size_t z = 0; z < uiTocTextEntries; z++) {
 		if(uiIdx == allTextSize) {
 			break;
 		}
-		size_t len = strlen(pTmpText + uiIdx);
-		if(len == 0) {
+		size_t len1 = strlen(pTmpText + uiIdx);
+		if(len1 == 0 || len1 >= META_CDTEXT_SIZE) {
 			z--;
 		}
 		else {
-			ZeroMemory(pInfo[z].Text, sizeof(pInfo[z].Text));
-			strncpy(pInfo[z].Text, pTmpText + uiIdx, len);
-			_TCHAR tmp[META_STRING_SIZE+1] = {0};
-			if(byAlbumCnt != 0 && z < byAlbumCnt) {
+			CHAR ctmp[META_CDTEXT_SIZE+1] = {0};
+			_TCHAR tmp[META_CDTEXT_SIZE+1] = {0};
+			strncpy(ctmp, pTmpText + uiIdx, len1);
+			ctmp[META_CDTEXT_SIZE] = 0;
 #ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, pDiscData->szTitle[nTitleCnt], len);
+			INT len = MultiByteToWideChar(CP_ACP, 0, ctmp, -1, NULL, 0);
+			MultiByteToWideChar(CP_ACP, 0, ctmp, -1, tmp, len);
 #else
-				strncpy(pDiscData->szTitle[nTitleCnt], pInfo[z].Text, strlen(pInfo[z].Text) + 1);
+			strncpy(tmp, ctmp, len1);
 #endif
+			if(byAlbumCnt != 0 && z < byAlbumCnt) {
+				_tcsncpy(pDiscData->szTitle[nTitleCnt], tmp, _tcslen(tmp));
 				if(nTitleCnt == 0) {
 					OutputLogString(fpLog, _T("\tAlbum Name: %s\n"), pDiscData->szTitle[nTitleCnt]);
 				}
@@ -2022,12 +2046,7 @@ void OutputCDText(
 			}
 			else if(byPerformerCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, pDiscData->szPerformer[nPerformerCnt], len);
-#else
-				strncpy(pDiscData->szPerformer[nPerformerCnt], pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
+				_tcsncpy(pDiscData->szPerformer[nPerformerCnt], tmp, _tcslen(tmp));
 				if(nPerformerCnt == 0) {
 					OutputLogString(fpLog, _T("\tAlbum Performer: %s\n"), pDiscData->szPerformer[nPerformerCnt]);
 				}
@@ -2038,12 +2057,7 @@ void OutputCDText(
 			}
 			else if(bySongwriterCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, pDiscData->szSongWriter[nSongwriterCnt], len);
-#else
-				strncpy(pDiscData->szSongWriter[nSongwriterCnt], pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
+				_tcsncpy(pDiscData->szSongWriter[nSongwriterCnt], tmp, _tcslen(tmp));
 				if(nSongwriterCnt == 0) {
 					OutputLogString(fpLog, _T("\tAlbum SongWriter: %s\n"), pDiscData->szSongWriter[nSongwriterCnt]);
 				}
@@ -2054,75 +2068,39 @@ void OutputCDText(
 			}
 			else if(byComposerCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt + byComposerCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, tmp, len);
-#else
-				strncpy(tmp, pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
 				OutputLogString(fpLog, _T("\tComposer: %s\n"), tmp);
 			}
 			else if(byArrangerCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt + byComposerCnt + byArrangerCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, tmp, len);
-#else
-				strncpy(tmp, pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
 				OutputLogString(fpLog, _T("\tArranger: %s\n"), tmp);
 			}
 			else if(byMessagesCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
 				byComposerCnt + byArrangerCnt + byMessagesCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, tmp, len);
-#else
-				strncpy(tmp, pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
 				OutputLogString(fpLog, _T("\tMessages: %s\n"), tmp);
 			}
 			else if(byDiscIdCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
 				byComposerCnt + byArrangerCnt + byMessagesCnt + byDiscIdCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, tmp, len);
-#else
-				strncpy(tmp, pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
 				OutputLogString(fpLog, _T("\tDiscId: %s\n"), tmp);
 			}
 			else if(byGenreCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
 				byComposerCnt + byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, tmp, len);
-#else
-				strncpy(tmp, pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
 				OutputLogString(fpLog, _T("\tGenre: %s\n"), tmp);
 			}
 			else if(byUpcEanCnt != 0 &&
 				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
 				byComposerCnt + byArrangerCnt + byMessagesCnt + byDiscIdCnt +
 				byGenreCnt + byTocInfoCnt + byTocInfo2Cnt + byUpcEanCnt)) {
-#ifdef UNICODE
-				INT len = MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, NULL, 0);
-				MultiByteToWideChar(CP_ACP, 0, pInfo[z].Text, -1, tmp, len);
-#else
-				strncpy(tmp, pInfo[z].Text, strlen(pInfo[z].Text) + 1);
-#endif
 				OutputLogString(fpLog, _T("\tUpcEan: %s\n"), tmp);
 			}
 		}
-		uiIdx += len + 1;
+		uiIdx += len1 + 1;
 	}
 	INT nTocInfoCnt = 0;
 	INT nSizeInfoCnt = 0;
-	for(size_t z = 0; z <= pDesc[uiTocTextEntries-1].SequenceNumber; z++) {
+	for(size_t z = 0; z <= bySizeInfoIdx; z++) {
 		if(pDesc[z].PackType == CDROM_CD_TEXT_PACK_TOC_INFO) {
 			// detail in Page 54-55 of EN 60908:1999
 			OutputLogString(fpLog, _T("\tTocInfo\n"));
@@ -2155,6 +2133,7 @@ void OutputCDText(
 					_T("\t\t     Track 4(frames): %d\n"),
 					pDesc[z].Text[0],
 					pDesc[z].Text[1],
+					pDesc[z].Text[2],
 					pDesc[z].Text[3],
 					pDesc[z].Text[4],
 					pDesc[z].Text[5],
@@ -2180,8 +2159,368 @@ void OutputCDText(
 				_T("\t\t       End point(frames): %d\n"),
 				pDesc[z].Text[0],
 				pDesc[z].Text[1],
-				pDesc[z].Text[4],
-				pDesc[z].Text[5],
+				pDesc[z].Text[6],
+				pDesc[z].Text[7],
+				pDesc[z].Text[8],
+				pDesc[z].Text[9],
+				pDesc[z].Text[10],
+				pDesc[z].Text[11]);
+		}
+		else if(pDesc[z].PackType == CDROM_CD_TEXT_PACK_SIZE_INFO) {
+			// detail in Page 56 of EN 60908:1999
+			OutputLogString(fpLog, _T("\tSizeInfo\n"));
+			if(nSizeInfoCnt == 0) {
+				OutputLogString(fpLog,
+					_T("\t\t  Charactor Code for this BLOCK: %d\n")
+					_T("\t\t             First track Number: %d\n")
+					_T("\t\t              Last track Number: %d\n")
+					_T("\t\t  Mode2 & copy protection flags: %d\n")
+					_T("\t\t       Number of PACKS with $80: %d\n")
+					_T("\t\t       Number of PACKS with $81: %d\n")
+					_T("\t\t       Number of PACKS with $82: %d\n")
+					_T("\t\t       Number of PACKS with $83: %d\n")
+					_T("\t\t       Number of PACKS with $84: %d\n")
+					_T("\t\t       Number of PACKS with $85: %d\n")
+					_T("\t\t       Number of PACKS with $86: %d\n")
+					_T("\t\t       Number of PACKS with $87: %d\n"),
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[0],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[1],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[2],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[3],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[4],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[5],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[6],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[7],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[8],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[9],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[10],
+					pDesc[uiTocTextEntries-bySizeInfoCnt].Text[11]);
+			}
+			else if(nSizeInfoCnt == 1) {
+				OutputLogString(fpLog,
+					_T("\t\t       Number of PACKS with $88: %d\n")
+					_T("\t\t       Number of PACKS with $89: %d\n")
+					_T("\t\t       Number of PACKS with $8a: %d\n")
+					_T("\t\t       Number of PACKS with $8b: %d\n")
+					_T("\t\t       Number of PACKS with $8c: %d\n")
+					_T("\t\t       Number of PACKS with $8d: %d\n")
+					_T("\t\t       Number of PACKS with $8e: %d\n")
+					_T("\t\t       Number of PACKS with $8f: %d\n")
+					_T("\t\tLast Sequence number of BLOCK 0: %d\n")
+					_T("\t\tLast Sequence number of BLOCK 1: %d\n")
+					_T("\t\tLast Sequence number of BLOCK 2: %d\n")
+					_T("\t\tLast Sequence number of BLOCK 3: %d\n"),
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[0],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[1],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[2],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[3],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[4],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[5],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[6],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[7],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[8],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[9],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[10],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+1].Text[11]);
+			}
+			else if(nSizeInfoCnt == 2) {
+				OutputLogString(fpLog,
+					_T("\t\tLast Sequence number of BLOCK 4: %d\n")
+					_T("\t\tLast Sequence number of BLOCK 5: %d\n")
+					_T("\t\tLast Sequence number of BLOCK 6: %d\n")
+					_T("\t\tLast Sequence number of BLOCK 7: %d\n")
+					_T("\t\t          Language code BLOCK 0: %d\n")
+					_T("\t\t          Language code BLOCK 1: %d\n")
+					_T("\t\t          Language code BLOCK 2: %d\n")
+					_T("\t\t          Language code BLOCK 3: %d\n")
+					_T("\t\t          Language code BLOCK 4: %d\n")
+					_T("\t\t          Language code BLOCK 5: %d\n")
+					_T("\t\t          Language code BLOCK 6: %d\n")
+					_T("\t\t          Language code BLOCK 7: %d\n"),
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[0],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[1],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[2],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[3],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[4],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[5],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[6],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[7],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[8],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[9],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[10],
+					pDesc[uiTocTextEntries-bySizeInfoCnt+2].Text[11]);
+			}
+			nSizeInfoCnt++;
+		}
+	}
+}
+
+void OutputCDWText(
+	PDISC_DATA pDiscData,
+	size_t uiFirstEntries,
+	size_t uiTocTextEntries,
+	size_t allTextSize,
+	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
+	PCHAR pTmpText,
+	FILE* fpLog
+	)
+{
+	UNREFERENCED_PARAMETER(pDiscData);
+	UCHAR byAlbumCnt = 0;
+	UCHAR byPerformerCnt = 0;
+	UCHAR bySongwriterCnt = 0;
+	UCHAR byComposerCnt = 0;
+	UCHAR byArrangerCnt = 0;
+	UCHAR byMessagesCnt = 0;
+	UCHAR byDiscIdCnt = 0;
+	UCHAR byGenreCnt = 0;
+	UCHAR byTocInfoCnt = 0;
+	UCHAR byTocInfo2Cnt = 0;
+	UCHAR byUpcEanCnt = 0;
+	UCHAR bySizeInfoCnt = 0;
+
+	UCHAR byAlbumIdx = 0;
+	UCHAR byPerformerIdx = 0;
+	UCHAR bySongwriterIdx = 0;
+	UCHAR byComposerIdx = 0;
+	UCHAR byArrangerIdx = 0;
+	UCHAR byMessagesIdx = 0;
+	UCHAR byDiscIdIdx = 0;
+	UCHAR byGenreIdx = 0;
+	UCHAR byTocInfoIdx = 0;
+	UCHAR byTocInfo2Idx = 0;
+	UCHAR byUpcEanIdx = 0;
+	UCHAR bySizeInfoIdx = 0;
+
+	for(size_t t = uiFirstEntries; t < uiTocTextEntries; t++) {
+		BOOL bRet = FALSE;
+		for(INT k = 0; k < 6; k++) {
+			if(pDesc[t].WText[k] == 0) {
+				bRet++;
+				if(k < 5 && pDesc[t].WText[k+1] == 0) {
+					bRet--;
+				}
+			}
+		}
+
+		if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ALBUM_NAME) {
+			if(bRet) {
+				byAlbumCnt++;
+			}
+			byAlbumIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_PERFORMER) {
+			if(bRet) {
+				byPerformerCnt++;
+			}
+			byPerformerIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SONGWRITER) {
+			if(bRet) {
+				bySongwriterCnt++;
+			}
+			bySongwriterIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_COMPOSER) {
+			if(bRet) {
+				byComposerCnt++;
+			}
+			byComposerIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ARRANGER) {
+			if(bRet) {
+				byArrangerCnt++;
+			}
+			byArrangerIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_MESSAGES) {
+			if(bRet) {
+				byMessagesCnt++;
+			}
+			byMessagesIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_DISC_ID) {
+			if(bRet) {
+				byDiscIdCnt++;
+			}
+			byDiscIdIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_GENRE) {
+			if(bRet) {
+				byGenreCnt++;
+			}
+			byGenreIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO) {
+			byTocInfoCnt++;
+			byTocInfoIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO2) {
+			byTocInfo2Cnt++;
+			byTocInfo2Idx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_UPC_EAN) {
+			if(bRet) {
+				byUpcEanCnt++;
+			}
+			byUpcEanIdx = pDesc[t].SequenceNumber;
+		}
+		else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SIZE_INFO) {
+			bySizeInfoCnt++;
+			bySizeInfoIdx = pDesc[t].SequenceNumber;
+		}
+		if(pDesc[t].PackType != CDROM_CD_TEXT_PACK_TOC_INFO &&
+			pDesc[t].PackType != CDROM_CD_TEXT_PACK_TOC_INFO2 &&
+			pDesc[t].PackType != CDROM_CD_TEXT_PACK_SIZE_INFO) {
+			memcpy(pTmpText + 12 * (t - uiFirstEntries), (WCHAR*)(pDesc[t].Text), 12);
+		}
+	}
+
+	size_t uiIdx = 0;
+	INT nTitleCnt = 0;
+	INT nPerformerCnt = 0;
+	INT nSongwriterCnt = 0;
+	for(size_t z = 0; z < uiTocTextEntries; z++) {
+		if(uiIdx == allTextSize) {
+			break;
+		}
+		size_t len1 = strlen(pTmpText + uiIdx);
+		if(len1 == 0 || len1 >= META_CDTEXT_SIZE) {
+			z--;
+		}
+		else {
+			CHAR ctmp[META_CDTEXT_SIZE+1] = {0};
+			_TCHAR tmp[META_CDTEXT_SIZE+1] = {0};
+			strncpy(ctmp, pTmpText + uiIdx, len1);
+			ctmp[META_CDTEXT_SIZE] = 0;
+#ifdef UNICODE
+			INT len = MultiByteToWideChar(CP_ACP, 0, ctmp, -1, NULL, 0);
+			MultiByteToWideChar(CP_ACP, 0, ctmp, -1, tmp, len);
+#else
+			strncpy(tmp, ctmp, len1);
+#endif
+			if(byAlbumCnt != 0 && z < byAlbumCnt) {
+				if(nTitleCnt == 0) {
+					OutputLogString(fpLog, _T("\tAlbum Name: %s\n"), tmp);
+				}
+				else {
+					OutputLogString(fpLog, _T("\t Song Name: %s\n"), tmp);
+				}
+				nTitleCnt++;
+			}
+			else if(byPerformerCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt)) {
+				if(nPerformerCnt == 0) {
+					OutputLogString(fpLog, _T("\tAlbum Performer: %s\n"), tmp);
+				}
+				else {
+					OutputLogString(fpLog, _T("\t Song Performer: %s\n"), tmp);
+				}
+				nPerformerCnt++;
+			}
+			else if(bySongwriterCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt)) {
+				if(nSongwriterCnt == 0) {
+					OutputLogString(fpLog, _T("\tAlbum SongWriter: %s\n"), tmp);
+				}
+				else {
+					OutputLogString(fpLog, _T("\t      SongWriter: %s\n"), tmp);
+				}
+				nSongwriterCnt++;
+			}
+			else if(byComposerCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt + byComposerCnt)) {
+				OutputLogString(fpLog, _T("\tComposer: %s\n"), tmp);
+			}
+			else if(byArrangerCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt + byComposerCnt + byArrangerCnt)) {
+				OutputLogString(fpLog, _T("\tArranger: %s\n"), tmp);
+			}
+			else if(byMessagesCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
+				byComposerCnt + byArrangerCnt + byMessagesCnt)) {
+				OutputLogString(fpLog, _T("\tMessages: %s\n"), tmp);
+			}
+			else if(byDiscIdCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
+				byComposerCnt + byArrangerCnt + byMessagesCnt + byDiscIdCnt)) {
+				OutputLogString(fpLog, _T("\tDiscId: %s\n"), tmp);
+			}
+			else if(byGenreCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
+				byComposerCnt + byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt)) {
+				OutputLogString(fpLog, _T("\tGenre: %s\n"), tmp);
+			}
+			else if(byUpcEanCnt != 0 &&
+				z < (size_t)(byAlbumCnt + byPerformerCnt + bySongwriterCnt +
+				byComposerCnt + byArrangerCnt + byMessagesCnt + byDiscIdCnt +
+				byGenreCnt + byTocInfoCnt + byTocInfo2Cnt + byUpcEanCnt)) {
+				OutputLogString(fpLog, _T("\tUpcEan: %s\n"), tmp);
+			}
+		}
+		uiIdx += len1 + 1;
+	}
+	INT nTocInfoCnt = 0;
+	INT nSizeInfoCnt = 0;
+	for(size_t z = 0; z <= bySizeInfoIdx; z++) {
+		if(pDesc[z].PackType == CDROM_CD_TEXT_PACK_TOC_INFO) {
+			// detail in Page 54-55 of EN 60908:1999
+			OutputLogString(fpLog, _T("\tTocInfo\n"));
+			if(nTocInfoCnt == 0) {
+				OutputLogString(fpLog,
+					_T("\t\t  First track number: %d\n")
+					_T("\t\t   Last track number: %d\n")
+					_T("\t\t   Lead-out(minutes): %d\n")
+					_T("\t\t   Lead-out(seconds): %d\n")
+					_T("\t\t    Lead-out(frames): %d\n"),
+					pDesc[z].Text[0],
+					pDesc[z].Text[1],
+					pDesc[z].Text[3],
+					pDesc[z].Text[4],
+					pDesc[z].Text[5]);
+			}
+			if(nTocInfoCnt == 1) {
+				OutputLogString(fpLog,
+					_T("\t\t    Track 1(minutes): %d\n")
+					_T("\t\t    Track 1(seconds): %d\n")
+					_T("\t\t     Track 1(frames): %d\n")
+					_T("\t\t    Track 2(minutes): %d\n")
+					_T("\t\t    Track 2(seconds): %d\n")
+					_T("\t\t     Track 2(frames): %d\n")
+					_T("\t\t    Track 3(minutes): %d\n")
+					_T("\t\t    Track 3(seconds): %d\n")
+					_T("\t\t     Track 3(frames): %d\n")
+					_T("\t\t    Track 4(minutes): %d\n")
+					_T("\t\t    Track 4(seconds): %d\n")
+					_T("\t\t     Track 4(frames): %d\n"),
+					pDesc[z].Text[0],
+					pDesc[z].Text[1],
+					pDesc[z].Text[2],
+					pDesc[z].Text[3],
+					pDesc[z].Text[4],
+					pDesc[z].Text[5],
+					pDesc[z].Text[6],
+					pDesc[z].Text[7],
+					pDesc[z].Text[8],
+					pDesc[z].Text[9],
+					pDesc[z].Text[10],
+					pDesc[z].Text[11]);
+			}
+			nTocInfoCnt++;
+		}
+		else if(pDesc[z].PackType == CDROM_CD_TEXT_PACK_TOC_INFO2) {
+			OutputLogString(fpLog, _T("\tTocInfo2\n"));
+			OutputLogString(fpLog,
+				_T("\t\t         Priority number: %d\n")
+				_T("\t\t     Number of intervals: %d\n")
+				_T("\t\t    Start point(minutes): %d\n")
+				_T("\t\t    Start point(seconds): %d\n")
+				_T("\t\t     Start point(frames): %d\n")
+				_T("\t\t      End point(minutes): %d\n")
+				_T("\t\t      End point(seconds): %d\n")
+				_T("\t\t       End point(frames): %d\n"),
+				pDesc[z].Text[0],
+				pDesc[z].Text[1],
 				pDesc[z].Text[6],
 				pDesc[z].Text[7],
 				pDesc[z].Text[8],
@@ -2300,7 +2639,7 @@ void OutputVolumeDescriptor(
 		buf[idx]);
 	_TCHAR str[5] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str) / sizeof(str[0]));
 #else
 	strncpy(str, (PCHAR)&buf[idx+1], 5);
 #endif
@@ -2334,8 +2673,8 @@ void OutputBootRecord(
 {
 	_TCHAR str[2][32] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+7], 32, str[0], sizeof(str));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+39], 32, str[1], sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+7], 32, str[0], sizeof(str) / sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+39], 32, str[1], sizeof(str) / sizeof(str[0]));
 #else
 	strncpy(str[0], (PCHAR)&buf[idx+7], 32);
 	strncpy(str[1], (PCHAR)&buf[idx+39], 32);
@@ -2366,34 +2705,34 @@ void OutputPrimaryVolumeDescriptorForTime(
 	_TCHAR second[4][2] = {0};
 	_TCHAR milisecond[4][2] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+813], 4, year[0], sizeof(year[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+817], 2, month[0], sizeof(month[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+819], 2, day[0], sizeof(day[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+821], 2, hour[0], sizeof(hour[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+823], 2, time[0], sizeof(time[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+825], 2, second[0], sizeof(second[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+827], 2, milisecond[0], sizeof(milisecond[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+830], 4, year[1], sizeof(year[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+834], 2, month[1], sizeof(month[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+836], 2, day[1], sizeof(day[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+838], 2, hour[1], sizeof(hour[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+840], 2, time[1], sizeof(time[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+842], 2, second[1], sizeof(second[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+844], 2, milisecond[1], sizeof(milisecond[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+847], 4, year[2], sizeof(year[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+851], 2, month[2], sizeof(month[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+853], 2, day[2], sizeof(day[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+855], 2, hour[2], sizeof(hour[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+857], 2, time[2], sizeof(time[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+859], 2, second[2], sizeof(second[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+861], 2, milisecond[2], sizeof(milisecond[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+864], 4, year[3], sizeof(year[3]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+868], 2, month[3], sizeof(month[3]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+870], 2, day[3], sizeof(day[3]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+872], 2, hour[3], sizeof(hour[3]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+874], 2, time[3], sizeof(time[3]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+876], 2, second[3], sizeof(second[3]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+878], 2, milisecond[3], sizeof(milisecond[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+813], 4, year[0], sizeof(year[0]) / sizeof(year[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+817], 2, month[0], sizeof(month[0]) / sizeof(month[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+819], 2, day[0], sizeof(day[0]) / sizeof(day[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+821], 2, hour[0], sizeof(hour[0]) / sizeof(hour[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+823], 2, time[0], sizeof(time[0]) / sizeof(time[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+825], 2, second[0], sizeof(second[0]) / sizeof(second[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+827], 2, milisecond[0], sizeof(milisecond[0]) / sizeof(milisecond[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+830], 4, year[1], sizeof(year[1]) / sizeof(year[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+834], 2, month[1], sizeof(month[1]) / sizeof(month[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+836], 2, day[1], sizeof(day[1]) / sizeof(day[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+838], 2, hour[1], sizeof(hour[1]) / sizeof(hour[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+840], 2, time[1], sizeof(time[1]) / sizeof(time[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+842], 2, second[1], sizeof(second[1]) / sizeof(second[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+844], 2, milisecond[1], sizeof(milisecond[1]) / sizeof(milisecond[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+847], 4, year[2], sizeof(year[2]) / sizeof(year[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+851], 2, month[2], sizeof(month[2]) / sizeof(month[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+853], 2, day[2], sizeof(day[2]) / sizeof(day[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+855], 2, hour[2], sizeof(hour[2]) / sizeof(hour[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+857], 2, time[2], sizeof(time[2]) / sizeof(time[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+859], 2, second[2], sizeof(second[2]) / sizeof(second[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+861], 2, milisecond[2], sizeof(milisecond[2]) / sizeof(milisecond[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+864], 4, year[3], sizeof(year[3]) / sizeof(year[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+868], 2, month[3], sizeof(month[3]) / sizeof(month[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+870], 2, day[3], sizeof(day[3]) / sizeof(day[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+872], 2, hour[3], sizeof(hour[3]) / sizeof(hour[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+874], 2, time[3], sizeof(time[3]) / sizeof(time[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+876], 2, second[3], sizeof(second[3]) / sizeof(second[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+878], 2, milisecond[3], sizeof(milisecond[3]) / sizeof(milisecond[0][0]));
 #else
 	strncpy(year[0], (PCHAR)&buf[idx+813], 4);
 	strncpy(month[0], (PCHAR)&buf[idx+817], 2);
@@ -2532,15 +2871,15 @@ void OutputPrimaryVolumeDescriptorForISO9660(
 {
 	_TCHAR str[10][128] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+190], 128, str[2], sizeof(str[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+318], 128, str[3], sizeof(str[3]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+446], 128, str[4], sizeof(str[4]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+574], 128, str[5], sizeof(str[5]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+702], 37, str[6], sizeof(str[6]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 37, str[7], sizeof(str[7]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 37, str[8], sizeof(str[8]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+190], 128, str[2], sizeof(str[2]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+318], 128, str[3], sizeof(str[3]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+446], 128, str[4], sizeof(str[4]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+574], 128, str[5], sizeof(str[5]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+702], 37, str[6], sizeof(str[6]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 37, str[7], sizeof(str[7]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 37, str[8], sizeof(str[8]) / sizeof(str[0][0]));
 #else
 	strncpy(str[0], (PCHAR)&buf[idx+8], 32);
 	strncpy(str[1], (PCHAR)&buf[idx+40], 32);
@@ -2555,7 +2894,7 @@ void OutputPrimaryVolumeDescriptorForISO9660(
 	OutputPrimaryVolumeDescriptorFor1(idx, buf, str, fpLog);
 	if(buf[idx+0] == 2) {
 #ifdef UNICODE
-		MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 32, str[9], sizeof(str[9]));
+		MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 32, str[9], sizeof(str[9]) / sizeof(str[0][0]));
 #else
 		strncpy(str[9], (PCHAR)&buf[idx+88], 32);
 #endif
@@ -2575,23 +2914,23 @@ void OutputPrimaryVolumeDescriptorForJoliet(
 {
 	_TCHAR str[9][128] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 16, str[0], sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 16, str[0], sizeof(str[0]) / sizeof(str[0][0]));
 	LittleToBig(str[0], (_TCHAR*)&buf[idx+8], 16);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 16, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 16, str[1], sizeof(str[1]) / sizeof(str[0][0]));
 	LittleToBig(str[1], (_TCHAR*)&buf[idx+40], 16);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+190], 16, str[2], sizeof(str[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+190], 16, str[2], sizeof(str[2]) / sizeof(str[0][0]));
 	LittleToBig(str[2], (_TCHAR*)&buf[idx+190], 64);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+318], 16, str[3], sizeof(str[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+318], 16, str[3], sizeof(str[3]) / sizeof(str[0][0]));
 	LittleToBig(str[3], (_TCHAR*)&buf[idx+318], 64);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+446], 16, str[4], sizeof(str[4]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+446], 16, str[4], sizeof(str[4]) / sizeof(str[0][0]));
 	LittleToBig(str[4], (_TCHAR*)&buf[idx+446], 64);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+574], 16, str[5], sizeof(str[5]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+574], 16, str[5], sizeof(str[5]) / sizeof(str[0][0]));
 	LittleToBig(str[5], (_TCHAR*)&buf[idx+574], 64);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+702], 16, str[6], sizeof(str[6]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+702], 16, str[6], sizeof(str[6]) / sizeof(str[0][0]));
 	LittleToBig(str[6], (_TCHAR*)&buf[idx+702], 18);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 16, str[7], sizeof(str[7]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 16, str[7], sizeof(str[7]) / sizeof(str[0][0]));
 	LittleToBig(str[7], (_TCHAR*)&buf[idx+739], 18);
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 16, str[8], sizeof(str[8]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 16, str[8], sizeof(str[8]) / sizeof(str[0][0]));
 	LittleToBig(str[8], (_TCHAR*)&buf[idx+776], 18);
 #else
 	_TCHAR str2[9][128+1] = {0};
@@ -2618,7 +2957,7 @@ void OutputPrimaryVolumeDescriptorForJoliet(
 
 	_TCHAR str3[32] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 16, str3, sizeof(str3));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 16, str3, sizeof(str3) / sizeof(str[0]));
 #else
 	_tcsncpy(str3, (_TCHAR*)&buf[idx+88], 32);
 #endif
@@ -2636,8 +2975,8 @@ void OutputVolumePartitionDescriptor(
 {
 	_TCHAR str[2][32] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]) / sizeof(str[0][0]));
 #else
 	strncpy(str[0], (PCHAR)&buf[idx+8], 32);
 	strncpy(str[1], (PCHAR)&buf[idx+40], 32);
@@ -2670,7 +3009,7 @@ void OutputVolumeStructureDescriptorFormat(
 {
 	_TCHAR str[5] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str) / sizeof(str[0]));
 #else
 	strncpy(str, (PCHAR)&buf[idx+1], 5);
 #endif
@@ -2692,7 +3031,7 @@ void OutputVolumeRecognitionSequence(
 {
 	_TCHAR str[5] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str) / sizeof(str[0]));
 #else
 	strncpy(str, (PCHAR)&buf[idx+1], 5);
 #endif
@@ -2751,10 +3090,10 @@ void OutputBootDescriptor(
 
 	_TCHAR str[4][23] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+9], 23, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 8, str[1], sizeof(str[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+41], 23, str[2], sizeof(str[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+64], 8, str[3], sizeof(str[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+9], 23, str[0], sizeof(str[0]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 8, str[1], sizeof(str[1]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+41], 23, str[2], sizeof(str[2]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+64], 8, str[3], sizeof(str[3]) / sizeof(str[0][0]));
 #else
 	strncpy(str[0], (PCHAR)&buf[idx+9], 23);
 	strncpy(str[1], (PCHAR)&buf[idx+24], 8);
@@ -2809,7 +3148,7 @@ void OutputCharspec(
 {
 	_TCHAR str[23] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str) / sizeof(str[0]));
 #else
 	strncpy(str, (PCHAR)&buf[idx+1], 23);
 #endif
@@ -2842,7 +3181,7 @@ void OutputRegid(
 {
 	_TCHAR str[23+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str) / sizeof(str[0]));
 #else
 	strncpy(str, (PCHAR)&buf[idx+1], 23); str[23] = '\0';
 #endif
@@ -2866,8 +3205,8 @@ void OutputPrimaryVolumeDescriptorForUDF(
 {
 	_TCHAR str[2][128] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 32, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+72], 128, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 32, str[0], sizeof(str[0]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+72], 128, str[1], sizeof(str[1]) / sizeof(str[0][0]));
 #else
 	strncpy(str[0], (PCHAR)&buf[idx+24], 32);
 	strncpy(str[1], (PCHAR)&buf[idx+72], 128);
@@ -2977,10 +3316,10 @@ void OutputImplementationUseVolumeDescriptor(
 
 	_TCHAR str[4][128] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+116], 128, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+244], 36, str[1], sizeof(str[1]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+280], 36, str[2], sizeof(str[2]));
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+316], 36, str[3], sizeof(str[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+116], 128, str[0], sizeof(str[0]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+244], 36, str[1], sizeof(str[1]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+280], 36, str[2], sizeof(str[2]) / sizeof(str[0][0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+316], 36, str[3], sizeof(str[3]) / sizeof(str[0][0]));
 #else
 	strncpy(str[0], (PCHAR)&buf[idx+116], 128);
 	strncpy(str[1], (PCHAR)&buf[idx+244], 36);
@@ -3077,7 +3416,7 @@ void OutputLogicalVolumeDescriptor(
 
 	_TCHAR str[128] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+84], 128, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+84], 128, str, sizeof(str) / sizeof(str[0]));
 #else
 	strncpy(str, (PCHAR)&buf[idx+84], 128);
 #endif
@@ -3423,12 +3762,16 @@ void WriteCcdFileForCDTextEntry(
 	for(size_t t = 0; t < uiTocTextEntries; t++) {
 		_ftprintf(fpCcd, 
 			_T("Entry %d=%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n"), 
-			t, pDesc[t].PackType, pDesc[t].TrackNumber | pDesc[t].ExtensionFlag << 8, pDesc[t].SequenceNumber, 
-			pDesc[t].CharacterPosition | pDesc[t].BlockNumber << 7 | pDesc[t].Unicode << 8,
+			t,
+			pDesc[t].PackType,
+			pDesc[t].TrackNumber | (pDesc[t].ExtensionFlag << 7),
+			pDesc[t].SequenceNumber, 
+			pDesc[t].CharacterPosition | (pDesc[t].BlockNumber << 4) | (pDesc[t].Unicode << 7),
 			pDesc[t].Text[0], pDesc[t].Text[1], pDesc[t].Text[2], pDesc[t].Text[3], 
 			pDesc[t].Text[4], pDesc[t].Text[5],	pDesc[t].Text[6], pDesc[t].Text[7], 
 			pDesc[t].Text[8], pDesc[t].Text[9], pDesc[t].Text[10], pDesc[t].Text[11]);
 	}
+	fflush(fpCcd);
 }
 
 void WriteCcdFileForSession(
@@ -3492,7 +3835,7 @@ void WriteCcdFileForEntry(
 
 void WriteCcdFileForTrack(
 	PDISC_DATA pDiscData,
-	INT nTrackNum,
+	UINT nTrackNum,
 	UCHAR byModeNum,
 	BOOL bISRC,
 	FILE* fpCcd
@@ -3541,7 +3884,7 @@ void WriteCueFile(
 	PDISC_DATA pDiscData,
 	BOOL bCDG,
 	LPCTSTR pszFilename,
-	INT nTrackNum,
+	UINT nTrackNum,
 	UCHAR byModeNum,
 	BOOL bISRC,
 	UCHAR byCtl,
@@ -3673,8 +4016,14 @@ void WriteSubChannel(
 {
 	fwrite(Subcode, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 	if(pDevData->bC2ErrorData && pDiscData->bAudioOnly && pDevData->bPlextor) {
-		OutputSubcode(pDiscData, nLBA, byCurrentTrackNum, 
-			Subcode, pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_ALT, fpParse);
+		if(pDevData->bPlextorPX755A) {
+			OutputSubcode(pDiscData, nLBA, byCurrentTrackNum, 
+				Subcode, pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_ALT, fpParse);
+		}
+		else {
+			OutputSubcode(pDiscData, nLBA, byCurrentTrackNum, 
+				Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
+		}
 	}
 	else {
 		OutputSubcode(pDiscData, nLBA, byCurrentTrackNum, 
