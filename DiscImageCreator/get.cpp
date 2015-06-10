@@ -11,8 +11,8 @@ BOOL GetDriveOffset(
 	BOOL bGetOffset = FALSE;
 	FILE* fpDrive = OpenProgrammabledFile(_T("driveOffset.txt"), _T("r"));
 	if (!fpDrive) {
-		OutputErrorStringA("Failed to open file [F:%s][L:%d]:%s", 
-			__FUNCTION__, __LINE__, "driveOffset.txt\n");
+		OutputErrorString(_T("Failed to open file [F:%s][L:%d]:%s"), 
+			_T(__FUNCTION__), __LINE__, "driveOffset.txt\n");
 		exit(-1);
 	}
 
@@ -111,7 +111,7 @@ BOOL GetWriteOffset(
 	)
 {
 	BOOL bRet = FALSE;
-	for(INT i = 0; i < CD_RAW_SECTOR_SIZE; i++) {
+	for(INT i = 0; i < CD_RAW_SECTOR_SIZE * 2; i++) {
 		if(IsValidDataHeader(pBuf + i)) {
 			UCHAR sm = BcdToDec((UCHAR)(pBuf[i+12] ^ 0x01));
 			UCHAR ss = BcdToDec((UCHAR)(pBuf[i+13] ^ 0x80));
@@ -119,6 +119,7 @@ BOOL GetWriteOffset(
 			INT tmpLBA = MSFtoLBA(sf, ss, sm) - 150;
 			*nCombinedOffset = CD_RAW_SECTOR_SIZE * -(tmpLBA - nLBA) + i;
 			bRet = TRUE;
+			break;
 		}
 	}
 	return bRet;

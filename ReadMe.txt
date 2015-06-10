@@ -28,11 +28,13 @@ Trouble in regard to the use of this tool, I can not guarantee any.
 *Tested Disc
 -----------------------
 Audio CD
+DVD-Video
 Fujitsu FM Towns series
 IBM PC compatible
 NEC PC-98 series CD
 NEC PC-Engine CD
 NEC PC-FX
+Panasonic 3DO Interactive Multiplayer
 Sega Dreamcast
 Sega Mega-CD
 Sega Saturn
@@ -50,12 +52,10 @@ Bandai / Apple Pippin
 Commodore Amiga CD
 Commodore Amiga CD32
 Commodore Amiga CDTV
-DVD-Video
 Mattel HyperScan
 Microsoft Xbox
 Microsoft Xbox 360
 NEC PC-88 series CD
-Panasonic 3DO Interactive Multiplayer
 Philips CD-i
 Sharp X68000 CD
 Tandy / Memorex Visual Information System
@@ -83,10 +83,12 @@ Vendor					Model					Firmware	Offset				Lead-in	Lead-out	Scrambled		GD-ROM					W
 HITACHI(HL-DT-ST)		GDR-8161B				0045		see driveOffset.txt	No		No			No				No						Yes
 HITACHI-LG(HL-DT-ST)	GWA-8164B(GDR8164B)		0M08		see driveOffset.txt	No		No			No				No						Yes
 HITACHI-LG(HL-DT-ST)	GDR-H20N				0D04		see driveOffset.txt	No		No			No				No						Yes
+HITACHI-LG(HL-DT-ST)	GDR-H20N				0D08		see driveOffset.txt	No		No			No				No						Yes
 LG(HL-DT-ST)			GCC-4320B				1.00		see driveOffset.txt	No		No			Yes				No						No
 HP(HL-DT-ST)			GDR-8163B				0B26		see driveOffset.txt	No		No			No				No						Yes
 HP(TSSTcorp)			TS-H353A				BA08		see driveOffset.txt	No		No			No				Yes						No
 HP(TSSTcorp)			TS-H353B				bc03(BC05)	see driveOffset.txt	No		No			Yes				No						No
+LITEON					DH-20A3S				9P56		see driveOffset.txt	No		No			Yes				No						No
 LITEON					DH-20A3S				9P58		see driveOffset.txt	No		No			Yes				No						No
 LITEON					LH-20A1S				9L09		see driveOffset.txt	Yes		Yes			No				No						No
 LITEON					LTD-163					GDHG		see driveOffset.txt	No		No			No				Partial(about 99:59:74)	No
@@ -101,7 +103,8 @@ PLEXTOR					PX-W8432Ti(PX-W8432T)	1.09		see driveOffset.txt	Yes		Yes			Yes(only 
 PLEXTOR					PX-320A					1.06		+686 is right		Yes		Yes			Yes(only pce)	No						No
 PLEXTOR					PX-504A					1.02		see driveOffset.txt	No		No			No				No						No
 PLEXTOR					PX-712SA(PX-712A)		1.09		see driveOffset.txt	Yes		Yes			Yes				Partial(limit 79:59:73)	No
-PLEXTOR					PX-755SA(PX-755A)		1.08		see driveOffset.txt	Yes		Yes			Yes				No						No
+PLEXTOR					PX-750A					1.03		see driveOffset.txt	No		No			No				No						No
+PLEXTOR					PX-755SA(PX-755A)		1.08		see driveOffset.txt	Yes		Yes			Yes				Partial					No
 PLEXTOR					PX-760A					1.07		see driveOffset.txt	Yes		Yes			Yes				No						No
 Slimtype				DS8A3S					HAT9		see driveOffset.txt	No		No			Yes				No						No
 TSSTcorp				TS-H192C				HI03		see driveOffset.txt	No		No			No				Yes						No
@@ -136,3 +139,22 @@ http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
    DiscImageCreator.exe -dec foo.bin 44990
 8. run below. (according to toc(0x110-0x297), split .dec)
    DiscImageCreator.exe -split foo.dec
+
+*Change Log
+**2011-11-xx
+**2012-03-xx
+**2012-05-26
+**2012-06-20
+**2012-07-01
+**2012-07-07
+forgot
+
+**2012-11-02
+[DC]
+delete .offset .toc file
+ => integration .log file
+create .gdi file
+ => need fix index of track2 manually
+
+[other]
+create unicode version

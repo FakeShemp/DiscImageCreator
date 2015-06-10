@@ -3,44 +3,34 @@
  */
 
 #ifdef _DEBUG
-#define OutputStringA(str, ...) \
-		{ \
-			CHAR c[256]; \
-			sprintf(c, str, __VA_ARGS__); \
-			OutputDebugStringA(c); \
-		}
-#define OutputErrorStringA(str, ...) \
-		{ \
-			CHAR c[256]; \
-			sprintf(c, str, __VA_ARGS__); \
-			OutputDebugStringA(c); \
-		}
-#define OutputLogStringA(fp, str, ...) \
-		{ \
-			CHAR c[256]; \
-			sprintf(c, str, __VA_ARGS__); \
-			OutputDebugStringA(c); \
-		}
-#define OutputLogStringW(fp, str, ...) \
+#define OutputString(str, ...) \
 		{ \
 			_TCHAR c[256]; \
 			_stprintf(c, str, __VA_ARGS__); \
-			OutputDebugStringW(c); \
+			OutputDebugString(c); \
+		}
+#define OutputErrorString(str, ...) \
+		{ \
+			_TCHAR c[256]; \
+			_stprintf(c, str, __VA_ARGS__); \
+			OutputDebugString(c); \
+		}
+#define OutputLogString(fp, str, ...) \
+		{ \
+			_TCHAR c[256]; \
+			_stprintf(c, str, __VA_ARGS__); \
+			OutputDebugString(c); \
 		}
 #else
-#define OutputStringA(str, ...) \
+#define OutputString(str, ...) \
 		{ \
-			printf(str, __VA_ARGS__); \
+			_tprintf(str, __VA_ARGS__); \
 		}
-#define OutputErrorStringA(str, ...) \
+#define OutputErrorString(str, ...) \
 		{ \
-			fprintf(stderr, str, __VA_ARGS__); \
+			_ftprintf(stderr, str, __VA_ARGS__); \
 		}
-#define OutputLogStringA(fp, str, ...) \
-		{ \
-			fprintf(fp, str, __VA_ARGS__); \
-		}
-#define OutputLogStringW(fp, str, ...) \
+#define OutputLogString(fp, str, ...) \
 		{ \
 			_ftprintf(fp, str, __VA_ARGS__); \
 		}
@@ -66,6 +56,7 @@ FILE* CreateOrOpenFileW(
 	LPCTSTR pszSrcPath,
 	LPTSTR pszOutPath,
 	LPTSTR pszFileNameWithoutPath,
+	LPTSTR pszFileNameWithoutPathAndExt,
 	LPCTSTR pszExt,
 	LPCTSTR pszMode,
 	INT nTrackNum,
@@ -140,7 +131,7 @@ void OutputParsingSubfile(
 void OutputScsiStatus(
 	PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb,
 	PUCHAR byScsiStatus,
-	LPCSTR pszFuncname,
+	LPCTSTR pszFuncname,
 	INT nLineNum
 	);
 
@@ -285,13 +276,13 @@ void SetAlbumTitle(
 void SetISRCToString(
 	CONST PUCHAR Subcode,
 	INT nTrackNum,
-	LPSTR pszOutString,
+	LPTSTR pszOutString,
 	BOOL bCopy
 	);
 
 void SetMCNToString(
 	CONST PUCHAR Subcode,
-	LPSTR pszOutString,
+	LPTSTR pszOutString,
 	BOOL bCopy
 	);
 
@@ -365,7 +356,7 @@ void WriteCcdFileForTrackIndex(
 
 void WriteCueFile(
 	BOOL bCatalog,
-	LPCSTR pszFilename,
+	LPCTSTR pszFilename,
 	INT nTrackNum,
 	UCHAR byModeNum, 
 	BOOL bISRC,

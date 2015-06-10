@@ -30,23 +30,25 @@ int exec(_TCHAR* argv[], ExecType execType)
 		OutputParsingSubfile(argv[2]);
 		return TRUE;
 	}
+
 	TCHAR szBuf[7];
 	ZeroMemory(szBuf, sizeof(szBuf));
 	_sntprintf(szBuf, 7, _T("\\\\.\\%c:"), argv[2][0]);
 	HANDLE hDevice = CreateFile(szBuf, GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if(hDevice == INVALID_HANDLE_VALUE) {
-		OutputErrorStringA("Device Open fail\n");
+		OutputErrorString(_T("Device Open fail\n"));
 		return FALSE;
 	}
-	BOOL bRet = FALSE;
+
 	if(execType == c) {
 		return StartStop(hDevice, START_UNIT_CODE, START_UNIT_CODE);
 	}
 	else if(execType == s) {
 		return StartStop(hDevice, STOP_UNIT_CODE, STOP_UNIT_CODE);
 	}
-	bRet = ReadTestUnitReady(hDevice);
+
+	BOOL bRet = ReadTestUnitReady(hDevice);
 	if(!bRet) {
 		return FALSE;
 	}
@@ -55,10 +57,26 @@ int exec(_TCHAR* argv[], ExecType execType)
 	ZeroMemory(pszVendorId, sizeof(pszVendorId));
 	ZeroMemory(pszProductId, sizeof(pszProductId));
 	FILE* fpLog = NULL;
+	BOOL bDC = FALSE;
+	if(execType == ra && !_tcscmp(argv[5], _T("44990")) && !_tcscmp(argv[6], _T("549150"))) {
+		bDC = TRUE;
+	}
 #ifndef _DEBUG
-	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, _T(".log.txt"), _T("w"), 0, 0);
+	_TCHAR szLogtxt[12];
+	ZeroMemory(szLogtxt, sizeof(szLogtxt));
+	if(bDC) {
+		_tcscpy(szLogtxt, _T("_dc.log.txt"));
+	}
+	else {
+		_tcscpy(szLogtxt, _T(".log.txt"));
+	}
+#ifdef UNICODE
+	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T("w, ccs=UTF-8"), 0, 0);
+#else
+	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T("w"), 0, 0);
+#endif
 	if(!fpLog) {
-		OutputErrorStringA("Failed to open file .log.txt\n");
+		OutputErrorString(_T("Failed to open file %s\n"), szLogtxt);
 		return FALSE;
 	}
 #endif
@@ -84,9 +102,13 @@ int exec(_TCHAR* argv[], ExecType execType)
 		INT nLength = 0;
 		TCHAR out[_MAX_PATH];
 		ZeroMemory(out, sizeof(out));
-		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, _T(".ccd"), _T("w"), 0, 0);
+#ifdef UNICODE
+		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T("w, ccs=UTF-8"), 0, 0);
+#else
+		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T("w"), 0, 0);
+#endif
 		if(!fpCcd) {
-			OutputErrorStringA("Failed to open file .ccd\n");
+			OutputErrorString(_T("Failed to open file .ccd\n"));
 			return FALSE;
 		}
 		bRet = ReadTOC(hDevice, &nLength, fpLog);
@@ -108,11 +130,11 @@ int exec(_TCHAR* argv[], ExecType execType)
 
 		if(execType == rd) {
 			bRet = ReadCDPartial(hDevice, argv[4], pszVendorId,
-				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All);
+				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC);
 		}
 		else if(execType == ra) {
 			bRet = ReadCDPartial(hDevice, argv[4], pszVendorId, 
-				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA);
+				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC);
 		}
 		else if(bRet == TRUE && execType == rall) {
 			bRet = ReadCDAll(hDevice, argv[4], pszVendorId, 
@@ -245,43 +267,43 @@ int checkArg(int argc, _TCHAR* argv[], ExecType* execType)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	OutputStringA("DiscImageCreator BuildDate:[%s %s]\n", __DATE__, __TIME__);
+	OutputString(_T("DiscImageCreator BuildDate:[%s %s]\n"), _T(__DATE__), _T(__TIME__));
 	ExecType execType;
 	if(!checkArg(argc, argv, &execType)) {
-		OutputStringA("Usage\n");
+		OutputString(_T("Usage\n"));
 #if 0
-		OutputStringA("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi/raw>\n");
+		OutputString(_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi/raw>\n"));
 #endif
-		OutputStringA("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi>\n");
-		OutputStringA("\t\tRipping CD or DVD from a to z\n");
-		OutputStringA("\t\tcmi:Log Copyright Management Information (Only DVD)(Very slow)\n");
+		OutputString(_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi>\n"));
+		OutputString(_T("\t\tRipping CD or DVD from a to z\n"));
+		OutputString(_T("\t\tcmi:Log Copyright Management Information (Only DVD)(Very slow)\n"));
 #if 0
-		OutputStringA("\t\traw:Ripping Raw mode (Only DVD)\n");
+		OutputString(_T("\t\traw:Ripping Raw mode (Only DVD)\n"));
 #endif
-		OutputStringA("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n");
-		OutputStringA("\t\tRipping CD from start to end (data) (Only CD)\n");
-		OutputStringA("\t-ra [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n");
-		OutputStringA("\t\tRipping CD from start to end (audio) (Only CD)\n");
-		OutputStringA("\t-c [DriveLetter]\n");
-		OutputStringA("\t\tClose tray\n");
-		OutputStringA("\t-s [DriveLetter]\n");
-		OutputStringA("\t\tStop spin disc\n");
-		OutputStringA("\t-dec [filename] [LBA]\n");
-		OutputStringA("\t\tDescramble data sector (for GD-ROM Image)\n");
-		OutputStringA("\t-split [filename]\n");
-		OutputStringA("\t\tSplit descrambled File (for GD-ROM Image)\n");
-		OutputStringA("\t-sub [subfile]\n");
-		OutputStringA("\t\tParse CloneCD sub file\n");
+		OutputString(_T("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n"));
+		OutputString(_T("\t\tRipping CD from start to end (data) (Only CD)\n"));
+		OutputString(_T("\t-ra [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n"));
+		OutputString(_T("\t\tRipping CD from start to end (audio) (Only CD)\n"));
+		OutputString(_T("\t-c [DriveLetter]\n"));
+		OutputString(_T("\t\tClose tray\n"));
+		OutputString(_T("\t-s [DriveLetter]\n"));
+		OutputString(_T("\t\tStop spin disc\n"));
+		OutputString(_T("\t-dec [filename] [LBA]\n"));
+		OutputString(_T("\t\tDescramble data sector (for GD-ROM Image)\n"));
+		OutputString(_T("\t-split [filename]\n"));
+		OutputString(_T("\t\tSplit descrambled File (for GD-ROM Image)\n"));
+		OutputString(_T("\t-sub [subfile]\n"));
+		OutputString(_T("\t\tParse CloneCD sub file\n"));
 	}
 	else {
 		time_t now;
 		struct tm* ts;
-		char buf[80];
-		memset(buf, 0, sizeof(buf));
+		_TCHAR buf[128];
+		ZeroMemory(buf, sizeof(buf));
 		now = time(NULL);
 		ts = localtime(&now);
-		strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S %Z", ts);
-		printf("Start->%s\n", buf);
+		_tcsftime(buf, sizeof(buf), _T("%Y-%m-%d(%a) %H:%M:%S"), ts);
+		OutputString(_T("Start->%s\n"), buf);
 		BOOL bRet = exec(argv, execType);
 		if(bRet) {
 			Beep(440, 200);   // do
@@ -305,8 +327,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		now = time(NULL);
 		ts = localtime(&now);
-		strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S %Z", ts);
-		printf("End->%s\n", buf);
+		_tcsftime(buf, sizeof(buf), _T("%Y-%m-%d(%a) %H:%M:%S"), ts);
+		OutputString(_T("End->%s\n"), buf);
 	}
 	return 0;
 }

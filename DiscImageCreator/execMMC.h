@@ -90,7 +90,8 @@ BOOL ReadCDPartial(
 	LPCSTR pszVendorId,
 	INT nStart,
 	INT nEnd,
-	_READ_CD_FLAG::_SectorType flg
+	_READ_CD_FLAG::_SectorType flg,
+	BOOL bDC
 	);
 
 BOOL ReadConfiguration(

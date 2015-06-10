@@ -44,3 +44,7 @@ BOOL IsValidTrackNumber(
 	UCHAR byLastTrackNum,
 	PBOOL bPrevTrackNum
 	);
+
+BOOL Is3DOData(
+	CONST PUCHAR src
+	);

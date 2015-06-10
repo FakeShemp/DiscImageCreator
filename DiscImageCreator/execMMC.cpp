@@ -26,7 +26,7 @@ BOOL ExecCommand(
 	PVOID pvBuffer,
 	ULONG dwBufferLength,
 	PUCHAR byScsiStatus,
-	LPSTR pszFuncname,
+	LPTSTR pszFuncname,
 	INT nLineNum
 	)
 {
@@ -52,8 +52,8 @@ BOOL ExecCommand(
 		OutputScsiStatus(&swb, byScsiStatus, pszFuncname, nLineNum);
 	}
 	else {
-		OutputErrorStringA(
-			"\nDeviceIoControl with SCSI_PASS_THROUGH_DIRECT command failed [F:%s][L:%d]\n", 
+		OutputErrorString(
+			_T("\nDeviceIoControl with SCSI_PASS_THROUGH_DIRECT command failed [F:%s][L:%d]\n"), 
 			pszFuncname, nLineNum);
 	}
 	return bRet;
@@ -84,7 +84,7 @@ BOOL ReadCDAll(
 		return FALSE;
 	}
 	FILE* fpImg = NULL;
-	if(NULL == (fpImg = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".img"), _T("wb"), 0, 0))) {
+	if(NULL == (fpImg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".img"), _T("wb"), 0, 0))) {
 		return FALSE;
 	}
 
@@ -105,26 +105,34 @@ BOOL ReadCDAll(
 	PUCHAR pBuf2 = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
-			throw "Failed to open .sub\n";
+		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
+			throw _T("Failed to open .sub\n");
 		}
-		if(NULL == (fpCue = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".cue"), _T("w"), 0, 0))) {
-			throw "Failed to open .cue\n";
+#ifdef UNICODE
+		if(NULL == (fpCue = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cue"), _T("w, ccs=UTF-8"), 0, 0))) {
+#else
+		if(NULL == (fpCue = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cue"), _T("w"), 0, 0))) {
+#endif
+			throw _T("Failed to open .cue\n");
 		}
-		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".sub.txt"), _T("w"), 0, 0))) {
-			throw "Failed to open .sub.txt\n";
+#ifdef UNICODE
+		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub.txt"), _T("w, ccs=UTF-8"), 0, 0))) {
+#else
+		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub.txt"), _T("w"), 0, 0))) {
+#endif
+			throw _T("Failed to open .sub.txt\n");
 		}
 
 		ULONG ulBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE;
 		if(bC2ErrorData && strncmp(pszVendorId, "PLEXTOR", 7)) {
-			if(NULL == (fpC2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".c2.err"), _T("wb"), 0, 0))) {
-				throw "Failed to open .c2.err\n";
+			if(NULL == (fpC2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".c2.err"), _T("wb"), 0, 0))) {
+				throw _T("Failed to open .c2.err\n");
 			}
 			ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
 		}
 
 		if(NULL == (fpTbl = OpenProgrammabledFile(_T("scramble.bin"), _T("rb")))) {
-			throw "Failed to open scramble.bin\n";
+			throw _T("Failed to open scramble.bin\n");
 		}
 		size_t dwTrackAllocSize = (size_t)toc.LastTrack + 1;
 #ifdef WIN64
@@ -133,19 +141,19 @@ BOOL ReadCDAll(
 		size_t dwTrackPointerAllocSize = dwTrackAllocSize * sizeof(INT);
 #endif
 		if(NULL == (aLBAStart = (INT**)malloc(dwTrackPointerAllocSize))) {
-			throw "Failed to alloc memory aLBAStart\n";
+			throw _T("Failed to alloc memory aLBAStart\n");
 		}
 		if(NULL == (aLBAOfDataTrack = (INT**)malloc(dwTrackPointerAllocSize))) {
-			throw "Failed to alloc memory aLBAOfDataTrack\n";
+			throw _T("Failed to alloc memory aLBAOfDataTrack\n");
 		}
 		if(NULL == (aCtl = (PUCHAR)malloc(dwTrackAllocSize))) {
-			throw "Failed to alloc memory aCtl\n";
+			throw _T("Failed to alloc memory aCtl\n");
 		}
 		if(NULL == (aMode = (PUCHAR)malloc(dwTrackAllocSize))) {
-			throw "Failed to alloc memory aMode\n";
+			throw _T("Failed to alloc memory aMode\n");
 		}
 		if(NULL == (aISRC = (BOOL*)malloc(dwTrackPointerAllocSize))) {
-			throw "Failed to alloc memory aISRC\n";
+			throw _T("Failed to alloc memory aISRC\n");
 		}
 #ifdef WIN64
 		size_t dwIndexAllocSize = (size_t)MAXIMUM_NUMBER_INDEXES * sizeof(INT64);
@@ -156,10 +164,10 @@ BOOL ReadCDAll(
 #endif
 		for(INT h = 0; h < toc.LastTrack + 1; h++) {
 			if(NULL == (aLBAStart[h] = (INT*)malloc(dwIndexAllocSize))) {
-				throw "Failed to alloc memory aLBAStart[h]\n";
+				throw _T("Failed to alloc memory aLBAStart[h]\n");
 			}
 			if(NULL == (aLBAOfDataTrack[h] = (INT*)malloc(dwRangeAllocSize))) {
-				throw "Failed to alloc memory aLBAOfDataTrack[h]\n";
+				throw _T("Failed to alloc memory aLBAOfDataTrack[h]\n");
 			}
 			FillMemory(aLBAStart[h], dwIndexAllocSize, -1);
 			FillMemory(aLBAOfDataTrack[h], dwRangeAllocSize, -1);
@@ -169,7 +177,7 @@ BOOL ReadCDAll(
 		ZeroMemory(aISRC, dwTrackPointerAllocSize);
 
 		if(NULL == (aBuf = (PUCHAR)malloc(ulBufLen + 0x10))) {
-			throw "Failed to alloc memory aBuf[h]\n";
+			throw _T("Failed to alloc memory aBuf[h]\n");
 		}
 		ZeroMemory(aBuf, ulBufLen + 0x10);
 		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
@@ -187,16 +195,24 @@ BOOL ReadCDAll(
 		aCmd[10] = READ_CD_FLAG::PtoW;
 
 		UCHAR byScsiStatus = 0;
-		for(INT n = 16; ; n++) {
+		for(INT n = 0; ; n++) {
 			if((toc.TrackData[0].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 				aCmd[1] = READ_CD_FLAG::All;
 				aCmd[5] = LOBYTE(LOWORD(n));
 				if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-					ulBufLen, &byScsiStatus, __FUNCTION__, __LINE__)
+					ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 					|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-					throw "";
+					throw _T("");
 				}
-				if(pBuf[15] == DATA_BLOCK_MODE1) {
+				if(n == 0) {
+					if(Is3DOData(pBuf)) {
+						break;
+					}
+					else {
+						n += 15;
+					}					
+				}
+				else if(pBuf[15] == DATA_BLOCK_MODE1) {
 					OutputVolumeDescriptor(SYNC_SIZE + HEADER_SIZE, pBuf, fpLog);
 					if(pBuf[SYNC_SIZE+HEADER_SIZE] == 0xff) {
 						break;
@@ -219,7 +235,7 @@ BOOL ReadCDAll(
 		UCHAR SubcodeRtoW[CD_RAW_READ_SUBCODE_SIZE];
 		ZeroMemory(SubcodeRtoW, sizeof(SubcodeRtoW));
 		if(NULL == (aEndCtl = (PUCHAR)malloc(dwTrackAllocSize))) {
-			throw "Failed to alloc memory aEndCtl\n";
+			throw _T("Failed to alloc memory aEndCtl\n");
 		}
 		ZeroMemory(aEndCtl, dwTrackAllocSize);
 		if(!strncmp(pszVendorId, "PLEXTOR", 7)) {
@@ -240,9 +256,9 @@ BOOL ReadCDAll(
 			aCmd[4] = HIBYTE(LOWORD(aTocLBA[p][0]));
 			aCmd[5] = LOBYTE(LOWORD(aTocLBA[p][0]));
 			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, 
-				pBuf, ulBufLen, &byScsiStatus, __FUNCTION__, __LINE__)
+				pBuf, ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-				throw "";
+				throw _T("");
 			}
 			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode, SubcodeRtoW);
 			aEndCtl[p] = (UCHAR)((Subcode[12] >> 4) & 0x0F);
@@ -280,20 +296,20 @@ BOOL ReadCDAll(
 		prevSubQ.byMode = DATA_BLOCK_MODE0;
 		BOOL bCatalog = FALSE;
 		UCHAR byCurrentTrackNum = toc.FirstTrack;
-		CHAR szCatalog[META_CATALOG_SIZE+1];
-		CHAR szISRC[META_ISRC_SIZE+1];
+		_TCHAR szCatalog[META_CATALOG_SIZE+1];
+		_TCHAR szISRC[META_ISRC_SIZE+1];
 		ZeroMemory(szCatalog, META_CATALOG_SIZE + 1);
 		ZeroMemory(szISRC, META_ISRC_SIZE + 1);
-		OutputLogStringA(fpLog, 
-			"\n--------------------------------error log begin--------------------------------\n");
+		OutputLogString(fpLog, 
+			_T("\n--------------------------------error log begin--------------------------------\n"));
 
 		for(INT nLBA = nOffsetStart; nLBA < nLength + nOffsetEnd; nLBA++) {
 			if(nStartLBAof2ndSession != -1 && nLastLBAof1stSession == nLBA) {
 				INT nStartSession2 = nStartLBAof2ndSession - 1;
-				OutputLogStringA(fpLog, 
-					"Skip from Leadout of Session 1 [%d]", nLastLBAof1stSession);
-				OutputLogStringA(fpLog, 
-					" to Leadin of Session 2 [%d]\n", nStartSession2);
+				OutputLogString(fpLog, 
+					_T("Skip from Leadout of Session 1 [%d]"), nLastLBAof1stSession);
+				OutputLogString(fpLog, 
+					_T(" to Leadin of Session 2 [%d]\n"), nStartSession2);
 				nLBA = nStartSession2;
 				prevSubQ.nAbsoluteTime = nLBA + 150;
 				continue;
@@ -305,8 +321,8 @@ BOOL ReadCDAll(
 			aCmd[4] = HIBYTE(LOWORD(nLBA));
 			aCmd[5] = LOBYTE(LOWORD(nLBA));
 			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, 
-				pBuf, ulBufLen, &byScsiStatus, __FUNCTION__, __LINE__)) {
-				throw "";
+				pBuf, ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
+				throw _T("");
 			}
 
 			if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
@@ -324,8 +340,8 @@ BOOL ReadCDAll(
 					uiSize = CD_RAW_SECTOR_SIZE;
 					fwrite(pBuf, sizeof(UCHAR), uiSize, fpImg);
 				}
-				OutputErrorStringA(
-					"LBA %d Read error [L:%d]. Zero padding [%dbyte]\n", 
+				OutputErrorString(
+					_T("LBA %d Read error [L:%d]. Zero padding [%dbyte]\n"), 
 					nLBA, __LINE__, uiSize);
 				prevSubQ.nAbsoluteTime++;
 				continue;
@@ -353,7 +369,7 @@ BOOL ReadCDAll(
 						bCatalog = bMCN;
 					}
 					if(!bMCN) {
-						OutputLogStringA(fpLog, "LBA %6d, MCN[%s]\n", nLBA, szCatalog);
+						OutputLogString(fpLog, _T("LBA %6d, MCN[%s]\n"), nLBA, szCatalog);
 						subQ.byAdr = prevSubQ.byAdr;
 					}
 					//// Fix TrackNum, because don't exist.
@@ -403,7 +419,7 @@ BOOL ReadCDAll(
 					szISRC[12] = '\0';
 					aISRC[byCurrentTrackNum-1] = bISRC;
 					if(!bISRC) {
-						OutputLogStringA(fpLog, "LBA %6d, ISRC[%s]\n", nLBA, szISRC);
+						OutputLogString(fpLog, _T("LBA %6d, ISRC[%s]\n"), nLBA, szISRC);
 						subQ.byAdr = prevSubQ.byAdr;
 					}
 					// because don't exist tracknum, index...
@@ -413,14 +429,14 @@ BOOL ReadCDAll(
 				else {
 					if(subQ.byAdr == ADR_NO_MODE_INFORMATION || 
 						subQ.byAdr > ADR_ENCODES_ISRC) {
-						OutputLogStringA(fpLog, "LBA %6d, Adr[%d], correct[%d]\n", 
+						OutputLogString(fpLog, _T("LBA %6d, Adr[%d], correct[%d]\n"), 
 							nLBA, subQ.byAdr, prevSubQ.byAdr);
 						subQ.byAdr = prevSubQ.byAdr;
 					}
 					BOOL bPrevTrackNum = TRUE;
 					if(!IsValidTrackNumber(&prevPrevSubQ, &prevSubQ,
 						&subQ, toc.FirstTrack, toc.LastTrack, &bPrevTrackNum)) {
-						OutputLogStringA(fpLog, "LBA %6d, TrackNum[%02d], correct[%02d]\n", 
+						OutputLogString(fpLog, _T("LBA %6d, TrackNum[%02d], correct[%02d]\n"), 
 							nLBA, subQ.byTrackNum, prevSubQ.byTrackNum);
 						// Bikkuriman Daijikai (Japan)
 						// LBA[106402, 0x19FA2], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-70, Index-01, RelativeTime-00:16:39, AbsoluteTime-23:40:52] RtoW:ZERO mode
@@ -438,7 +454,7 @@ BOOL ReadCDAll(
 						}
 					}
 					else if(!bPrevTrackNum) {
-						OutputLogStringA(fpLog, "LBA %6d, PrevTrackNum[%02d], correct[%02d]\n", 
+						OutputLogString(fpLog, _T("LBA %6d, PrevTrackNum[%02d], correct[%02d]\n"), 
 							nLBA, prevSubQ.byTrackNum, prevPrevSubQ.byTrackNum);
 						aLBAStart[prevSubQ.byTrackNum-1][prevSubQ.byIndex] = -1;
 						aLBAOfDataTrack[prevSubQ.byTrackNum-1][0] = -1;
@@ -447,41 +463,41 @@ BOOL ReadCDAll(
 					BOOL bPrevIndex = TRUE;
 					BOOL bPrevPrevIndex = TRUE;
 					if(!IsValidIndex(&prevPrevSubQ, &prevSubQ, &subQ, &bPrevIndex, &bPrevPrevIndex)) {
-						OutputLogStringA(fpLog, "LBA %6d, Index[%02d], correct[%02d]\n", 
+						OutputLogString(fpLog, _T("LBA %6d, Index[%02d], correct[%02d]\n"), 
 							nLBA, subQ.byIndex, prevSubQ.byIndex);
 						subQ.byTrackNum = prevSubQ.byTrackNum;
 						subQ.byIndex = prevSubQ.byIndex;
 					}
 					else if(!bPrevIndex) {
-						OutputLogStringA(fpLog, "LBA %6d, PrevIndex[%02d], correct[%02d]\n", 
+						OutputLogString(fpLog, _T("LBA %6d, PrevIndex[%02d], correct[%02d]\n"), 
 							nLBA - 1 , prevSubQ.byIndex, prevPrevSubQ.byIndex);
 						aLBAStart[prevSubQ.byTrackNum-1][prevSubQ.byIndex] = -1;
 						prevSubQ.byTrackNum = prevPrevSubQ.byTrackNum;
 						prevSubQ.byIndex = prevPrevSubQ.byIndex;
 					}
 					else if(!bPrevPrevIndex) {
-						OutputLogStringA(fpLog, "LBA %6d, PrevPrevIndex[%02d], correct[%02d]\n", 
+						OutputLogString(fpLog, _T("LBA %6d, PrevPrevIndex[%02d], correct[%02d]\n"), 
 							nLBA - 1 , prevPrevSubQ.byIndex, prevSubQ.byIndex);
 						aLBAStart[prevPrevSubQ.byTrackNum-1][prevPrevSubQ.byIndex] = -1;
 						prevPrevSubQ.byTrackNum = prevSubQ.byTrackNum;
 						prevPrevSubQ.byIndex = prevSubQ.byIndex;
 					}
 					if(Subcode[18] != 0) {
-						OutputLogStringA(fpLog, 
-							"LBA %6d, Zero[%02d], correct[0]\n", nLBA, Subcode[18]);
+						OutputLogString(fpLog, 
+							_T("LBA %6d, Zero[%02d], correct[0]\n"), nLBA, Subcode[18]);
 					}
 					if(!IsValidAbsoluteTime(&prevSubQ, &subQ, Subcode, nLBA)) {
 						UCHAR byFrame, bySecond, byMinute;
 						LBAtoMSF(nLBA + 150, &byFrame, &bySecond, &byMinute);
-						OutputLogStringA(fpLog, 
-							"LBA %6d, AbsoluteTime[%02d:%02d:%02d], correct[%02d:%02d:%02d]\n", 
+						OutputLogString(fpLog, 
+							_T("LBA %6d, AbsoluteTime[%02d:%02d:%02d], correct[%02d:%02d:%02d]\n"), 
 							nLBA, BcdToDec(Subcode[19]), BcdToDec(Subcode[20]), 
 							BcdToDec(Subcode[21]), byMinute, bySecond, byFrame);
 					}
 				}
 				if(!IsValidControl(&prevPrevSubQ, &prevSubQ, 
 					&subQ, aEndCtl[subQ.byTrackNum-1])) {
-					OutputLogStringA(fpLog, "LBA %6d, Ctl[%d], correct[%d]\n",
+					OutputLogString(fpLog, _T("LBA %6d, Ctl[%d], correct[%d]\n"),
 						nLBA, subQ.byCtl, prevSubQ.byCtl);
 					subQ.byCtl = prevSubQ.byCtl;
 				}
@@ -490,7 +506,9 @@ BOOL ReadCDAll(
 				fwrite(Subcode, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 				OutputSubcode(nLBA, byCurrentTrackNum, 
 					Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
-
+#ifdef _DEBUG
+//				fflush(fpParse);
+#endif
 				// preserve mode, ctl
 				if(nLBA == aTocLBA[subQ.byTrackNum-1][0]) {
 					aCtl[subQ.byTrackNum-1] = subQ.byCtl;
@@ -524,6 +542,18 @@ BOOL ReadCDAll(
 					(prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
 					(subQ.byCtl & AUDIO_DATA_TRACK) == 0) {
 					aLBAOfDataTrack[subQ.byTrackNum-1][subQ.byIndex] = nLBA - 1;
+				}
+				// Hyper Wars (Japan)
+				// LBA[098484, 0x180B4], Data, Copy NG, TOC[TrackNum-03, Index-00, RelativeTime-00:02:01, AbsoluteTime-21:55:09] RtoW:ZERO mode
+				// LBA[098485, 0x180B5], Data, Copy NG, TOC[TrackNum-03, Index-00, RelativeTime-00:02:00, AbsoluteTime-21:55:10] RtoW:ZERO mode
+				// LBA[098486, 0x180B6], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-03, Index-00, RelativeTime-00:01:74, AbsoluteTime-21:55:11] RtoW:ZERO mode
+				// LBA[098487, 0x180B7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-03, Index-00, RelativeTime-00:01:73, AbsoluteTime-21:55:12] RtoW:ZERO mode
+				if((prevPrevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+					(prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+					(subQ.byCtl & AUDIO_DATA_TRACK) == 0 &&
+					 subQ.byIndex == 0 && prevSubQ.byIndex == 0 && prevPrevSubQ.byIndex == 0 
+					) {
+					aLBAOfDataTrack[subQ.byTrackNum-1][subQ.byIndex+1] = nLBA - 1;
 				}
 				// preserve index
 				if(prevSubQ.byIndex + 1 == subQ.byIndex && 
@@ -608,9 +638,9 @@ BOOL ReadCDAll(
 			prevPrevSubQ.byIndex = prevSubQ.byIndex;
 			prevSubQ.byTrackNum = subQ.byTrackNum;
 			prevSubQ.byIndex = subQ.byIndex;
-			printf("\rCreating img(LBA) %6d/%6d", nLBA - nOffsetEnd, nLength - 1);
+			OutputString(_T("\rCreating img(LBA) %6d/%6d"), nLBA - nOffsetEnd, nLength - 1);
 		}
-		printf("\n");
+		OutputString(_T("\n"));
 		FcloseAndNull(fpImg);
 		FcloseAndNull(fpSub);
 		if(strncmp(pszVendorId, "PLEXTOR", 7)) {
@@ -619,21 +649,21 @@ BOOL ReadCDAll(
 		FcloseAndNull(fpParse);
 		FreeAndNull(aBuf);
 
-		OutputLogStringA(fpLog, 
-			"---------------------------------error log end---------------------------------\n\n");
-		OutputLogStringA(fpLog, "TOC on Subchannel\n");
+		OutputLogString(fpLog, 
+			_T("---------------------------------error log end---------------------------------\n\n"));
+		OutputLogString(fpLog, _T("TOC on Subchannel\n"));
 		for(INT r = 0; r < toc.LastTrack; r++) {
-			OutputLogStringA(fpLog, 
-				"\tTrack %2d, Ctl %d, Mode %d", r + 1, aCtl[r], aMode[r]);
+			OutputLogString(fpLog, 
+				_T("\tTrack %2d, Ctl %d, Mode %d"), r + 1, aCtl[r], aMode[r]);
 			for(INT k = 0; k < MAXIMUM_NUMBER_INDEXES; k++) {
 				if(aLBAStart[r][k] != -1) {
-					OutputLogStringA(fpLog, ", Index%d %6d", k, aLBAStart[r][k]);
+					OutputLogString(fpLog, _T(", Index%d %6d"), k, aLBAStart[r][k]);
 				}
 				else if(k == 0) {
-					OutputLogStringA(fpLog, ",              ");
+					OutputLogString(fpLog, _T(",              "));
 				}
 			}
-			OutputLogStringA(fpLog, "\n");
+			OutputLogString(fpLog, _T("\n"));
 		}
 
 		// 5th:Descramble img
@@ -642,13 +672,13 @@ BOOL ReadCDAll(
 		FcloseAndNull(fpTbl);
 		UCHAR aSrcBuf[CD_RAW_SECTOR_SIZE];
 
-		if(NULL == (fpImg2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".img"), _T("rb+"), 0, 0))) {
-			throw "Failed to open file .img\n";
+		if(NULL == (fpImg2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".img"), _T("rb+"), 0, 0))) {
+			throw _T("Failed to open file .img\n");
 		}
 
 		for(INT k = 0; k < toc.LastTrack; k++) {
 			if(aLBAOfDataTrack[k][0] != -1) {
-				OutputLogStringA(fpLog, "\tData Sector, LBA %6d-%6d\n", 
+				OutputLogString(fpLog, _T("\tData Sector, LBA %6d-%6d\n"), 
 					aLBAOfDataTrack[k][0], aLBAOfDataTrack[k][1]);
 				INT nStartLBA = aSessionNum[k] >= 2 
 					? aLBAOfDataTrack[k][0] - (11400 * (aSessionNum[k] - 1)) 
@@ -672,24 +702,24 @@ BOOL ReadCDAll(
 						}
 						fwrite(aSrcBuf, sizeof(UCHAR), sizeof(aSrcBuf), fpImg2);
 					}
-					printf("\rDescrambling data sector of img(LBA) %6d/%6d", nStartLBA, nEndLBA);
+					OutputString(_T("\rDescrambling data sector of img(LBA) %6d/%6d"), nStartLBA, nEndLBA);
 				}
-				printf("\n");
+				OutputString(_T("\n"));
 			}
 		}
 		// 6th:Creating bin, cue, ccd
 		TCHAR pszFileNameWithoutPath[_MAX_FNAME];
 		for(INT i = toc.FirstTrack; i <= toc.LastTrack; i++) {
 			if(NULL == (fpBin = CreateOrOpenFileW(pszOutFile, NULL, 
-				pszFileNameWithoutPath, _T(".bin"), _T("wb"), i, toc.LastTrack))) {
-				throw "Failed to open .bin\n";
+				pszFileNameWithoutPath, NULL, _T(".bin"), _T("wb"), i, toc.LastTrack))) {
+				throw _T("Failed to open .bin\n");
 			}
-			printf("\rCreating bin, cue, ccd(Track) %2d/%2d", i, toc.LastTrack);
-			CHAR fname[_MAX_FNAME*sizeof(TCHAR)];
-			ZeroMemory(fname, sizeof(fname));
-			WideCharToMultiByte(CP_ACP, 0, pszFileNameWithoutPath,
-				-1, fname, sizeof(fname), NULL, NULL);
-			WriteCueFile(bCatalog, fname, 
+			OutputString(_T("\rCreating bin, cue, ccd(Track) %2d/%2d"), i, toc.LastTrack);
+//			CHAR fname[_MAX_FNAME*sizeof(TCHAR)];
+//			ZeroMemory(fname, sizeof(fname));
+//			WideCharToMultiByte(CP_ACP, 0, pszFileNameWithoutPath,
+//				-1, fname, sizeof(fname), NULL, NULL);
+			WriteCueFile(bCatalog, pszFileNameWithoutPath, 
 				i, aMode[i-1], aISRC[i-1], aCtl[i-1], fpCue);
 			bCatalog = FALSE;
 			WriteCcdFileForTrack(i, aMode[i-1], aISRC[i-1], fpCcd);
@@ -753,17 +783,17 @@ BOOL ReadCDAll(
 			}
 			fseek(fpImg2, nPrevLba * CD_RAW_SECTOR_SIZE, SEEK_SET);
 			if(NULL == (pBuf2 = (PUCHAR)malloc(uiBufsize))) {
-				throw "Failed to alloc memory pBuf2\n";
+				throw _T("Failed to alloc memory pBuf2\n");
 			}
 			fread(pBuf2, sizeof(UCHAR), uiBufsize, fpImg2);
 			fwrite(pBuf2, sizeof(UCHAR), uiBufsize, fpBin);
 			FreeAndNull(pBuf2);
 			FcloseAndNull(fpBin);
 		}
-		printf("\n");
+		OutputString(_T("\n"));
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 #ifndef _DEBUG
@@ -818,26 +848,26 @@ BOOL ReadCDForSearchingOffset(
 	if(!bGetDrive) {
 		CHAR a[6];
 		ZeroMemory(a, sizeof(a));
-		printf("This drive isn't defined in driveOffset.txt.\n");
-		printf("Please input Drive offset(Samples) -> ");
+		OutputString(_T("This drive isn't defined in driveOffset.txt.\n"));
+		OutputString(_T("Please input Drive offset(Samples) -> "));
 		INT b = scanf("%6[^\n]%*[^\n]", a);
 		b = getchar();
 		nDriveSampleOffset = atoi(a) * 4;
 	}
 	if(bAudioOnly) {
 		*nCombinedOffset = nDriveSampleOffset * 4;
-		OutputLogStringA(fpLog, "Offset");
+		OutputLogString(fpLog, _T("Offset"));
 		if(bGetDrive) {
-			OutputLogStringA(fpLog, "(Drive offset data referes to www.accuraterip.com)");
+			OutputLogString(fpLog, _T("(Drive offset data referes to www.accuraterip.com)"));
 		}
-		OutputLogStringA(fpLog, "\n");
-		OutputLogStringA(fpLog, "\tDrive Offset(Byte) %d, (Samples) %d\n", 
+		OutputLogString(fpLog, _T("\n"));
+		OutputLogString(fpLog, _T("\tDrive Offset(Byte) %d, (Samples) %d\n"), 
 			*nCombinedOffset, nDriveSampleOffset);
 		bRet = TRUE;
 	}
 	else {
 		UCHAR byScsiStatus = 0;
-		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+0x10];
+		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE*2+0x10];
 		UCHAR aCmd[CDB12GENERIC_LENGTH];
 
 		ZeroMemory(aBuf, sizeof(aBuf));
@@ -845,7 +875,7 @@ BOOL ReadCDForSearchingOffset(
 		ZeroMemory(aCmd, sizeof(aCmd));
 
 		INT nDriveOffset = nDriveSampleOffset * 4;
-		UCHAR byTransferLen = 1;
+		UCHAR byTransferLen = 2;
 		if(!strncmp(pszVendorId, "PLEXTOR", 7)) {
 			// PX-504A don't support...
 			// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
@@ -867,7 +897,7 @@ BOOL ReadCDForSearchingOffset(
 		aCmd[4] = HIBYTE(LOWORD(nFirstDataLBA));
 		aCmd[5] = LOBYTE(LOWORD(nFirstDataLBA));
 		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-			CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, __FUNCTION__, __LINE__)) {
+			CD_RAW_SECTOR_WITH_SUBCODE_SIZE * 2, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
 			return FALSE;
 		}
 		if(byScsiStatus == 0) {
@@ -877,7 +907,10 @@ BOOL ReadCDForSearchingOffset(
 
 			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode, SubcodeRtoW);
 			OutputSub96(Subcode, nFirstDataLBA, fpLog);
-			bRet = GetWriteOffset(pBuf, nFirstDataLBA, nCombinedOffset);
+			UCHAR aBuf2[CD_RAW_SECTOR_SIZE*2];
+			memcpy(aBuf2, pBuf, CD_RAW_SECTOR_SIZE);
+			memcpy(aBuf2 + CD_RAW_SECTOR_SIZE, pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, CD_RAW_SECTOR_SIZE);
+			bRet = GetWriteOffset(aBuf2, nFirstDataLBA, nCombinedOffset);
 		}
 		else {
 			// PLEXTOR(PX-W8432, PX-W1210T, PX-W2410T)
@@ -885,31 +918,31 @@ BOOL ReadCDForSearchingOffset(
 			// ==>Sense data, Key:Asc:Ascq: 05:64:00(ILLEGAL_REQUEST. ILLEGAL MODE FOR THIS TRACK)
 			// else if Track1 isn't DataTrack (pc engine etc)
 			// ==>no error.
-			printf("This drive can't read data sector in scrambled mode.\n");
+			OutputString(_T("This drive can't read data sector in scrambled mode.\n"));
 			return FALSE;
 		}
 
 		if(bRet) {
-			OutputLogStringA(fpLog, "Offset");
+			OutputLogString(fpLog, _T("Offset"));
 			if(bGetDrive) {
-				OutputLogStringA(fpLog, "(Drive offset data referes to www.accuraterip.com)");
+				OutputLogString(fpLog, _T("(Drive offset data referes to www.accuraterip.com)"));
 			}
-			OutputLogStringA(fpLog, "\n");
-			OutputLogStringA(fpLog, 
-				"\t Combined Offset(Byte) %6d, (Samples) %5d\n", 
+			OutputLogString(fpLog, _T("\n"));
+			OutputLogString(fpLog, 
+				_T("\t Combined Offset(Byte) %6d, (Samples) %5d\n"), 
 				*nCombinedOffset, *nCombinedOffset / 4);
-			OutputLogStringA(fpLog, 
-				"\t-   Drive Offset(Byte) %6d, (Samples) %5d\n", 
+			OutputLogString(fpLog, 
+				_T("\t-   Drive Offset(Byte) %6d, (Samples) %5d\n"), 
 				nDriveOffset, nDriveSampleOffset);
-			OutputLogStringA(fpLog, 
-				"\t----------------------------------------------\n");
-			OutputLogStringA(fpLog, 
-				"\t       CD Offset(Byte) %6d, (Samples) %5d\n", 
+			OutputLogString(fpLog, 
+				_T("\t----------------------------------------------\n"));
+			OutputLogString(fpLog, 
+				_T("\t       CD Offset(Byte) %6d, (Samples) %5d\n"), 
 				*nCombinedOffset - nDriveOffset, 
 				(*nCombinedOffset - nDriveOffset) / 4);
 		}
 		else {
-			OutputErrorStringA("Failed to get write-offset[L:%d]\n", __LINE__);
+			OutputErrorString(_T("Failed to get write-offset[L:%d]\n"), __LINE__);
 		}
 	}
 
@@ -919,7 +952,7 @@ BOOL ReadCDForSearchingOffset(
 	else if(*nCombinedOffset < 0) {
 		nAdjustSectorNum = *nCombinedOffset / CD_RAW_SECTOR_SIZE - 1;
 	}
-	OutputLogStringA(fpLog, "\tNeed overread sector:%d\n", nAdjustSectorNum);
+	OutputLogString(fpLog, _T("\tNeed overread sector:%d\n"), nAdjustSectorNum);
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
 #else
@@ -934,24 +967,40 @@ BOOL ReadCDPartial(
 	LPCSTR pszVendorId,
 	INT nStart,
 	INT nEnd,
-	_READ_CD_FLAG::_SectorType flg
+	_READ_CD_FLAG::_SectorType flg,
+	BOOL bDC
 	)
 {
-	FILE* fp = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".bin"), _T("wb"), 0, 0);
+	_TCHAR szBin[8];
+	_TCHAR szSub[8];
+	_TCHAR szSubtxt[12];
+	ZeroMemory(szBin, sizeof(szBin));
+	if(bDC) {
+		_tcscpy(szSub, _T("_dc.sub"));
+		_tcscpy(szSubtxt, _T("_dc.sub.txt"));
+	}
+	else {
+		_tcscpy(szSub, _T(".sub"));
+		_tcscpy(szSubtxt, _T(".sub.txt"));
+	}
+	FILE* fp = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("wb"), 0, 0);
 	if(!fp) {
-		OutputErrorStringA(
-			"Failed to open file .bin [L:%d]\n", __LINE__);
+		OutputErrorString(_T("Failed to open file %s [L:%d]\n"), szBin, __LINE__);
 		return FALSE;
 	}
 	FILE* fpSub = NULL;
 	FILE* fpParse = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
-			throw "Failed to open .sub\n";
+		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSub, _T("wb"), 0, 0))) {
+			throw _T("Failed to open .sub\n");
 		}
-		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".sub.txt"), _T("w"), 0, 0))) {
-			throw "Failed to open .sub.txt\n";
+#ifdef UNICODE
+		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSubtxt, _T("w, ccs=UTF-8"), 0, 0))) {
+#else
+		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSubtxt, _T("w"), 0, 0))) {
+#endif
+			throw _T("Failed to open .sub.txt\n");
 		}
 		UCHAR byScsiStatus = 0;
 		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+0x10];
@@ -985,13 +1034,13 @@ BOOL ReadCDPartial(
 			aCmd[5] = LOBYTE(LOWORD(nLBA));
 			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 				CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, 
-				__FUNCTION__, __LINE__)) {
-				throw "";
+				_T(__FUNCTION__), __LINE__)) {
+				throw _T("");
 			}
 			if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-				OutputErrorStringA("LBA %d Read error [L:%d]\n", nLBA, __LINE__);
+				OutputErrorString(_T("LBA %d Read error [L:%d]\n"), nLBA, __LINE__);
 				if(nEnd == 549150) {
-					throw "";
+					throw _T("");
 				}
 			}
 			else {
@@ -1001,12 +1050,12 @@ BOOL ReadCDPartial(
 				OutputSubcode(nLBA, BcdToDec(Subcode[13]) - 1, 
 					Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
 			}
-			printf("\rCreating bin from %d to %d (LBA) %6d", nStart, nEnd, nLBA);
+			OutputString(_T("\rCreating bin from %d to %d (LBA) %6d"), nStart, nEnd, nLBA);
 		}
-		printf("\n");
+		OutputString(_T("\n"));
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FcloseAndNull(fp);
@@ -1035,35 +1084,35 @@ BOOL ReadConfiguration(
 	aCmd[3] = FeatureProfileList;
 	aCmd[7] = HIBYTE(uiSize);
 	aCmd[8] = LOBYTE(uiSize);
-	OutputLogStringA(fpLog, "Configuration\n");
+	OutputLogString(fpLog, _T("Configuration\n"));
 	BOOL bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pHeader, 
-		(ULONG)uiSize, &byScsiStatus, __FUNCTION__, __LINE__);
+		(ULONG)uiSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		*pusCurrentMedia = ProfileCdrom;
 		// not false. because undefined mmc1..
-		OutputLogStringA(fpLog, "\tUndefined this drive\n");
+		OutputLogString(fpLog, _T("\tUndefined this drive\n"));
 	}
 	else {
-		OutputLogStringA(fpLog, "\tCurrentMedia:");
+		OutputLogString(fpLog, _T("\tCurrentMedia:"));
 		*pusCurrentMedia = MAKEWORD(pHeader[7], pHeader[6]);
 		OutputFeatureProfileType(fpLog, *pusCurrentMedia);
-		OutputLogStringA(fpLog, "\n");
+		OutputLogString(fpLog, _T("\n"));
 		// 4 is DataLength size of GET_CONFIGURATION_HEADER
 		LONG lAllLen = MAKELONG(MAKEWORD(pHeader[3], pHeader[2]), 
 			MAKEWORD(pHeader[1], pHeader[0])) + 4;
 
 		PUCHAR pConf = (PUCHAR)malloc((size_t)lAllLen);
 		if(!pConf) {
-			printf("Can't alloc memory [F:%s][L:%d]\n", __FUNCTION__, __LINE__);
+			OutputErrorString(_T("Can't alloc memory [F:%s][L:%d]\n"), _T(__FUNCTION__), __LINE__);
 			return FALSE;
 		}
 		aCmd[7] = HIBYTE(lAllLen);
 		aCmd[8] = LOBYTE(lAllLen);
 		bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pConf, 
-			(size_t)lAllLen, &byScsiStatus, __FUNCTION__, __LINE__);
+			(size_t)lAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 		if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false. because undefined mmc1..
-			OutputLogStringA(fpLog, "\tUndefined this drive\n");
+			OutputLogString(fpLog, _T("\tUndefined this drive\n"));
 		}
 		else {
 			OutputFeatureNumber(pConf, lAllLen, uiSize, bCanCDText, bC2ErrorData, fpLog);
@@ -1091,7 +1140,7 @@ BOOL ReadDeviceInfo(
 	aCmd[0] = SCSIOP_INQUIRY;
 	aCmd[4] = byInquirySize;
 	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, pInquiry, 
-		byInquirySize, &byScsiStatus, __FUNCTION__, __LINE__) || 
+		byInquirySize, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -1107,9 +1156,9 @@ BOOL ReadDVD(
 	FILE* fpLog
 	)
 {
-	FILE* fp = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".iso"), _T("wb"), 0, 0);
+	FILE* fp = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".iso"), _T("wb"), 0, 0);
 	if(!fp) {
-		OutputErrorStringA("Failed to open file .iso [L:%d]\n", __LINE__);
+		OutputErrorString(_T("Failed to open file .iso [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	UCHAR byScsiStatus = 0;
@@ -1118,7 +1167,7 @@ BOOL ReadDVD(
 	BOOL bRet = TRUE;
 	try {
 		if(NULL == (aBuf = (PUCHAR)malloc(CD_RAW_READ * (size_t)byTransferLen + 0x10))) {
-			throw "Can't alloc memory aBuf\n";
+			throw _T("Can't alloc memory aBuf\n");
 		}
 		UCHAR aCmd[CDB12GENERIC_LENGTH];
 		ZeroMemory(aBuf, CD_RAW_READ * (size_t)byTransferLen + 0x10);
@@ -1129,9 +1178,9 @@ BOOL ReadDVD(
 		aCmd[9] = byTransferLen;
 		aCmd[10] = 0x80; // Streaming
 		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, __FUNCTION__, __LINE__)
+			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			OutputErrorStringA("Not supported Streaming. Changed ForceMediaAccess.\n");
+			OutputErrorString(_T("Not supported Streaming. Changed ForceMediaAccess.\n"));
 			aCmd[1] = CDB_FORCE_MEDIA_ACCESS;
 			aCmd[10] = 0;
 		}
@@ -1150,22 +1199,22 @@ BOOL ReadDVD(
 			aCmd2[7] = DvdMaxDescriptor;
 			aCmd2[8] = HIBYTE(LOWORD(uiSize));
 			aCmd2[9] = LOBYTE(LOWORD(uiSize));
-			OutputLogStringA(fpLog, "\tCopyrightManagementInformation\n");
+			OutputLogString(fpLog, _T("\tCopyrightManagementInformation\n"));
 		}
 		aCmd[5] = LOBYTE(0);
 		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, __FUNCTION__, __LINE__)
+			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			throw "";
+			throw _T("");
 		}
 		for(INT i = CD_RAW_READ * 16; i <= CD_RAW_READ * 21; i += CD_RAW_READ) {
 			OutputVolumeRecognitionSequence(i, pBuf, fpLog);
 		}
 		aCmd[5] = LOBYTE(32);
 		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, __FUNCTION__, __LINE__)
+			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			throw "";
+			throw _T("");
 		}
 		if(pBuf[20] == 0 && pBuf[21] == 0 && pBuf[22] == 0 && pBuf[23] == 0) {
 			for(INT i = 0; i <= CD_RAW_READ * 5; i += CD_RAW_READ) {
@@ -1175,9 +1224,9 @@ BOOL ReadDVD(
 		aCmd[4] = HIBYTE(LOWORD(256));
 		aCmd[5] = LOBYTE(LOWORD(256));
 		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, __FUNCTION__, __LINE__)
+			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			throw "";
+			throw _T("");
 		}
 		OutputVolumeDescriptorSequence(0, pBuf, fpLog);
 		fflush(fpLog);
@@ -1192,9 +1241,9 @@ BOOL ReadDVD(
 			aCmd[4] = HIBYTE(LOWORD(nLBA));
 			aCmd[5] = LOBYTE(LOWORD(nLBA));
 			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-				(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, __FUNCTION__, __LINE__)
+				(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-				throw "";
+				throw _T("");
 			}
 
 			fwrite(pBuf, sizeof(UCHAR), (size_t)CD_RAW_READ * byTransferLen, fp);
@@ -1205,23 +1254,23 @@ BOOL ReadDVD(
 					aCmd2[4] = HIBYTE(LOWORD(nLBA + i));
 					aCmd2[5] = LOBYTE(LOWORD(nLBA + i));
 					if(!ExecCommand(hDevice, aCmd2, CDB10GENERIC_LENGTH, 
-						pBuf2, (ULONG)uiSize, &byScsiStatus, __FUNCTION__, __LINE__)) {
-						throw "";
+						pBuf2, (ULONG)uiSize, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
+						throw _T("");
 					}
 					if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-						OutputErrorStringA(
-							"LBA %7d, Read Disc Structure Cmd error\n", nLBA);
+						OutputErrorString(
+							_T("LBA %7d, Read Disc Structure Cmd error\n"), nLBA);
 					}
 					OutputCopyrightManagementInformation(nLBA, i, pBuf2, fpLog);
 				}
 			}
-			printf("\rCreating iso(LBA):%7d/%7d", 
+			OutputString(_T("\rCreating iso(LBA):%7d/%7d"), 
 				nLBA + byTransferLen - 1, nDVDSectorSize - 1);
 		}
-		printf("\n");
+		OutputString(_T("\n"));
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FreeAndNull(aBuf);
@@ -1241,9 +1290,9 @@ BOOL ReadDVDRaw(
 	FILE* fpLog
 	)
 {
-	FILE* fp = CreateOrOpenFileW(pszOutFile, NULL, NULL, _T(".raw"), _T("wb"), 0, 0);
+	FILE* fp = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".raw"), _T("wb"), 0, 0);
 	if(!fp) {
-		OutputErrorStringA("Failed to open file .raw [L:%d]\n", __LINE__);
+		OutputErrorString(_T("Failed to open file .raw [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	UCHAR byScsiStatus = 0;
@@ -1252,7 +1301,7 @@ BOOL ReadDVDRaw(
 	BOOL bRet = TRUE;
 	try {
 		if(NULL == (aBuf = (PUCHAR)malloc(DVD_RAW_READ * (size_t)byTransferLen + 0x10))) {
-			throw "Can't alloc memory aBuf\n";
+			throw _T("Can't alloc memory aBuf\n";
 		}
 		UCHAR aCmd[CDB12GENERIC_LENGTH];
 		ZeroMemory(aBuf, DVD_RAW_READ * (size_t)byTransferLen + 0x10);
@@ -1303,19 +1352,19 @@ BOOL ReadDVDRaw(
 				aCmd[9] = LOBYTE(LOWORD(nLBA));
 			}
 			if(!ExecCommand(hDevice, aCmd, cdblen, pBuf, 
-				(ULONG)DVD_RAW_READ * byTransferLen, &byScsiStatus, __FUNCTION__, __LINE__)
+				(ULONG)DVD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-				throw "";
+				throw _T("");
 			}
 
 			fwrite(pBuf, sizeof(UCHAR), (size_t)DVD_RAW_READ * byTransferLen, fp);
-			printf("\rCreating raw(LBA):%7d/%7d", 
+			OutputString(_T("\rCreating raw(LBA):%7d/%7d", 
 				nLBA + byTransferLen - 1, nDVDSectorSize - 1);
 		}
-		printf("\n");
+		OutputString(_T("\n"));
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FreeAndNull(aBuf);
@@ -1330,14 +1379,14 @@ BOOL ReadDVDRaw(
 	ZeroMemory(pszInPath, sizeof(pszInPath));
 	FILE* fpIn = CreateOrOpenFileA(pszOutFileA, pszInPath, NULL, ".raw", "rb", 0, 0);
 	if(!fpIn) {
-		OutputErrorStringA("Failed to open file .raw [L:%d]\n", __LINE__);
+		OutputErrorString(_T("Failed to open file .raw [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	CHAR pszOutPath[_MAX_PATH];
 	ZeroMemory(pszOutPath, sizeof(pszOutPath));
 	FILE* fpOut = CreateOrOpenFileA(pszOutFileA, pszOutPath, NULL, ".iso", "wb", 0, 0);
 	if(!fpOut) {
-		OutputErrorStringA("Failed to open file .iso [L:%d]\n", __LINE__);
+		OutputErrorString(_T("Failed to open file .iso [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	UINT current_sector = 0;
@@ -1370,7 +1419,7 @@ BOOL ReadDVDStructure(
 	aCmd[9] = LOBYTE(uiMaxDVDStructureSize);
 
 	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pDiscStructure, 
-		(ULONG)uiMaxDVDStructureSize, &byScsiStatus, __FUNCTION__, __LINE__)
+		(ULONG)uiMaxDVDStructureSize, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -1379,12 +1428,12 @@ BOOL ReadDVDStructure(
 	INT nAllStructureSize = usDataLength - 2;
 	size_t uiFormatSize = (size_t)(nAllStructureSize / 4);
 	if(uiFormatSize == 0) {
-		OutputLogStringA(fpLog, "DVD Structure failed. formatSize is 0\n");
+		OutputLogString(fpLog, _T("DVD Structure failed. formatSize is 0\n"));
 		return FALSE;
 	}
 	PUCHAR pFormat = (PUCHAR)malloc(uiFormatSize);
 	if(!pFormat) {
-		OutputErrorStringA("Can't alloc memory L:%d", __LINE__);
+		OutputErrorString(_T("Can't alloc memory L:%d"), __LINE__);
 		return FALSE;
 	}
 	ZeroMemory(pFormat, uiFormatSize);
@@ -1393,17 +1442,17 @@ BOOL ReadDVDStructure(
 	BOOL bRet = TRUE;
 	try {
 		if(NULL == (pStructureLength =(PUSHORT)malloc(uiFormatSize * sizeof(USHORT)))) {
-			throw "Can't alloc memory pStructureLength\n";
+			throw _T("Can't alloc memory pStructureLength\n");
 		}
 		ZeroMemory(pStructureLength, uiFormatSize * sizeof(USHORT));
-		OutputLogStringA(fpLog, "DVD Structure\n");
+		OutputLogString(fpLog, _T("DVD Structure\n"));
 		for(INT i = 0, j = 0; i < nAllStructureSize; i+=4, j++) {
 #ifdef _DEBUG
 			if(i == 0) {
-				OutputLogStringA(fpLog, "\tDisc Structure List\n");
+				OutputLogString(fpLog, _T("\tDisc Structure List\n"));
 			}
-			OutputLogStringA(fpLog, 
-				"\t\tFormatCode:%02X, SDR:%s, RDS:%s, Structure Length:%d\n", 
+			OutputLogString(fpLog, 
+				_T("\t\tFormatCode:%02X, SDR:%s, RDS:%s, Structure Length:%d\n"), 
 				pDiscStructure[4+i], 
 				(pDiscStructure[5+i] & 0x80) == 0x80 ? "Yes" : "No ", 
 				(pDiscStructure[5+i] & 0x40) == 0x40 ? "Yes" : "No ", 
@@ -1420,7 +1469,7 @@ BOOL ReadDVDStructure(
 				continue;
 			}
 			if(NULL == (pStructure = (PUCHAR)malloc(pStructureLength[i]))) {
-				throw "Can't alloc memory pStructure\n";
+				throw _T("Can't alloc memory pStructure\n");
 			}
 			ZeroMemory(pStructure, pStructureLength[i]);
 			aCmd[7] = pFormat[i];
@@ -1428,19 +1477,19 @@ BOOL ReadDVDStructure(
 			aCmd[9] = LOBYTE(pStructureLength[i]);
 
 			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pStructure, 
-				pStructureLength[i], &byScsiStatus, __FUNCTION__, __LINE__)) {
-				throw "";
+				pStructureLength[i], &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
+				throw _T("");
 			}
 			if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-				OutputErrorStringA("Failure - Format %d\n", pFormat[i]);
+				OutputErrorString(_T("Failure - Format %d\n"), pFormat[i]);
 				continue;
 			}
 			OutputDVDStructureFormat(pFormat, i, pStructure, pStructureLength, nDVDSectorSize, fpLog);
 			FreeAndNull(pStructure);
 		}
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FreeAndNull(pFormat);
@@ -1461,7 +1510,7 @@ BOOL ReadTestUnitReady(
 	aCmd[0] = SCSIOP_TEST_UNIT_READY;
 
 	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, NULL, 
-		0, &byScsiStatus, __FUNCTION__, __LINE__) || 
+		0, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -1482,14 +1531,14 @@ BOOL ReadTOC(
 	aCmd[8] = LOBYTE(CDROM_TOC_SIZE);
 
 	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &toc, 
-		CDROM_TOC_SIZE, &byScsiStatus, __FUNCTION__, __LINE__) || 
+		CDROM_TOC_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		OutputErrorStringA("Can't get toc\n");
+		OutputErrorString(_T("Can't get toc\n"));
 		return FALSE;
 	}
 
-	OutputLogStringA(fpLog, "TOC on SCSIOP_READ_TOC\n");
-	CHAR strType[6];
+	OutputLogString(fpLog, _T("TOC on SCSIOP_READ_TOC\n"));
+	_TCHAR strType[6];
 	BOOL bFirstData = TRUE;
 	for(INT i = toc.FirstTrack; i <= toc.LastTrack; i++) {
 		for(INT j = 0, k = 24; j < 4; j++, k -= 8) {
@@ -1500,21 +1549,21 @@ BOOL ReadTOC(
 		*nLength += aTocLBA[i-1][1] - aTocLBA[i-1][0] + 1;
 
 		if((toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == 0) {
-			strcpy(strType, "Audio");
+			_tcscpy(strType, _T("Audio"));
 		}
 		else if((toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 			if(bFirstData) {
 				nFirstDataLBA = aTocLBA[i-1][0];
 				bFirstData = FALSE;
 			}
-			strcpy(strType, " Data");
+			_tcscpy(strType, _T(" Data"));
 		}
-		OutputLogStringA(fpLog, "\t%s Track %2u, LBA %6u-%6u, Length %6u\n", 
+		OutputLogString(fpLog, _T("\t%s Track %2u, LBA %6u-%6u, Length %6u\n"), 
 			strType, i, aTocLBA[i-1][0], aTocLBA[i-1][1], 
 			aTocLBA[i-1][1] - aTocLBA[i-1][0] + 1);
 	}
-	OutputLogStringA(fpLog, 
-		"\t                                   Total  %6u\n", *nLength);
+	OutputLogString(fpLog, 
+		_T("\t                                   Total  %6u\n"), *nLength);
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
 #endif
@@ -1541,9 +1590,9 @@ BOOL ReadTOCFull(
 	UCHAR byScsiStatus = 0;
 	CDROM_TOC_FULL_TOC_DATA fullToc = {0};
 	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &fullToc,
-		(ULONG)uiFullTocDataSize, &byScsiStatus, __FUNCTION__, __LINE__) 
+		(ULONG)uiFullTocDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		OutputErrorStringA("Can't get CDROM_TOC_FULL_TOC_DATA 1\n");
+		OutputErrorString(_T("Can't get CDROM_TOC_FULL_TOC_DATA 1\n"));
 		return FALSE;
 	}
 
@@ -1558,12 +1607,12 @@ BOOL ReadTOCFull(
 	if(!strncmp(pszVendorId, "PLEXTOR", 7) &&
 		!strncmp(pszProductId, "DVDR   PX-712A", 14) &&
 		uiFullTocDataMaxSize > 1028) {
-		OutputErrorStringA("On this drive, can't get CDROM_TOC_FULL_TOC_DATA of this disc\n");
+		OutputErrorString(_T("On this drive, can't get CDROM_TOC_FULL_TOC_DATA of this disc\n"));
 		return TRUE;
 	}
 	PBYTE pFullToc = (PBYTE)malloc(uiFullTocDataMaxSize + 0x10);
 	if(!pFullToc) {
-		printf("Can't alloc memory [L:%d]\n", __LINE__);
+		OutputString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	aCmd[7] = HIBYTE(uiFullTocDataMaxSize);
@@ -1571,9 +1620,9 @@ BOOL ReadTOCFull(
 	BOOL bRet = TRUE;
 	try {
 		if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pFullToc, 
-			(ULONG)uiFullTocDataMaxSize, &byScsiStatus, __FUNCTION__, __LINE__) 
+			(ULONG)uiFullTocDataMaxSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			throw "Can't get CDROM_TOC_FULL_TOC_DATA 2\n";
+			throw _T("Can't get CDROM_TOC_FULL_TOC_DATA 2\n");
 		}
 		CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData = 
 			((CDROM_TOC_FULL_TOC_DATA*)pFullToc)->Descriptors;
@@ -1609,9 +1658,9 @@ BOOL ReadTOCFull(
 					aCmd2[4] = HIBYTE(LOWORD(nLBA));
 					aCmd2[5] = LOBYTE(LOWORD(nLBA));
 					if(!ExecCommand(hDevice, aCmd2, CDB12GENERIC_LENGTH, pBuf,
-						CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, __FUNCTION__, __LINE__)
+						CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 						|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-						OutputErrorStringA("Can't read CD for MCN\n");
+						OutputErrorString(_T("Can't read CD for MCN\n"));
 						break;
 					}
 					if(nLBA ==  aLBA[uiIdx]) {
@@ -1623,7 +1672,7 @@ BOOL ReadTOCFull(
 					UCHAR byAdr = (UCHAR)(Subcode[12] & 0x0F);
 					if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
 						BOOL bMCN = IsValidMCN(Subcode);
-						CHAR szCatalog[META_CATALOG_SIZE+1];
+						_TCHAR szCatalog[META_CATALOG_SIZE+1];
 						SetMCNToString(Subcode, szCatalog, bMCN);
 						WriteCcdFileForDiscCatalog(fpCcd);
 						break;
@@ -1637,8 +1686,8 @@ BOOL ReadTOCFull(
 		OutputTocFull(&fullToc, pTocData, uiTocEntries,	&nLastLBAof1stSession,
 			&nStartLBAof2ndSession, aSessionNum, fpCcd, fpLog);
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FreeAndNull(pFullToc);
@@ -1664,26 +1713,26 @@ BOOL ReadTOCText(
 	UCHAR byScsiStatus = 0;
 	CDROM_TOC_CD_TEXT_DATA tocText = {0};
 	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &tocText,
-		(ULONG)uiCDTextDataSize, &byScsiStatus, __FUNCTION__, __LINE__) 
+		(ULONG)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		OutputErrorStringA("Can't get CDROM_TOC_CD_TEXT_DATA\n");
+		OutputErrorString(_T("Can't get CDROM_TOC_CD_TEXT_DATA\n"));
 		return FALSE;
 	}
 
-	OutputLogStringA(fpLog, "CDTEXT on SCSIOP_READ_TOC\n");
+	OutputLogString(fpLog, _T("CDTEXT on SCSIOP_READ_TOC\n"));
 	size_t uiTocTextsize = 
 		MAKEWORD(tocText.Length[1], tocText.Length[0]) - sizeof(tocText.Length);
 	size_t uiTocTextEntries = uiTocTextsize / sizeof(CDROM_TOC_CD_TEXT_DATA_BLOCK);
 	WriteCcdFileForDiscCDTextLength(uiTocTextsize, fpCcd);
 	if(!uiTocTextEntries) {
-		OutputLogStringA(fpLog, "\tNothing\n");
+		OutputLogString(fpLog, _T("\tNothing\n"));
 		// almost CD is nothing text
 		return TRUE;
 	}
 	size_t uiCDTextDataMaxSize = uiTocTextsize + uiCDTextDataSize;
 	PBYTE pTocText = (PBYTE)malloc(uiCDTextDataMaxSize + 0x10);
 	if(!pTocText) {
-		OutputErrorStringA("Can't alloc memory [L:%d]\n", __LINE__);
+		OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	aCmd[7] = HIBYTE(uiCDTextDataMaxSize);
@@ -1693,19 +1742,19 @@ BOOL ReadTOCText(
 	CHAR* pTmpText = NULL;
 	try {
 		if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pTocText, 
-			(ULONG)uiCDTextDataMaxSize, &byScsiStatus, __FUNCTION__, __LINE__) 
+			(ULONG)uiCDTextDataMaxSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			throw "Can't get CDROM_TOC_CD_TEXT_DATA_BLOCK\n";
+			throw _T("Can't get CDROM_TOC_CD_TEXT_DATA_BLOCK\n");
 		}
 		WriteCcdFileForCDText(uiTocTextEntries, fpCcd);
 		if(NULL == (pInfo = (PCD_TEXT_INFO)malloc(uiTocTextEntries * META_STRING_SIZE))) {
-			throw "Can't alloc memory PCD_TEXT_INFO\n";
+			throw _T("Can't alloc memory PCD_TEXT_INFO\n");
 		}
 		CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc = 
 			((CDROM_TOC_CD_TEXT_DATA*)pTocText)->Descriptors;
 		size_t allTextSize = uiTocTextEntries * sizeof(pDesc->Text);
 		if(NULL == (pTmpText = (CHAR*)malloc(allTextSize))) {
-			throw "Can't alloc memory CHAR*\n";
+			throw _T("Can't alloc memory CHAR*\n");
 		}
 
 		UCHAR byAlbumTitleCnt = 0;
@@ -1835,73 +1884,73 @@ BOOL ReadTOCText(
 				ZeroMemory(pInfo[z].Text, sizeof(pInfo[z].Text));
 				strncpy(pInfo[z].Text, pTmpText + uiIdx, len);
 				if(byAlbumTitleIdx != 0 && z < byAlbumTitleIdx) {
-					OutputLogStringA(fpLog, "\tAlbumTitle : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tAlbumTitle : %s\n"), pInfo[z].Text);
 					SetAlbumTitle(pInfo[z].Text);
 				}
 				else if(byAlbumTitleIdx != 0 && byAlbumTitleIdx != byAlbumIdx && 
 					byAlbumTitleIdx <= z && z <= byAlbumIdx) {
-					OutputLogStringA(fpLog, "\tTitle : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tTitle : %s\n"), pInfo[z].Text);
 					SetTitle(pInfo[z].Text, nTitleCnt);
 					nTitleCnt++;
 				}
 				else if(byPerformerIdx != 0 && byAlbumIdx != byPerformerIdx && 
 					byAlbumIdx <= z && z <= byPerformerIdx) {
-					OutputLogStringA(fpLog, "\tPerformer : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tPerformer : %s\n"), pInfo[z].Text);
 					SetPerformer(pInfo[z].Text);
 				}
 				else if(bySongwriterIdx != 0 && byPerformerIdx != bySongwriterIdx && 
 					byPerformerIdx <= z && z <= bySongwriterIdx) {
-					OutputLogStringA(fpLog, "\tSongwriter : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tSongwriter : %s\n"), pInfo[z].Text);
 					SetSongWriter(pInfo[z].Text);
 				}
 				else if(byComposerIdx != 0 && bySongwriterIdx != byComposerIdx && 
 					bySongwriterIdx <= z && z <= byComposerIdx) {
-					OutputLogStringA(fpLog, "\tComposer : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tComposer : %s\n"), pInfo[z].Text);
 				}
 				else if(byArrangerIdx && byComposerIdx != byArrangerIdx && 
 					byComposerIdx <= z && z <= byArrangerIdx) {
-					OutputLogStringA(fpLog, "\tArranger : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tArranger : %s\n"), pInfo[z].Text);
 				}
 				else if(byMessagesIdx != 0 && byArrangerIdx != byMessagesIdx && 
 					byArrangerIdx <= z && z <= byMessagesIdx) {
-					OutputLogStringA(fpLog, "\tMessages : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tMessages : %s\n"), pInfo[z].Text);
 				}
 				else if(byDiscIdIdx != 0 && byMessagesIdx != byDiscIdIdx && 
 					byMessagesIdx <= z && z <= byDiscIdIdx) {
-					OutputLogStringA(fpLog, "\tDiscId : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tDiscId : %s\n"), pInfo[z].Text);
 				}
 				else if(byGenreIdx != 0 && byDiscIdIdx != byGenreIdx && 
 					byDiscIdIdx <= z && z <= byGenreIdx) {
-					OutputLogStringA(fpLog, "\tGenre : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tGenre : %s\n"), pInfo[z].Text);
 				}
 #if 0
 				// detail in Page 54-55 of EN 60908:1999
 				else if(byTocInfoIdx != 0 && byGenreIdx != byTocInfoIdx && 
 					byGenreIdx <= z && z <= byTocInfoIdx) {
-					OutputLogStringA(fpLog, "\tTocInfo : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tTocInfo : %s\n"), pInfo[z].Text);
 				}
 				else if(byTocInfo2Idx != 0 && byTocInfoIdx != byTocInfo2Idx && 
 					byTocInfoIdx <= z && z <= byTocInfo2Idx) {
-					OutputLogStringA(fpLog, "\tTocInfo2 : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tTocInfo2 : %s\n"), pInfo[z].Text);
 				}
 #endif
 				else if(byUpcEanIdx != 0 && byTocInfo2Idx != byUpcEanIdx && 
 					byTocInfo2Idx <= z && z <= byUpcEanIdx) {
-					OutputLogStringA(fpLog, "\tUpcEan : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tUpcEan : %s\n"), pInfo[z].Text);
 				}
 #if 0
 				// detail in Page 56 of EN 60908:1999
 				else if(bySizeInfoIdx != 0 && byUpcEanIdx != bySizeInfoIdx && 
 					byUpcEanIdx <= z && z <= bySizeInfoIdx) {
-					OutputLogStringA(fpLog, "\tSizeInfo : %s\n", pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tSizeInfo : %s\n"), pInfo[z].Text);
 				}
 #endif
 			}
 			uiIdx += len + 1;
 		}
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FreeAndNull(pTocText);
@@ -2009,17 +2058,17 @@ BOOL SetCDSpeed(
 	aCDCmd[3] = LOBYTE(wCDSpeedList[nCDSpeedNum]);
 
 	if(!ExecCommand(hDevice, aCDCmd, CDB12GENERIC_LENGTH, &setspeed, 
-		sizeof(CDROM_SET_SPEED), &byScsiStatus, __FUNCTION__, __LINE__)
+		sizeof(CDROM_SET_SPEED), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-	OutputLogStringA(fpLog, "Drive speed\n");
-	OutputLogStringA(fpLog, "\tRequestType:%s\n",
-		setspeed.RequestType == 0 ? "CdromSetSpeed" : "CdromSetStreaming");
-	OutputLogStringA(fpLog, "\tReadSpeed:%uKB/sec\n", setspeed.ReadSpeed);
-	OutputLogStringA(fpLog, "\tWriteSpeed:%uKB/sec\n", setspeed.WriteSpeed);
-	OutputLogStringA(fpLog, "\tRotationControl:%s\n",
-		setspeed.RotationControl == 0 ? "CdromDefaultRotation" : "CdromCAVRotation");
+	OutputLogString(fpLog, _T("Drive speed\n"));
+	OutputLogString(fpLog, _T("\tRequestType:%s\n"),
+		setspeed.RequestType == 0 ? _T("CdromSetSpeed") : _T("CdromSetStreaming"));
+	OutputLogString(fpLog, _T("\tReadSpeed:%uKB/sec\n"), setspeed.ReadSpeed);
+	OutputLogString(fpLog, _T("\tWriteSpeed:%uKB/sec\n"), setspeed.WriteSpeed);
+	OutputLogString(fpLog, _T("\tRotationControl:%s\n"),
+		setspeed.RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation"));
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
 #endif
@@ -2039,7 +2088,7 @@ BOOL StartStop(
 	aCmd[4] = UCHAR(LoadEject << 1 | Start);
 
 	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, NULL, 0, 
-		&byScsiStatus, __FUNCTION__, __LINE__)
+		&byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}

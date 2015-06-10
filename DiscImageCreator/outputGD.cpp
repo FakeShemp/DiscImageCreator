@@ -8,10 +8,10 @@ BOOL DescrambleDataSector(
 	INT nLBA
 	)
 {
-	FILE* fpScr = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
+	FILE* fpScr = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
 	if (!fpScr) {
-		OutputErrorStringA("Failed to open file .bin [F:%s][L:%d]\n", 
-			__FUNCTION__, __LINE__);
+		OutputErrorString(_T("Failed to open file .bin [F:%s][L:%d]\n"), 
+			_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
 	FILE* fpDescr = NULL;
@@ -19,14 +19,18 @@ BOOL DescrambleDataSector(
 	FILE* fpTbl = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".dec"), _T("wb"), 0, 0))) {
-			throw "Failed to open .dec\n";
+		if(NULL == (fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".dec"), _T("wb"), 0, 0))) {
+			throw _T("Failed to open .dec\n");
 		}
-		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".offset.txt"), _T("w"), 0, 0))) {
-			throw "Failed to open .offset.txt\n";
+#ifdef UNIOCDE
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a, ccs=UTF-8"), 0, 0))) {
+#else
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a"), 0, 0))) {
+#endif
+			throw _T("Failed to open .log.txt\n");
 		}
 		if(NULL == (fpTbl = OpenProgrammabledFile(_T("scramble.bin"), _T("rb")))) {
-			throw "Failed to open scramble.bin\n";
+			throw _T("Failed to open scramble.bin\n");
 		}
 		ULONG ulFilesize = GetFilesize(fpScr, 0);
 		UCHAR bufScr[CD_RAW_SECTOR_SIZE];
@@ -45,7 +49,7 @@ BOOL DescrambleDataSector(
 			}
 		}
 		if(!bRet2) {
-			throw "Not GD-ROM File\n";
+			throw _T("Not GD-ROM File\n");
 		}
 		// skip to 10:02:00(11:82:00)
 		fread(bufScr + SYNC_SIZE, sizeof(UCHAR), 3, fpScr);
@@ -56,7 +60,7 @@ BOOL DescrambleDataSector(
 		INT nVal = lba2 - 150 - nLBA;
 		INT nCombinedOffset = 
 			nVal > 0 ? -CD_RAW_SECTOR_SIZE * nVal + nOffset : nOffset;
-		OutputLogStringA(fptxt, "Combined offset(byte):%d, (sample):%d\n",
+		OutputLogString(fptxt, _T("Combined offset(byte):%d, (sample):%d\n"),
 			nCombinedOffset, nCombinedOffset / 4);
 		FcloseAndNull(fptxt);
 
@@ -66,7 +70,7 @@ BOOL DescrambleDataSector(
 
 		LONG lSeekSize = CD_RAW_SECTOR_SIZE * (lba1 - lba2) + nOffset;
 		if(ulFilesize < (ULONG)lSeekSize) {
-			OutputErrorStringA("Out of range! SeekSize:%d, FileSize:%d\n", lSeekSize, ulFilesize);
+			OutputErrorString(_T("Out of range! SeekSize:%d, FileSize:%d\n"), lSeekSize, ulFilesize);
 			return FALSE;
 		}
 		fseek(fpScr, lSeekSize, SEEK_SET);
@@ -91,12 +95,12 @@ BOOL DescrambleDataSector(
 				// copy audio data
 				fwrite(bufScr, sizeof(UCHAR), CD_RAW_SECTOR_SIZE, fpDescr);
 			}
-			printf("\rDescrambling File(size) %10d/%10d", CD_RAW_SECTOR_SIZE * i, ulDecFilesize);
+			OutputString(_T("\rDescrambling File(size) %10d/%10d"), CD_RAW_SECTOR_SIZE * i, ulDecFilesize);
 		}
-		printf("\n");
+		OutputString(_T("\n"));
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 	}
 	FcloseAndNull(fpScr);
 	FcloseAndNull(fpDescr);
@@ -109,13 +113,15 @@ BOOL SplitDescrambledFile(
 	LPCTSTR pszInFilename
 	)
 {
-	FILE* fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".dec"), _T("rb"), 0, 0);
+	_TCHAR pszFileNameWithoutPathAndExt[_MAX_PATH];
+	ZeroMemory(pszFileNameWithoutPathAndExt, sizeof(pszFileNameWithoutPathAndExt));
+	FILE* fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, pszFileNameWithoutPathAndExt, _T(".dec"), _T("rb"), 0, 0);
 	if(!fpDescr) {
-	OutputErrorStringA("Failed to open file .dec [F:%s][L:%d]\n", 
-			__FUNCTION__, __LINE__);
+	OutputErrorString(_T("Failed to open file .dec [F:%s][L:%d]\n"), _T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
 	FILE* fptxt = NULL;
+	FILE* fpGdi = NULL;
 #if 0
 	FILE* fpCcd = NULL;
 #endif
@@ -124,25 +130,40 @@ BOOL SplitDescrambledFile(
 	PUCHAR pBuf = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".toc.txt"), _T("w"), 0, 0))) {
-			throw "Failed to open .toc.txt\n";
+#ifdef UNICODE
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a, ccs=UTF-8"), 0, 0))) {
+#else
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a"), 0, 0))) {
+#endif
+			throw _T("Failed to open .log.txt\n");
+		}
+#ifdef UNICODE
+		if(NULL == (fpGdi = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".gdi"), _T("w, ccs=UTF-8"), 0, 0))) {
+#else
+		if(NULL == (fpGdi = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".gdi"), _T("w"), 0, 0))) {
+#endif
+			throw _T("Failed to open .gdi\n");
 		}
 #if 0
-		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".ccd"), _T("w"), 0, 0))) {
-			throw "Failed to open .ccd\n";
+#ifdef UNICODE
+		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".ccd"), _T("w, ccs=UTF-8"), 0, 0))) {
+#else
+		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".ccd"), _T("w"), 0, 0))) {
+#endif
+			throw _T("Failed to open .ccd\n");
 		}
 #endif
 
 		ULONG ulFilesize = GetFilesize(fpDescr, 0);
 		if(ulFilesize < 0x110 + 512) {
-			throw "Not GD-ROM data\n";
+			throw _T("Not GD-ROM data\n");
 		}
 		fseek(fpDescr, 0x110, SEEK_SET);
 		// 0x110 - 0x31F is toc data
 		UCHAR byToc[512];
 		fread(byToc, sizeof(UCHAR), sizeof(byToc), fpDescr);
 		if(byToc[0] != 'T' || byToc[1] != 'O' || byToc[2] != 'C' || byToc[3] != '1') {
-			throw "Not GD-ROM data\n";
+			throw _T("Not GD-ROM data\n");
 		}
 		INT nTrackNum = 3;
 #if 0
@@ -200,7 +221,33 @@ BOOL SplitDescrambledFile(
 		INT nMaxTrackNum = byToc[nMaxToc+4*1+2];
 		pToc = (PLONG)malloc(nMaxTrackNum * sizeof(LONG));
 		if(!pToc) {
-			throw "Failed to alloc memory to toc";
+			throw _T("Failed to alloc memory to toc");
+		}
+
+		LONG lMaxLba = 0;
+		for(INT i = 0; i < nMaxToc; i += 4) {
+			if(byToc[7+i] == 0xFF) {
+				lMaxLba = MAKELONG(MAKEWORD(byToc[4+i-4], byToc[5+i-4]), MAKEWORD(byToc[6+i-4], 0));
+				break;
+			}
+		}
+
+		_ftprintf(fpGdi, _T("%d\n"), nMaxTrackNum);
+		if(nMaxTrackNum <= 9 && lMaxLba <= 99999) {
+			_ftprintf(fpGdi, _T("1 %5d 4 2352 \"%s (Track %d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
+			_ftprintf(fpGdi, _T("2 [fix] 0 2352 \"%s (Track %d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
+		}
+		else if(10 <= nMaxTrackNum && lMaxLba <= 99999) {
+			_ftprintf(fpGdi, _T(" 1 %5d 4 2352 \"%s (Track %02d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
+			_ftprintf(fpGdi, _T(" 2 [fix] 0 2352 \"%s (Track %02d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
+		}
+		else if(nMaxTrackNum <= 9 && 100000 <= lMaxLba) {
+			_ftprintf(fpGdi, _T("1 %6d 4 2352 \"%s (Track %d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
+			_ftprintf(fpGdi, _T("2  [fix] 0 2352 \"%s (Track %d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
+		}
+		else if(10 <= nMaxTrackNum && 100000 <= lMaxLba) {
+			_ftprintf(fpGdi, _T(" 1 %6d 4 2352 \"%s (Track %02d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
+			_ftprintf(fpGdi, _T(" 2  [fix] 0 2352 \"%s (Track %02d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
 		}
 
 		for(INT i = 0; i < nMaxToc; i += 4, nTrackNum++) {
@@ -235,53 +282,68 @@ BOOL SplitDescrambledFile(
 			pToc[nTrackNum-3] = lToc - 300;
 			if(nTrackNum == 3) {
 				pToc[nTrackNum-3] += 150;
-				OutputLogStringA(fptxt, 
-					"Track %2d, Ctl %d,              , Index1 %6d\n", 
+				OutputLogString(fptxt, 
+					_T("Track %2d, Ctl %d,              , Index1 %6d\n"), 
 					nTrackNum, byCtl, pToc[nTrackNum-3]);
 			}
 			else {
 				if((byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 					pToc[nTrackNum-3] -= 75;
-					OutputLogStringA(fptxt, 
-						"Track %2d, Ctl %d, Index0 %6d, Index1 %6d\n", 
+					OutputLogString(fptxt, 
+						_T("Track %2d, Ctl %d, Index0 %6d, Index1 %6d\n"), 
 						nTrackNum, byCtl, pToc[nTrackNum-3], pToc[nTrackNum-3] + 225);
 				}
 				else {
-					OutputLogStringA(fptxt, 
-						"Track %2d, Ctl %d, Index0 %6d, Index1 %6d\n", 
+					OutputLogString(fptxt, 
+						_T("Track %2d, Ctl %d, Index0 %6d, Index1 %6d\n"), 
 						nTrackNum, byCtl, pToc[nTrackNum-3], pToc[nTrackNum-3] + 150);
 				}
 			}
+
+			if(nMaxTrackNum <= 9 && lMaxLba <= 99999) {
+				_ftprintf(fpGdi, _T("%d %5d %d 2352 \"%s (Track %d).bin\" 0\n"),
+					nTrackNum, pToc[nTrackNum-3], byCtl, pszFileNameWithoutPathAndExt, nTrackNum);
+			}
+			else if(10 <= nMaxTrackNum && lMaxLba <= 99999) {
+				_ftprintf(fpGdi, _T("%2d %5d %d 2352 \"%s (Track %02d).bin\" 0\n"),
+					nTrackNum, pToc[nTrackNum-3], byCtl, pszFileNameWithoutPathAndExt, nTrackNum);
+			}
+			else if(nMaxTrackNum <= 9 && 100000 <= lMaxLba) {
+				_ftprintf(fpGdi, _T("%d %6d %d 2352 \"%s (Track %d).bin\" 0\n"),
+					nTrackNum, pToc[nTrackNum-3], byCtl, pszFileNameWithoutPathAndExt, nTrackNum);
+			}
+			else if(10 <= nMaxTrackNum && 100000 <= lMaxLba) {
+				_ftprintf(fpGdi, _T("%2d %6d %d 2352 \"%s (Track %02d).bin\" 0\n"),
+					nTrackNum, pToc[nTrackNum-3], byCtl, pszFileNameWithoutPathAndExt, nTrackNum);
+			}
 		}
-		OutputLogStringA(fptxt, "MaxTrackNum %2d\n", nMaxTrackNum);
+		OutputLogString(fptxt, _T("MaxTrackNum %2d\n"), nMaxTrackNum);
 		LONG lToc = 
 			MAKELONG(MAKEWORD(byToc[nMaxToc+4*2], byToc[nMaxToc+4*2+1]), 
 			MAKEWORD(byToc[nMaxToc+4*2+2], 0)) - 150;
-		OutputLogStringA(fptxt, "Leadout, LBA %6d\n", lToc);
+		OutputLogString(fptxt, _T("Leadout, LBA %6d\n"), lToc);
 		pToc[nTrackNum-3] = lToc;
 
-		if(nMaxTrackNum > 3) {
-			rewind(fpDescr);
-			for(INT i = 3; i <= nMaxTrackNum; i++) {
-				printf("\rSplit File(num) %2d/%2d", i, nMaxTrackNum);
-				if(NULL == (fpBin = CreateOrOpenFileW(pszInFilename, NULL,
-					NULL, _T(".bin"), _T("wb"), i, nMaxTrackNum))) {
-					throw "Failed to open .bin";
-				}
-				size_t size = 
-					(size_t)(pToc[i-2] - pToc[i-3]) * CD_RAW_SECTOR_SIZE;
-				if(NULL == (pBuf = (PUCHAR)malloc(size))) {
-					throw "Failed alloc memory .bin";
-				}
-				fread(pBuf, sizeof(UCHAR), size, fpDescr);
-				fwrite(pBuf, sizeof(UCHAR), size, fpBin);
-				FcloseAndNull(fpBin);
-				FreeAndNull(pBuf);
+		rewind(fpDescr);
+		for(INT i = 3; i <= nMaxTrackNum; i++) {
+			OutputString(_T("\rSplit File(num) %2d/%2d"), i, nMaxTrackNum);
+			if(NULL == (fpBin = CreateOrOpenFileW(pszInFilename, NULL,
+				NULL, NULL, _T(".bin"), _T("wb"), i, nMaxTrackNum))) {
+				throw _T("Failed to open .bin");
 			}
+			size_t size = 
+				(size_t)(pToc[i-2] - pToc[i-3]) * CD_RAW_SECTOR_SIZE;
+			if(NULL == (pBuf = (PUCHAR)malloc(size))) {
+				throw _T("Failed alloc memory .bin");
+			}
+			fread(pBuf, sizeof(UCHAR), size, fpDescr);
+			fwrite(pBuf, sizeof(UCHAR), size, fpBin);
+			FcloseAndNull(fpBin);
+			FreeAndNull(pBuf);
 		}
 	}
-	catch(PCHAR str) {
-		OutputErrorStringA(str);
+	catch(LPTSTR str) {
+		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FcloseAndNull(fpDescr);
