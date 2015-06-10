@@ -78,10 +78,28 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 	#define AFLAG "a"
 #endif
 
-typedef struct _DEV_ADDR {
+typedef struct _DEVICE_DATA {
 	HANDLE hDevice;
-	SCSI_ADDRESS addr;
-} DEV_ADDR, *PDEV_ADDR;
+	SCSI_ADDRESS adress;
+} DEVICE_DATA, *PDEVICE_DATA;
+
+typedef struct _DISC_DATA {
+	CDROM_TOC toc;
+	CHAR pszVendorId[8+1];
+	CHAR pszProductId[16+1];
+	USHORT pusCurrentMedia;
+	INT aSessionNum[MAXIMUM_NUMBER_TRACKS];
+	INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2];
+	INT nFirstDataLBA;
+	INT nLastLBAof1stSession;
+	INT nStartLBAof2ndSession;
+	INT nAdjustSectorNum;
+	INT nCombinedOffset;
+	INT nLength;
+	BOOL bCanCDText;
+	BOOL bC2ErrorData;
+	BOOL bAudioOnly;
+} DISC_DATA, *PDISC_DATA;
 
 #include "convert.h"
 #include "execMMC.h"

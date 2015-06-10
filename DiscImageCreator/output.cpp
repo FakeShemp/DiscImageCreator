@@ -1562,7 +1562,7 @@ void OutputSense(
 	OutputErrorString(_T("\n"));
 }
 
-void OutputSub96(
+void OutputAlignSub96(
 	CONST PUCHAR pBuf,
 	INT nLBA,
 	FILE* fpLog
@@ -1576,6 +1576,27 @@ void OutputSub96(
 			_T("\t%c %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"), 
 			ch,	pBuf[i], pBuf[i+1], pBuf[i+2], pBuf[i+3], pBuf[i+4], pBuf[i+5],
 			pBuf[i+6], pBuf[i+7], pBuf[i+8], pBuf[i+9], pBuf[i+10], pBuf[i+11]);
+	}
+#ifdef _DEBUG
+	UNREFERENCED_PARAMETER(fpLog);
+#endif
+}
+
+void OutputRawSub96(
+	CONST PUCHAR pBuf,
+	INT nLBA,
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog, _T("Sub Channel(Raw) LBA %d\n"), nLBA);
+	OutputLogString(fpLog, _T("\t    +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n"));
+
+	for(INT i = 0; i < CD_RAW_READ_SUBCODE_SIZE; i += 16) {
+		OutputLogString(fpLog, 
+			_T("\t%3X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"), 
+			i, pBuf[i], pBuf[i+1], pBuf[i+2], pBuf[i+3], pBuf[i+4], pBuf[i+5],
+			pBuf[i+6], pBuf[i+7], pBuf[i+8], pBuf[i+9], pBuf[i+10], pBuf[i+11], 
+			pBuf[i+12], pBuf[i+13], pBuf[i+14], pBuf[i+15]);
 	}
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
@@ -1681,10 +1702,8 @@ void OutputSubcode(
 			tmpCode[j] = (UCHAR)(*(SubcodeOrg + (i * 24 + j)) & 0x3F);
 		}
 		memcpy(&scRW[i], tmpCode, sizeof(scRW[i]));
-	}
 
-	for(INT a = 1; a <= 4; a++) {
-		switch(scRW[a].command) {
+		switch(scRW[i].command) {
 		case 0: // MODE 0, ITEM 0
 			_tcscat(str, _T("RtoW:ZERO mode"));
 			break;
@@ -1709,7 +1728,7 @@ void OutputSubcode(
 		default:
 			break;
 		}
-		if(a < 4) {
+		if(i < 3) {
 			_tcscat(str, _T(", "));
 		}
 		else {
@@ -1723,9 +1742,9 @@ void OutputTocFull(
 	CONST CDROM_TOC_FULL_TOC_DATA* fullToc,
 	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData,
 	size_t uiTocEntries,
-	INT* nLastLBAof1stSession,
-	INT* nStartLBAof2ndSession,
-	INT* aSessionNum,
+	PINT nLastLBAof1stSession,
+	PINT nStartLBAof2ndSession,
+	PINT aSessionNum,
 	FILE* fpCcd,
 	FILE* fpLog
 	)
@@ -3173,4 +3192,61 @@ void WriteCueFileForIndex(
 {
 	_ftprintf(fpCue, _T("    INDEX %02d %02d:%02d:%02d\n"), 
 		byIndex, byMinute, bySecond, byFrame);
+}
+
+void WriteMainChannel(
+	PDISC_DATA pDiscData,
+	INT nLBA,
+	INT nFixStartLBA,
+	INT nFixEndLBA,
+	size_t uiShift,
+	PINT* aLBAStart,
+	PUCHAR pBuf,
+	FILE* fpImg
+	)
+{
+	if(nFixStartLBA <= nLBA && nLBA < pDiscData->nLength + nFixEndLBA) {
+		// first sector
+		if(nLBA == nFixStartLBA) {
+			fwrite(pBuf + uiShift, sizeof(UCHAR), 
+				CD_RAW_SECTOR_SIZE - uiShift, fpImg);
+			aLBAStart[0][0] = -150;
+			aLBAStart[0][1] = nLBA - nFixStartLBA;
+		}
+		// last sector
+		else if(nLBA == pDiscData->nLength + nFixEndLBA - 1) {
+			fwrite(pBuf, sizeof(UCHAR), uiShift, fpImg);
+		}
+		else {
+			if(pDiscData->nStartLBAof2ndSession != -1 &&
+				nLBA == pDiscData->nStartLBAof2ndSession) {
+				if(pDiscData->nCombinedOffset > 0) {
+					ZeroMemory(pBuf, (size_t)pDiscData->nCombinedOffset);
+				}
+				else if(pDiscData->nCombinedOffset < 0) {
+					// todo
+				}
+			}
+			fwrite(pBuf, sizeof(UCHAR), CD_RAW_SECTOR_SIZE, fpImg);
+		}
+	}
+}
+
+void WriteSubChannel(
+	INT nLBA,
+	UCHAR byCurrentTrackNum,
+	PUCHAR pBuf,
+	PUCHAR Subcode,
+	PUCHAR SubcodeRaw,
+	FILE* fpSub,
+	FILE* fpParse,
+	FILE* fpCdg
+	)
+{
+	fwrite(Subcode, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpSub);
+	OutputSubcode(nLBA, byCurrentTrackNum, 
+		Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
+	if(fpCdg != NULL) {
+		fwrite(SubcodeRaw, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpCdg);
+	}
 }

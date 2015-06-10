@@ -2,13 +2,11 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 
-#ifdef _DEBUG
 #define OutputString(str, ...) \
 		{ \
-			_TCHAR c[256]; \
-			_stprintf(c, str, __VA_ARGS__); \
-			OutputDebugString(c); \
+			_tprintf(str, __VA_ARGS__); \
 		}
+#ifdef _DEBUG
 #define OutputErrorString(str, ...) \
 		{ \
 			_TCHAR c[256]; \
@@ -22,10 +20,6 @@
 			OutputDebugString(c); \
 		}
 #else
-#define OutputString(str, ...) \
-		{ \
-			_tprintf(str, __VA_ARGS__); \
-		}
 #define OutputErrorString(str, ...) \
 		{ \
 			_ftprintf(stderr, str, __VA_ARGS__); \
@@ -137,7 +131,13 @@ void OutputSense(
 	UCHAR byAscq
 	);
 
-void OutputSub96(
+void OutputAlignSub96(
+	CONST PUCHAR pBuf,
+	INT nLBA,
+	FILE* fpLog
+	);
+
+void OutputRawSub96(
 	CONST PUCHAR pBuf,
 	INT nLBA,
 	FILE* fpLog
@@ -155,9 +155,9 @@ void OutputTocFull(
 	CONST CDROM_TOC_FULL_TOC_DATA* fullToc,
 	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData,
 	size_t uiTocEntries,
-	INT* nLastLBAof1stSession,
-	INT* nStartLBAof2ndSession,
-	INT* aSessionNum,
+	PINT nLastLBAof1stSession,
+	PINT nStartLBAof2ndSession,
+	PINT aSessionNum,
 	FILE* fpCcd,
 	FILE* fpLog
 	);
@@ -373,4 +373,26 @@ void WriteCueFileForIndex(
 	UCHAR bySecond,
 	UCHAR byMinute,
 	FILE* fpCue
+	);
+
+void WriteMainChannel(
+	PDISC_DATA pDiscData,
+	INT nLBA,
+	INT nFixStartLBA,
+	INT nFixEndLBA,
+	size_t uiShift,
+	PINT* aLBAStart,
+	PUCHAR pBuf,
+	FILE* fpImg
+	);
+
+void WriteSubChannel(
+	INT nLBA,
+	UCHAR byCurrentTrackNum,
+	PUCHAR pBuf,
+	PUCHAR Subcode,
+	PUCHAR SubcodeRaw,
+	FILE* fpSub,
+	FILE* fpParse,
+	FILE* fpCdg
 	);

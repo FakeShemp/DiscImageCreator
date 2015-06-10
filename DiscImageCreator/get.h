@@ -2,6 +2,11 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 
+USHORT GetCrc16CCITT(
+	INT n,
+	UCHAR c[]
+	);
+
 BOOL GetDriveOffset(
 	LPCSTR pszProductId,
 	PINT nDriveOffset

@@ -23,87 +23,91 @@
 		Subcode[72-83] -> V channel
 		Subcode[84-95] -> W channel
 */
-INT AlignSubcode(
-	CONST PUCHAR pBuf, 
-	PUCHAR Subcode
+/*
+	//p(0x80)	//0x80  0	//0x40 L1	//0x20 L2	//0x10 L3	//0x08 L4	//0x04 L5	//0x02 L6	//0x01 L7
+	//q(0x40)	//0x80 R1	//0x40 0	//0x20 L1	//0x10 L2	//0x08 L3	//0x04 L4	//0x02 L5	//0x01 L6
+	//r(0x20)	//0x80 R2	//0x40 R1	//0x20 0	//0x10 L1	//0x08 L2	//0x04 L3	//0x02 L4	//0x01 L5
+	//s(0x10)	//0x80 R3	//0x40 R2	//0x20 R1	//0x10 0	//0x08 L1	//0x04 L2	//0x02 L3	//0x01 L4
+	//t(0x08)	//0x80 R4	//0x40 R3	//0x20 R2	//0x10 R1	//0x08 0	//0x04 L1	//0x02 L2	//0x01 L3
+	//u(0x04)	//0x80 R5	//0x40 R4	//0x20 R3	//0x10 R2	//0x08 R1	//0x04 0	//0x02 L1	//0x01 L2
+	//v(0x02)	//0x80 R6	//0x40 R5	//0x20 R4	//0x10 R3	//0x08 R2	//0x04 R1	//0x02 0	//0x01 L1
+	//w(0x01)	//0x80 R7	//0x40 R6	//0x20 R5	//0x10 R4	//0x08 R3	//0x04 R2	//0x02 R1	//0x01 0
+*/
+BOOL AlignRowSubcode(
+	CONST PUCHAR pColumnSubcode,
+	PUCHAR pRowSubcode
 	)
 {
-	ZeroMemory(Subcode, CD_RAW_READ_SUBCODE_SIZE);
+	ZeroMemory(pRowSubcode, CD_RAW_READ_SUBCODE_SIZE);
+	INT nRow = 0;
+	for(INT bitNum = 0; bitNum < CHAR_BIT; bitNum++) {
+		for(INT nColumn = 0; nColumn < CD_RAW_READ_SUBCODE_SIZE; nRow++) {
+			UINT nMask = 0x80;
+			for(INT nShift = 0; nShift < CHAR_BIT; nShift++, nColumn++) {
+				INT n = nShift - bitNum;
+				if(n > 0) {
+					pRowSubcode[nRow] |= (pColumnSubcode[nColumn] >> n) & nMask;
+				}
+				else {
+					pRowSubcode[nRow] |= (pColumnSubcode[nColumn] << abs(n)) & nMask;
+				}
+				nMask >>= 1;
+			}
+		}
+	}
+	return TRUE;
+}
 
-	INT p = 0, q = 1, r = 2, s = 3, t = 4, u = 5, v = 6, w = 7;
-	INT mask = 0x80;
-	for(INT j = 0, k = 0; j < CD_RAW_READ_SUBCODE_SIZE; j++) {
-		Subcode[k] |= (UCHAR)((pBuf[j] >> p) & mask);
-		p++;
-		if(j % 8 <= 1) {
-			Subcode[k+12] |= (UCHAR)((pBuf[j] << q) & mask);
-			if(q != 0) {
-				q--;
+/*
+	<src>
+		pRowSubcode[ 0-11] -> P channel
+		pRowSubcode[12-23] -> Q channel
+		pRowSubcode[24-35] -> R channel
+		pRowSubcode[36-47] -> S channel
+		pRowSubcode[48-59] -> T channel
+		pRowSubcode[60-71] -> U channel
+		pRowSubcode[72-83] -> V channel
+		pRowSubcode[84-95] -> W channel
+	<dst>
+		pColumnSubcode[0-96] & 0x80 -> P channel
+		pColumnSubcode[0-96] & 0x40 -> Q channel
+		pColumnSubcode[0-96] & 0x20 -> R channel
+		pColumnSubcode[0-96] & 0x10 -> S channel
+		pColumnSubcode[0-96] & 0x08 -> T channel
+		pColumnSubcode[0-96] & 0x04 -> U channel
+		pColumnSubcode[0-96] & 0x02 -> V channel
+		pColumnSubcode[0-96] & 0x01 -> W channel
+*/
+/*
+	//p(0x80)	//0x80  0	//0x40 L1	//0x20 L2	//0x10 L3	//0x08 L4	//0x04 L5	//0x02 L6	//0x01 L7
+	//q(0x40)	//0x80 R1	//0x40 0	//0x20 L1	//0x10 L2	//0x08 L3	//0x04 L4	//0x02 L5	//0x01 L6
+	//r(0x20)	//0x80 R2	//0x40 R1	//0x20 0	//0x10 L1	//0x08 L2	//0x04 L3	//0x02 L4	//0x01 L5
+	//s(0x10)	//0x80 R3	//0x40 R2	//0x20 R1	//0x10 0	//0x08 L1	//0x04 L2	//0x02 L3	//0x01 L4
+	//t(0x08)	//0x80 R4	//0x40 R3	//0x20 R2	//0x10 R1	//0x08 0	//0x04 L1	//0x02 L2	//0x01 L3
+	//u(0x04)	//0x80 R5	//0x40 R4	//0x20 R3	//0x10 R2	//0x08 R1	//0x04 0	//0x02 L1	//0x01 L2
+	//v(0x02)	//0x80 R6	//0x40 R5	//0x20 R4	//0x10 R3	//0x08 R2	//0x04 R1	//0x02 0	//0x01 L1
+	//w(0x01)	//0x80 R7	//0x40 R6	//0x20 R5	//0x10 R4	//0x08 R3	//0x04 R2	//0x02 R1	//0x01 0
+*/
+BOOL AlignColumnSubcode(
+	CONST PUCHAR pRowSubcode,
+	PUCHAR pColumnSubcode
+	)
+{
+	INT nRow = 0;
+	UINT nMask = 0x80;
+	for(INT bitNum = 0; bitNum < CHAR_BIT; bitNum++) {
+		for(INT nColumn = 0; nColumn < CD_RAW_READ_SUBCODE_SIZE; nRow++) {
+			for(INT nShift = 0; nShift < CHAR_BIT; nShift++, nColumn++) {
+				INT n = nShift - bitNum;
+				if(n > 0) {
+					pColumnSubcode[nColumn] |= (pRowSubcode[nRow] << n) & nMask;
+				}
+				else {
+					pColumnSubcode[nColumn] |= (pRowSubcode[nRow] >> abs(n)) & nMask;
+				}
 			}
 		}
-		else {
-			q++;
-			Subcode[k+12] |= (UCHAR)((pBuf[j] >> q) & mask);
-		}
-		if(j % 8 <= 2) {
-			Subcode[k+24] |= (UCHAR)((pBuf[j] << r) & mask);
-			if(r != 0) {
-				r--;
-			}
-		}
-		else {
-			r++;
-			Subcode[k+24] |= (UCHAR)((pBuf[j] >> r) & mask);
-		}
-		if(j % 8 <= 3) {
-			Subcode[k+36] |= (UCHAR)((pBuf[j] << s) & mask);
-			if(s != 0) {
-				s--;
-			}
-		}
-		else {
-			s++;
-			Subcode[k+36] |= (UCHAR)((pBuf[j] >> s) & mask);
-		}
-		if(j % 8 <= 4) {
-			Subcode[k+48] |= (UCHAR)((pBuf[j] << t) & mask);
-			if(t != 0) {
-				t--;
-			}
-		}
-		else {
-			t++;
-			Subcode[k+48] |= (UCHAR)((pBuf[j] >> t) & mask);
-		}
-		if(j % 8 <= 5) {
-			Subcode[k+60] |= (UCHAR)((pBuf[j] << u) & mask);
-			if(u != 0) {
-				u--;
-			}
-		}
-		else {
-			u++;
-			Subcode[k+60] |= (UCHAR)((pBuf[j] >> u) & mask);
-		}
-		if(j % 8 <= 6) {
-			Subcode[k+72] |= (UCHAR)((pBuf[j] << v) & mask);
-			if(v != 0) {
-				v--;
-			}
-		}
-		else {
-			v++;
-			Subcode[k+72] |= (UCHAR)((pBuf[j] >> v) & mask);
-		}
-		Subcode[k+84] |= (UCHAR)((pBuf[j] << w) & mask);
-		w--;
-		mask /= 2;
-
-		if(j % 8 == 7) {
-			p = 0, q = 1, r = 2, s = 3, t = 4, u = 5, v = 6, w = 7;
-			k++;
-			mask = 0x80;
-		}
+		nMask >>= 1;
 	}
 	return TRUE;
 }

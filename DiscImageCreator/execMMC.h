@@ -62,33 +62,23 @@ __declspec(align(1)) typedef struct _SUB_Q_DATA {
 # pragma pack ()
 
 BOOL ReadCDAll(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
-	LPCSTR pszVendorId,
-	INT nWriteOffset,
-	INT nLength,
-	BOOL bC2ErrorData,
-	BOOL bAudioOnly,
 	FILE* fpLog,
 	FILE* fpCcd
 	);
 
 BOOL ReadCDForSearchingOffset(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
-	LPCSTR pszVendorId,
-	LPCSTR pszProductId,
-	PINT nCombinedOffset,
-	PBOOL bAudioOnly,
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
 BOOL ReadCDPartial(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
-	LPCSTR pszVendorId,
 	INT nStart,
 	INT nEnd,
 	_READ_CD_FLAG::_SectorType flg,
@@ -96,87 +86,69 @@ BOOL ReadCDPartial(
 	);
 
 BOOL ReadConfiguration(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
-	PUSHORT pusCurrentMedia,
-	PBOOL bCanCDText,
-	PBOOL bC2ErrorData,
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
 BOOL ReadDeviceInfo(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
-	LPSTR pszVendorId,
-	LPSTR pszProductId,
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
 BOOL ReadDVD(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
 	LPCTSTR pszOutFile,
 	LPCTSTR pszOption,
 	INT nDVDSectorSize,
 	FILE* fpLog
 	);
-#if 0
+
 BOOL ReadDVDRaw(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
 	LPCSTR pszVendorId,
 	LPCTSTR pszOutFile,
-	LPCTSTR pszOption,
-	INT nDVDSectorSize,
-	FILE* fpLog
+	INT nDVDSectorSize
 	);
-#endif
+
 BOOL ReadDVDStructure(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
 	PINT nDVDSectorSize,
 	FILE* fpLog
 	);
 
 BOOL ReadTestUnitReady(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress
+	PDEVICE_DATA pDevData
 	);
 
 BOOL ReadTOC(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
-	PINT nLength,
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
 BOOL ReadTOCFull(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
-	LPCSTR pszVendorId,
-	LPCSTR pszProductId,
-	BOOL bCanCDText,
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog,
 	FILE* fpCcd
 	);
 
 BOOL ReadTOCText(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
 	FILE* fpLog,
 	FILE* fpCcd
 	);
 
 BOOL SetCDSpeed(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
 	INT nCDSpeedNum,
 	FILE* fpLog
 	);
 
 BOOL StartStop(
-	HANDLE hDevice,
-	PSCSI_ADDRESS pAdress,
+	PDEVICE_DATA pDevData,
     UCHAR Start,
     UCHAR LoadEject
 	);

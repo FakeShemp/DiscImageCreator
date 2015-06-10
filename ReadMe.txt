@@ -169,3 +169,7 @@ delete bom in unicode build
 
 **2012-01-03
 fix checking & data of subchannel
+
+**2012-01-05
+refactoring
+improved subchannel data

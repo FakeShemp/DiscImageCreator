@@ -33,9 +33,10 @@ int exec(_TCHAR* argv[], ExecType execType)
 
 	TCHAR szBuf[7] = {0};
 	_sntprintf(szBuf, 7, _T("\\\\.\\%c:"), argv[2][0]);
-	HANDLE hDevice = CreateFile(szBuf, GENERIC_READ | GENERIC_WRITE,
+	DEVICE_DATA devData = {0};
+	devData.hDevice = CreateFile(szBuf, GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	if(hDevice == INVALID_HANDLE_VALUE) {
+	if(devData.hDevice == INVALID_HANDLE_VALUE) {
 		OutputErrorString(_T("Device Open fail\n"));
 		return FALSE;
 	}
@@ -61,62 +62,56 @@ int exec(_TCHAR* argv[], ExecType execType)
 #endif
 	BOOL bRet = 0;
 	ULONG ulReturned = 0;
-	SCSI_ADDRESS adr = {0};
-	bRet = DeviceIoControl(hDevice, IOCTL_SCSI_GET_ADDRESS, &adr, 
-		sizeof(SCSI_ADDRESS), &adr, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
+	bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
+		sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
 	OutputLogString(fpLog, _T("IOCTL_SCSI_GET_ADDRESS\n"));
-	OutputLogString(fpLog, _T("\tLength %d\n"), adr.Length);
-	OutputLogString(fpLog, _T("\tPortNumber %d\n"), adr.PortNumber);
-	OutputLogString(fpLog, _T("\tPathId %d\n"), adr.PathId);
-	OutputLogString(fpLog, _T("\tTargetId %d\n"), adr.TargetId);
-	OutputLogString(fpLog, _T("\tLun %d\n"), adr.Lun);
+	OutputLogString(fpLog, _T("\tLength %d\n"), devData.adress.Length);
+	OutputLogString(fpLog, _T("\tPortNumber %d\n"), devData.adress.PortNumber);
+	OutputLogString(fpLog, _T("\tPathId %d\n"), devData.adress.PathId);
+	OutputLogString(fpLog, _T("\tTargetId %d\n"), devData.adress.TargetId);
+	OutputLogString(fpLog, _T("\tLun %d\n"), devData.adress.Lun);
 
 	if(execType == c) {
-		return StartStop(hDevice, &adr, START_UNIT_CODE, START_UNIT_CODE);
+		return StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
 	}
 	else if(execType == s) {
-		return StartStop(hDevice, &adr, STOP_UNIT_CODE, STOP_UNIT_CODE);
+		return StartStop(&devData, STOP_UNIT_CODE, STOP_UNIT_CODE);
 	}
 
-	bRet = ReadTestUnitReady(hDevice, &adr);
+	bRet = ReadTestUnitReady(&devData);
 	if(!bRet) {
 		return FALSE;
 	}
-	CHAR pszVendorId[8+1] = {0};
-	CHAR pszProductId[16+1] = {0};
-
-	bRet = ReadDeviceInfo(hDevice, &adr, pszVendorId, pszProductId, fpLog);
+	DISC_DATA discData = {0};
+	discData.nLastLBAof1stSession = -1;
+	discData.nStartLBAof2ndSession = -1;
+	bRet = ReadDeviceInfo(&devData, &discData, fpLog);
 	if(!bRet) {
 		return FALSE;
 	}
-	pszVendorId[8] = '\0';
-	pszProductId[16] = '\0';
+	discData.pszVendorId[8] = '\0';
+	discData.pszProductId[16] = '\0';
 
-	USHORT usFeatureProfileType = ProfileInvalid;
-	BOOL bCanCDText = FALSE;
-	BOOL bC2ErrorData = FALSE;
-
-	SetCDSpeed(hDevice, &adr, _ttoi(argv[3]), fpLog);
-	bRet = ReadConfiguration(hDevice, &adr, &usFeatureProfileType, &bCanCDText, &bC2ErrorData, fpLog);
+	SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
+	bRet = ReadConfiguration(&devData, &discData, fpLog);
 	if(!bRet) {
 		return FALSE;
 	}
-	if(usFeatureProfileType == ProfileCdrom || 
-		usFeatureProfileType == ProfileCdRecordable ||
-		usFeatureProfileType == ProfileCdRewritable ||
-		(usFeatureProfileType == ProfileInvalid && (execType == ra))) {
-		INT nLength = 0;
+	if(discData.pusCurrentMedia == ProfileCdrom || 
+		discData.pusCurrentMedia == ProfileCdRecordable ||
+		discData.pusCurrentMedia == ProfileCdRewritable ||
+		(discData.pusCurrentMedia == ProfileInvalid && (execType == ra))) {
 		TCHAR out[_MAX_PATH] = {0};
 		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
 		if(!fpCcd) {
 			OutputErrorString(_T("Failed to open file .ccd\n"));
 			return FALSE;
 		}
-		bRet = ReadTOC(hDevice, &adr, &nLength, fpLog);
+		bRet = ReadTOC(&devData, &discData, fpLog);
 		if(!bRet) {
 			return FALSE;
 		}
-		bRet = ReadTOCFull(hDevice, &adr, pszVendorId, pszProductId, bCanCDText, fpLog, fpCcd);
+		bRet = ReadTOCFull(&devData, &discData, fpLog, fpCcd);
 		if(!bRet) {
 			return FALSE;
 		}
@@ -125,52 +120,48 @@ int exec(_TCHAR* argv[], ExecType execType)
 			_tremove(out);
 		}
 
-		INT nCombinedOffset = 0;
-		BOOL bAudioOnly = TRUE;
-		bRet = ReadCDForSearchingOffset(hDevice, &adr, pszVendorId, 
-			pszProductId, &nCombinedOffset, &bAudioOnly, fpLog);
+		bRet = ReadCDForSearchingOffset(&devData, &discData, fpLog);
 
 		if(execType == rd) {
-			bRet = ReadCDPartial(hDevice, &adr, argv[4], pszVendorId,
+			bRet = ReadCDPartial(&devData, &discData, argv[4],
 				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC);
 		}
 		else if(execType == ra) {
-			bRet = ReadCDPartial(hDevice, &adr, argv[4], pszVendorId, 
+			bRet = ReadCDPartial(&devData, &discData, argv[4],
 				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC);
 		}
 		else if(bRet == TRUE && execType == rall) {
-			bRet = ReadCDAll(hDevice, &adr, argv[4], pszVendorId, 
-				nCombinedOffset, nLength, bC2ErrorData, bAudioOnly, fpLog, fpCcd);
+			bRet = ReadCDAll(&devData, &discData, argv[4], fpLog, fpCcd);
 			fclose(fpCcd);
 		}
 	}
-	else if(usFeatureProfileType == ProfileDvdRom || 
-		usFeatureProfileType == ProfileDvdRecordable ||
-		usFeatureProfileType == ProfileDvdRam || 
-		usFeatureProfileType == ProfileDvdRewritable || 
-		usFeatureProfileType == ProfileDvdRWSequential || 
-		usFeatureProfileType == ProfileDvdDashRDualLayer || 
-		usFeatureProfileType == ProfileDvdDashRLayerJump || 
-		usFeatureProfileType == ProfileDvdPlusRW || 
-//		usFeatureProfileType == ProfileInvalid ||
-		usFeatureProfileType == ProfileDvdPlusR) {
+	else if(discData.pusCurrentMedia == ProfileDvdRom || 
+		discData.pusCurrentMedia == ProfileDvdRecordable ||
+		discData.pusCurrentMedia == ProfileDvdRam || 
+		discData.pusCurrentMedia == ProfileDvdRewritable || 
+		discData.pusCurrentMedia == ProfileDvdRWSequential || 
+		discData.pusCurrentMedia == ProfileDvdDashRDualLayer || 
+		discData.pusCurrentMedia == ProfileDvdDashRLayerJump || 
+		discData.pusCurrentMedia == ProfileDvdPlusRW || 
+//		discData.pusCurrentMedia == ProfileInvalid ||
+		discData.pusCurrentMedia == ProfileDvdPlusR) {
 		INT nDVDSectorSize = 0;
-		bRet = ReadDVDStructure(hDevice, &adr, &nDVDSectorSize, fpLog);
+		bRet = ReadDVDStructure(&devData, &nDVDSectorSize, fpLog);
 		if(bRet) {
 			if(argv[5] && !_tcscmp(argv[5], _T("raw"))) {
 #if 0
-				bRet = ReadDVDRaw(hDevice, &adr, pszVendorId, argv[4], argv[5], nDVDSectorSize, fpLog);
+				bRet = ReadDVDRaw(&devData, pszVendorId, argv[4], nDVDSectorSize);
 #endif
 			}
 			else {
-				bRet = ReadDVD(hDevice, &adr, argv[4], argv[5], nDVDSectorSize, fpLog);
+				bRet = ReadDVD(&devData, argv[4], argv[5], nDVDSectorSize, fpLog);
 			}
 		}
 	}
 #ifndef _DEBUG
 	fclose(fpLog);
 #endif
-	CloseHandle(hDevice);
+	CloseHandle(devData.hDevice);
 	return bRet;
 }
 

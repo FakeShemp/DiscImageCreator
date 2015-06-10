@@ -3,6 +3,28 @@
  */
 #include "stdafx.h"
 
+#define CRCPOLY1  0x1021U  /* x^{16}+x^{12}+x^5+1 */
+// init val = 0, output xor = 0xFFFF, shift left
+USHORT GetCrc16CCITT(
+	INT n,
+	UCHAR c[]
+	)
+{
+	USHORT r = 0;
+	for(INT i = 0; i < n; i++) {
+		r ^= (USHORT)c[i] << (16 - CHAR_BIT);
+		for(INT j = 0; j < CHAR_BIT; j++) {
+			if(r & 0x8000U) {
+				r = (r << 1) ^ CRCPOLY1;
+			}
+			else {
+				r <<= 1;
+			}
+		}
+	}
+	return ~r & 0xFFFFU;
+}
+
 BOOL GetDriveOffset(
 	LPCSTR pszProductId,
 	PINT nDriveOffset

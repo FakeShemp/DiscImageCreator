@@ -2,9 +2,14 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 
-INT AlignSubcode(
+BOOL AlignRowSubcode(
 	CONST PUCHAR pBuf,
 	PUCHAR Subcode
+	);
+
+BOOL AlignColumnSubcode(
+	CONST PUCHAR pRowSubcode,
+	PUCHAR pColumnSubcode
 	);
 
 UCHAR BcdToDec(
