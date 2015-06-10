@@ -29,6 +29,7 @@ Trouble in regard to the use of this tool, I can not guarantee any.
 
 *Tested Disc
 -----------------------
+Apple Macintosh
 Audio CD
 DVD-Video
 Fujitsu FM Towns series
@@ -43,12 +44,12 @@ Sega Saturn
 Sony PlayStation
 Sony PlayStation 2
 SNK Neo Geo CD
+VCD
 -----------------------
 
 *Not tested Disc
 -----------------------------------------
 Acorn Archimedes
-Apple Macintosh
 Bandai Playdia
 Bandai / Apple Pippin
 Commodore Amiga CD
@@ -63,7 +64,6 @@ Sharp X68000 CD
 Tandy / Memorex Visual Information System
 Tao iKTV CD
 Tomy Kiss-Site CD
-VCD
 VM Labs NUON DVD
 VTech V.Flash
 -----------------------------------------
@@ -92,6 +92,8 @@ HP(TSSTcorp)			TS-H353A				BA08		No		No			No				Yes						No
 HP(TSSTcorp)			TS-H353B				bc03(BC05)	No		No			Yes				No						No
 LITEON					DH-20A3S				9P56		No		No			Yes				No						No
 LITEON					DH-20A3S				9P58		No		No			Yes				No						No
+LITEON					LH-18A1P				GL0B		Yes		Yes			No				No						No
+LITEON					LH-18A1P				GL0J		Yes		Yes			No				No						No
 LITEON					LH-20A1S				9L09		Yes		Yes			No				No						No
 LITEON					LTD-163					GDHG		No		No			No				Partial(about 99:59:74)	No
 LITEON(JLMS)			LTD-166S(XJ-HD166S)		DS1E		Yes		No			No				No						No
@@ -211,7 +213,7 @@ fix crach close/stop command.
 add OS version log.
 
 **2013-02-03
-improved CD-TEXT analyze
+improved CD-TEXT analyze.
 => support unicode flag
 
 **2013-02-22
@@ -221,3 +223,7 @@ fix x64 reading.
 fix logic
 =>if combined offset is plus and can't read lead-out, tool doesn't work.
   Or if combined offset is minus and can't read lead-in, tool doesn't work.
+
+**2013-03-07
+fixed ripping CD-TEXT disc.
+improved ripping MCN(EAN) including disc.

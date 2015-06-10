@@ -139,7 +139,7 @@ INT MSFtoLBA(
 	return byFrame + 75 * (bySecond + 60 * byMinute);
 }
 
-void LBAtoMSF(
+VOID LBAtoMSF(
 	INT nLBA, 
 	PUCHAR byFrame, 
 	PUCHAR bySecond, 
@@ -153,7 +153,7 @@ void LBAtoMSF(
 	*byMinute = (UCHAR)(nLBA);
 }
 
-void LittleToBig(
+VOID LittleToBig(
 	_TCHAR* out,
 	CONST _TCHAR* in,
 	INT cnt

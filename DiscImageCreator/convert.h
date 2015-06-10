@@ -26,14 +26,14 @@ INT MSFtoLBA(
 	UCHAR byMinute
 	);
 
-void LBAtoMSF(
+VOID LBAtoMSF(
 	INT nLBA,
 	PUCHAR byFrame,
 	PUCHAR bySecond,
 	PUCHAR byMinute
 	);
 
-void LittleToBig(
+VOID LittleToBig(
 	_TCHAR* out,
 	CONST _TCHAR* in,
 	INT cnt

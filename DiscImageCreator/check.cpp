@@ -143,6 +143,13 @@ BOOL IsValidControl(
 					}
 				}
 			}
+			// EVE - burst error (Disc 3) (Terror Disc)
+			// LBA[188021, 0x2DE75], Data, Copy NG, TOC[TrackNum-01, Index-01, RelativeTime-41:46:71, AbsoluteTime-41:48:71] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+			// LBA[188022, 0x2DE76], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :72] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+			// LBA[188023, 0x2DE77], Data, Copy NG, TOC[TrackNum-01, Index-01, RelativeTime-41:46:73, AbsoluteTime-41:48:73] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+			else if(subQ->byAdr == ADR_ENCODES_MEDIA_CATALOG) {
+				bRet = FALSE;
+			}
 			if(prevPrevSubQ->byCtl == subQ->byCtl) {
 				bRet = TRUE;
 			}
@@ -431,18 +438,83 @@ BOOL CheckAndFixSubchannel(
 			bBadAdr = TRUE;
 		}
 		else {
+			//// Fix RelativeTime, because don't exist.
+			if(nLBA == pDiscData->aTocLBA[95][0] - 225) {
+				// Cosmic Fantasy 3 - Bouken Shounen Rei (Japan)
+				// LBA[261585, 0x3FDD1], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-95, Index-01, RelativeTime-00:13:69, AbsoluteTime-58:09:60] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[261586, 0x3FDD2], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :61] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[261587, 0x3FDD3], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-96, Index-00, RelativeTime-00:02:73, AbsoluteTime-58:09:62] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				if((prevSubQ->byCtl & AUDIO_DATA_TRACK) == 0 &&
+					(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
+					subQ->nRelativeTime = 224;
+				}
+				else {
+					subQ->nRelativeTime = prevSubQ->nRelativeTime + 1;
+				}
+			}
+			// Madou Monogatari I - Honoo no Sotsuenji (Japan)
+			// LBA[183031, 0x2CAF7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-21, Index-01, RelativeTime-00:31:70, AbsoluteTime-40:42:31] RtoW:ZERO mode
+			// LBA[183032, 0x2CAF8], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :32] RtoW:ZERO mode
+			// LBA[183033, 0x2CAF9], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-22, Index-01, RelativeTime-00:00:01, AbsoluteTime-40:42:33] RtoW:ZERO mode
+			else if(nLBA == pDiscData->aTocLBA[prevSubQ->byTrackNum][0]) {
+				subQ->nRelativeTime = 0;
+			}
+			// Cosmic Fantasy 3 - Bouken Shounen Rei (Japan)
+			// LBA[142873, 0x22E19], Data, Copy NG, TOC[TrackNum-37, Index-00, RelativeTime-00:00:00, AbsoluteTime-31:46:73] RtoW:ZERO mode
+			// LBA[142874, 0x22E1A], Data, Copy NG, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :74] RtoW:ZERO mode
+			// LBA[142875, 0x22E1B], Data, Copy NG, TOC[TrackNum-37, Index-01, RelativeTime-00:00:01, AbsoluteTime-31:47:00] RtoW:ZERO mode
+			else if(prevSubQ->byIndex == 0 && prevSubQ->nRelativeTime == 0) {
+				subQ->nRelativeTime = 0;
+			}
+			else if(prevSubQ->byIndex == 0) {
+				subQ->nRelativeTime = prevSubQ->nRelativeTime - 1;
+			}
+			else if(prevSubQ->byIndex > 0) {
+				subQ->nRelativeTime = prevSubQ->nRelativeTime + 1;
+			}
+
 			//// Fix TrackNum, because don't exist.
-			// Cosmic Fantasy 2
-			// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
-			// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
-			// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
 			if((prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
+				(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
+				// Cosmic Fantasy 2
+				// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
+				// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
+				// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
+				if(nLBA == pDiscData->aTocLBA[prevSubQ->byTrackNum+1][0] - 150) {
+					subQ->byTrackNum = (UCHAR)(prevSubQ->byTrackNum + 1);
+				}
+				// EVE - burst error (Disc 3) (Terror Disc)
+				// LBA[188021, 0x2DE75], Data, Copy NG, TOC[TrackNum-01, Index-01, RelativeTime-41:46:71, AbsoluteTime-41:48:71] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[188022, 0x2DE76], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :72] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[188023, 0x2DE77], Data, Copy NG, TOC[TrackNum-01, Index-01, RelativeTime-41:46:73, AbsoluteTime-41:48:73] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				else {
+					subQ->byTrackNum = prevSubQ->byTrackNum;
+				}
+			}
+			else if(nLBA == pDiscData->aTocLBA[95][0] - 225) {
+				// Cosmic Fantasy 3 - Bouken Shounen Rei (Japan)
+				// LBA[261585, 0x3FDD1], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-95, Index-01, RelativeTime-00:13:69, AbsoluteTime-58:09:60] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[261586, 0x3FDD2], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :61] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[261587, 0x3FDD3], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-96, Index-00, RelativeTime-00:02:73, AbsoluteTime-58:09:62] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				if((prevSubQ->byCtl & AUDIO_DATA_TRACK) == 0 &&
+					(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
+					subQ->byTrackNum = (UCHAR)(prevSubQ->byTrackNum + 1);
+				}
+				else {
+					subQ->byTrackNum = prevSubQ->byTrackNum;
+				}
+			}
+			// Madou Monogatari I - Honoo no Sotsuenji (Japan)
+			// LBA[183031, 0x2CAF7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-21, Index-01, RelativeTime-00:31:70, AbsoluteTime-40:42:31] RtoW:ZERO mode
+			// LBA[183032, 0x2CAF8], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :32] RtoW:ZERO mode
+			// LBA[183033, 0x2CAF9], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-22, Index-01, RelativeTime-00:00:01, AbsoluteTime-40:42:33] RtoW:ZERO mode
+			else if(nLBA == pDiscData->aTocLBA[prevSubQ->byTrackNum][0]) {
 				subQ->byTrackNum = (UCHAR)(prevSubQ->byTrackNum + 1);
 			}
 			else {
 				subQ->byTrackNum = prevSubQ->byTrackNum;
 			}
+
 			//// Fix Index, because don't exist.
 			// Psychic Detective Series Vol. 5 - Nightmare (Japan)
 			// LBA[080999, 0x13C67], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-02, Index-00, RelativeTime-00:00:00, AbsoluteTime-18:01:74] RtoW:ZERO mode
@@ -460,25 +532,39 @@ BOOL CheckAndFixSubchannel(
 				subQ->byIndex = prevPrevSubQ->byIndex;
 				prevSubQ->byIndex = prevPrevSubQ->byIndex;
 			}
-			// Cosmic Fantasy 2
-			// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
-			// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
-			// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
 			else if((prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
-				subQ->byIndex = 0; // TODO
+				(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
+				// Cosmic Fantasy 2
+				// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
+				// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
+				// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
+				if(nLBA == pDiscData->aTocLBA[prevSubQ->byTrackNum+1][0] - 150) {
+					subQ->byIndex = 0;
+				}
+				// EVE - burst error (Disc 3) (Terror Disc)
+				// LBA[188021, 0x2DE75], Data, Copy NG, TOC[TrackNum-01, Index-01, RelativeTime-41:46:71, AbsoluteTime-41:48:71] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[188022, 0x2DE76], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :72] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[188023, 0x2DE77], Data, Copy NG, TOC[TrackNum-01, Index-01, RelativeTime-41:46:73, AbsoluteTime-41:48:73] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				else {
+					subQ->byIndex = prevSubQ->byIndex;
+				}
+			}
+			else if(nLBA == pDiscData->aTocLBA[95][0] - 225) {
+				// Cosmic Fantasy 3 - Bouken Shounen Rei (Japan)
+				// LBA[261585, 0x3FDD1], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-95, Index-01, RelativeTime-00:13:69, AbsoluteTime-58:09:60] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[261586, 0x3FDD2], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :61] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				// LBA[261587, 0x3FDD3], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-96, Index-00, RelativeTime-00:02:73, AbsoluteTime-58:09:62] RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode, RtoW:ZERO mode
+				if((prevSubQ->byCtl & AUDIO_DATA_TRACK) == 0 &&
+					(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
+					subQ->byIndex = 0;
+				}
+				else {
+					subQ->byIndex = prevSubQ->byIndex;
+				}
 			}
 			else {
 				subQ->byIndex = prevSubQ->byIndex;
 			}
-
-			if(subQ->byIndex == 0) {
-				subQ->nRelativeTime = prevSubQ->nRelativeTime - 1;
-			}
-			else if(subQ->byIndex > 0) {
-				subQ->nRelativeTime = prevSubQ->nRelativeTime + 1;
-			}
-
 		}
 	}
 	else if(subQ->byAdr == ADR_ENCODES_ISRC) {
@@ -504,11 +590,11 @@ BOOL CheckAndFixSubchannel(
 		}
 	}
 	else if(subQ->byAdr == ADR_NO_MODE_INFORMATION || 
-			subQ->byAdr > ADR_ENCODES_ISRC) {
-			OutputLogString(fpLog, _T("LBA %6d, Adr[%d], correct[%d]\n"), 
-				nLBA, subQ->byAdr, prevSubQ->byAdr);
-			subQ->byAdr = prevSubQ->byAdr;
-			bBadAdr = TRUE;
+		subQ->byAdr > ADR_ENCODES_ISRC) {
+		OutputLogString(fpLog, _T("LBA %6d, Adr[%d], correct[%d]\n"), 
+			nLBA, subQ->byAdr, prevSubQ->byAdr);
+		subQ->byAdr = prevSubQ->byAdr;
+		bBadAdr = TRUE;
 	}
 	if(bBadAdr) {
 		Subcode[12] = (UCHAR)(subQ->byCtl << 4 | subQ->byAdr);

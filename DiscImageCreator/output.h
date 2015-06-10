@@ -79,41 +79,41 @@ FILE* OpenProgrammabledFile(
 	LPCTSTR pszMode
 	);
 
-void OutputIoctlInfoScsiStatus(
+VOID OutputIoctlInfoScsiStatus(
 	CONST PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb,
 	PUCHAR byScsiStatus,
 	LPCTSTR pszFuncname,
 	INT nLineNum
 	);
 
-void OutputIoctlInfoSense(
+VOID OutputIoctlInfoSense(
 	UCHAR byKey,
 	UCHAR byAsc,
 	UCHAR byAscq
 	);
 
-void OutputIoctlScsiAddress(
+VOID OutputIoctlScsiAddress(
 	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	);
 
-void OutputIoctlStorageAdaptorDescriptor(
+VOID OutputIoctlStorageAdaptorDescriptor(
 	PSTORAGE_ADAPTER_DESCRIPTOR adapterDescriptor,
 	FILE* fpLog
 	);
 
-void OutputMmcInquiryData(
+VOID OutputMmcInquiryData(
 	PDEVICE_DATA pDevData,
 	PINQUIRYDATA pInquiry,
 	FILE* fpLog
 	);
 
-void OutputMmcDriveSpeed(
+VOID OutputMmcDriveSpeed(
 	PCDROM_SET_SPEED pSetspeed,
 	FILE* fpLog
 	);
 
-void OutputMmcFeatureNumber(
+VOID OutputMmcFeatureNumber(
 	PDEVICE_DATA pDevData,
 	CONST PUCHAR pConf,
 	ULONG ulAllLen,
@@ -121,12 +121,12 @@ void OutputMmcFeatureNumber(
 	FILE* fpLog
 	);
 
-void OutputMmcFeatureProfileType(
+VOID OutputMmcFeatureProfileType(
 	USHORT usFeatureProfileType,
 	FILE* fpLog
 	);
 
-void OutputMmcTocFull(
+VOID OutputMmcTocFull(
 	PDISC_DATA pDiscData,
 	CONST PCDROM_TOC_FULL_TOC_DATA fullToc,
 	CONST PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData,
@@ -135,7 +135,7 @@ void OutputMmcTocFull(
 	FILE* fpLog
 	);
 
-void OutputMmcTocCDText(
+VOID OutputMmcTocCDText(
 	PDISC_DATA pDiscData,
 	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	PCHAR pTmpText,
@@ -144,7 +144,7 @@ void OutputMmcTocCDText(
 	FILE* fpLog
 	);
 
-void OutputMmcTocCDWText(
+VOID OutputMmcTocCDWText(
 	PDISC_DATA pDiscData,
 	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	PCHAR pTmpText,
@@ -154,31 +154,31 @@ void OutputMmcTocCDWText(
 	FILE* fpLog
 	);
 
-void OutputMmcCdC2Error296(
+VOID OutputMmcCdC2Error296(
 	CONST PUCHAR pBuf,
 	INT nLBA,
 	FILE* fpLog
 	);
 
-void OutputMmcCdMain2352(
+VOID OutputMmcCdMain2352(
 	CONST PUCHAR pBuf,
 	INT nLBA,
 	FILE* fpLog
 	);
 
-void OutputMmcCdSub96Align(
+VOID OutputMmcCdSub96Align(
 	CONST PUCHAR pBuf,
 	INT nLBA,
 	FILE* fpLog
 	);
 
-void OutputMmcCdSub96Raw(
+VOID OutputMmcCdSub96Raw(
 	CONST PUCHAR pBuf,
 	INT nLBA,
 	FILE* fpLog
 	);
 
-void OutputMmcCdSubToLog(
+VOID OutputMmcCdSubToLog(
 	PDISC_DATA pDiscData,
 	CONST PUCHAR Subcode,
 	CONST PUCHAR SubcodeOrg,
@@ -187,7 +187,7 @@ void OutputMmcCdSubToLog(
 	FILE* fpParse
 	);
 
-void OutputMmcDVDStructureFormat(
+VOID OutputMmcDVDStructureFormat(
 	CONST PUCHAR pFormat, 
 	CONST PUCHAR pStructure,
 	CONST PUSHORT pStructureLength,
@@ -196,20 +196,20 @@ void OutputMmcDVDStructureFormat(
 	FILE* fpLog
 	);
 
-void OutputMmcDVDCopyrightManagementInformation(
+VOID OutputMmcDVDCopyrightManagementInformation(
 	PUCHAR pBuf2,
 	INT nLBA,
 	INT i,
 	FILE* fpLog
 	);
 
-void OutputFsVolumeDescriptor(
+VOID OutputFsVolumeDescriptor(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsBootRecord(
+VOID OutputFsBootRecord(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
@@ -221,97 +221,97 @@ bool OutputFsTagFormat(
 	FILE* fpLog
 	);
 
-void OutputFsPrimaryVolumeDescriptorForISO9660(
+VOID OutputFsPrimaryVolumeDescriptorForISO9660(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsPrimaryVolumeDescriptorForJoliet(
+VOID OutputFsPrimaryVolumeDescriptorForJoliet(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsVolumePartitionDescriptor(
+VOID OutputFsVolumePartitionDescriptor(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsVolumeStructureDescriptorFormat(
+VOID OutputFsVolumeStructureDescriptorFormat(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsVolumeRecognitionSequence(
+VOID OutputFsVolumeRecognitionSequence(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsBootDescriptor(
+VOID OutputFsBootDescriptor(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsAnchorVolumeDescriptorPointer(
+VOID OutputFsAnchorVolumeDescriptorPointer(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsPrimaryVolumeDescriptorForUDF(
+VOID OutputFsPrimaryVolumeDescriptorForUDF(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsImplementationUseVolumeDescriptor(
+VOID OutputFsImplementationUseVolumeDescriptor(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsPartitionDescriptor(
+VOID OutputFsPartitionDescriptor(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsLogicalVolumeDescriptor(
+VOID OutputFsLogicalVolumeDescriptor(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsUnallocatedSpaceDescriptor(
+VOID OutputFsUnallocatedSpaceDescriptor(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsVolumeDescriptorPointer(
+VOID OutputFsVolumeDescriptorPointer(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsVolumeDescriptorSequence(
+VOID OutputFsVolumeDescriptorSequence(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void OutputFsMasterDirectoryBlocks(
+VOID OutputFsMasterDirectoryBlocks(
 	CONST PUCHAR buf,
 	INT idx,
 	FILE* fpLog
 	);
 
-void SetISRCToString(
+VOID SetISRCToString(
 	PDISC_DATA pDiscData,
 	CONST PUCHAR Subcode,
 	LPTSTR pszOutString,
@@ -319,57 +319,57 @@ void SetISRCToString(
 	BOOL bCopy
 	);
 
-void SetMCNToString(
+VOID SetMCNToString(
 	PDISC_DATA pDiscData,
 	CONST PUCHAR Subcode,
 	LPTSTR pszOutString,
 	BOOL bCopy
 	);
 
-void WriteCcdFileForDisc(
+VOID WriteCcdFileForDisc(
 	size_t tocEntries,
 	UCHAR LastCompleteSession,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForDiscCDTextLength(
+VOID WriteCcdFileForDiscCDTextLength(
 	size_t cdTextSize,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForDiscCatalog(
+VOID WriteCcdFileForDiscCatalog(
 	PDISC_DATA pDiscData,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForCDText(
+VOID WriteCcdFileForCDText(
 	size_t cdTextSize,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForCDTextEntry(
+VOID WriteCcdFileForCDTextEntry(
 	CONST PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	size_t uiTocTextEntries,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForSession(
+VOID WriteCcdFileForSession(
 	UCHAR SessionNumber,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForSessionPregap(
+VOID WriteCcdFileForSessionPregap(
 	UCHAR mode,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForEntry(
+VOID WriteCcdFileForEntry(
 	CONST PCDROM_TOC_FULL_TOC_DATA_BLOCK toc,
 	size_t a,
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForTrack(
+VOID WriteCcdFileForTrack(
 	PDISC_DATA pDiscData,
 	UINT nTrackNum,
 	UCHAR byModeNum,
@@ -377,19 +377,19 @@ void WriteCcdFileForTrack(
 	FILE* fpCcd
 	);
 
-void WriteCcdFileForTrackIndex(
+VOID WriteCcdFileForTrackIndex(
 	LONG index,
 	LONG lba,
 	FILE* fpCcd
 	);
 
-void WriteCueFileFirst(
+VOID WriteCueFileFirst(
 	PDISC_DATA pDiscData,
 	BOOL bCatalog,
 	FILE* fpCue
 	);
 
-void WriteCueFile(
+VOID WriteCueFile(
 	PDISC_DATA pDiscData,
 	LPCTSTR pszFilename,
 	BOOL bCDG,
@@ -400,7 +400,7 @@ void WriteCueFile(
 	FILE* fpCue
 	);
 
-void WriteCueFileForIndex(
+VOID WriteCueFileForIndex(
 	UCHAR byIndex,
 	UCHAR byFrame, 
 	UCHAR bySecond,
@@ -408,7 +408,7 @@ void WriteCueFileForIndex(
 	FILE* fpCue
 	);
 
-void WriteMainChannel(
+VOID WriteMainChannel(
 	PDISC_DATA pDiscData,
 	PUCHAR pBuf,
 	PINT* aLBAStart,
@@ -419,7 +419,7 @@ void WriteMainChannel(
 	FILE* fpImg
 	);
 
-void WriteSubChannel(
+VOID WriteSubChannel(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	PUCHAR pBuf,
@@ -432,6 +432,6 @@ void WriteSubChannel(
 	FILE* fpCdg
 	);
 
-void WriteParsingSubfile(
+VOID WriteParsingSubfile(
 	LPCTSTR pszSubfile
 	);

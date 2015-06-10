@@ -172,9 +172,9 @@ BOOL UpdateSubchannelQData(
 {
 	if(prevSubQ->byAdr != ADR_ENCODES_MEDIA_CATALOG && 
 		prevSubQ->byAdr != ADR_ENCODES_ISRC) {
+		prevPrevSubQ->byMode = prevSubQ->byMode;
 		prevPrevSubQ->byAdr = prevSubQ->byAdr;
 		prevPrevSubQ->nRelativeTime = prevSubQ->nRelativeTime;
-		prevPrevSubQ->byMode = prevSubQ->byMode;
 	}
 	else if((prevSubQ->byAdr == ADR_ENCODES_MEDIA_CATALOG || 
 		prevSubQ->byAdr == ADR_ENCODES_ISRC) && prevSubQ->byIndex == 0) {
@@ -183,22 +183,22 @@ BOOL UpdateSubchannelQData(
 
 	if(subQ->byAdr != ADR_ENCODES_MEDIA_CATALOG && 
 		subQ->byAdr != ADR_ENCODES_ISRC) {
-		prevSubQ->byAdr = subQ->byAdr;
 		prevSubQ->byMode = subQ->byMode;
+		prevSubQ->byAdr = subQ->byAdr;
 	}
 	else if(prevSubQ->byIndex == 0 && prevSubQ->nRelativeTime == 0) {
 		prevSubQ->byIndex = 1;
 	}
 
-	prevPrevSubQ->byCtl = prevSubQ->byCtl;
-	prevPrevSubQ->nAbsoluteTime = prevSubQ->nAbsoluteTime;
-	prevSubQ->byCtl = subQ->byCtl;
-	prevSubQ->nAbsoluteTime++;
 	prevPrevSubQ->byTrackNum = prevSubQ->byTrackNum;
 	prevPrevSubQ->byIndex = prevSubQ->byIndex;
+	prevPrevSubQ->byCtl = prevSubQ->byCtl;
+	prevPrevSubQ->nAbsoluteTime = prevSubQ->nAbsoluteTime;
 	prevSubQ->byTrackNum = subQ->byTrackNum;
 	prevSubQ->byIndex = subQ->byIndex;
+	prevSubQ->byCtl = subQ->byCtl;
 	prevSubQ->nRelativeTime = subQ->nRelativeTime;
+	prevSubQ->nAbsoluteTime++;
 
 	return TRUE;
 }
@@ -225,27 +225,19 @@ BOOL PreserveTrackAttribution(
 		}
 		// preserve nLBA
 		if(prevSubQ->byTrackNum + 1 == subQ->byTrackNum) {
-			// index 1 is prior to TOC
-			if(subQ->byIndex == 1 && nLBA != pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
-				OutputLogString(fpLog, _T("Track %2d, LBA on subchannel: %6d, LBA on TOC: %6d\n"),
-					subQ->byTrackNum, nLBA, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
-				pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
-				if(pLBAStartList[subQ->byTrackNum-1][0] == pLBAStartList[subQ->byTrackNum-1][1]) {
-					pLBAStartList[subQ->byTrackNum-1][0] = -1;
+			if(subQ->byIndex > 0) {
+				// index 1 is prior to TOC
+				if(subQ->byIndex == 1 && nLBA != pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
+					OutputLogString(fpLog, 
+						_T("Subchannel & TOC isn't sync. Track %2d, LBA on subchannel: %6d, index: %2d, LBA on TOC: %6d\n"),
+						subQ->byTrackNum, nLBA, subQ->byIndex, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
+					pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
+					if(pLBAStartList[subQ->byTrackNum-1][0] == pLBAStartList[subQ->byTrackNum-1][1]) {
+						pLBAStartList[subQ->byTrackNum-1][0] = -1;
+					}
 				}
-			}
-			else {
-				if(subQ->byIndex > 0) {
+				else {
 					pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
-				}
-			}
-			// Madou Monogatari I - Honoo no Sotsuenji (Japan)
-			// LBA[183031, 0x2CAF7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-21, Index-01, RelativeTime-00:31:70, AbsoluteTime-40:42:31] RtoW:ZERO mode
-			// LBA[183032, 0x2CAF8], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :32] RtoW:ZERO mode
-			// LBA[183033, 0x2CAF9], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-22, Index-01, RelativeTime-00:00:01, AbsoluteTime-40:42:33] RtoW:ZERO mode
-			if(subQ->nRelativeTime == 1) {
-				if(subQ->byIndex > 0) {
-					pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] -= 1;
 				}
 			}
 			// preserve end lba of data track
@@ -257,12 +249,6 @@ BOOL PreserveTrackAttribution(
 				}
 			}
 			*byCurrentTrackNum = subQ->byTrackNum;
-		}
-		// Hatsukoi Monotagari (Japan)
-		if(subQ->byIndex > 0 && prevSubQ->byIndex + 1 == subQ->byIndex && 
-			(prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
-			pLBAOfDataTrackList[subQ->byTrackNum-1][subQ->byIndex] = nLBA - 1;
 		}
 		// Hyper Wars (Japan)
 		// LBA[098484, 0x180B4], Data, Copy NG, TOC[TrackNum-03, Index-00, RelativeTime-00:02:01, AbsoluteTime-21:55:09] RtoW:ZERO mode
@@ -284,8 +270,8 @@ BOOL PreserveTrackAttribution(
 				// index 1 is prior to TOC
 				if(nLBA != pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
 					OutputLogString(fpLog,
-						_T("Subchannel & TOC isn't sync. Track %2d, LBA on subchannel: %6d, LBA on TOC: %6d\n"),
-						subQ->byTrackNum, nLBA, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
+						_T("Subchannel & TOC isn't sync. Track %2d, LBA on subchannel: %6d, prevIndex: %2d, LBA on TOC: %6d\n"),
+						subQ->byTrackNum, nLBA, prevSubQ->byIndex, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
 				}
 				pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
 				if(pLBAStartList[subQ->byTrackNum-1][0] == pLBAStartList[subQ->byTrackNum-1][1]) {
@@ -299,9 +285,18 @@ BOOL PreserveTrackAttribution(
 		}
 
 		if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) != AUDIO_DATA_TRACK) {
-			OutputLogString(fpLog, _T("LBA %6d, this data track has audio sector\n"), nLBA);
+			(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
+			OutputLogString(fpLog,
+				_T("LBA %6d, Track[%02d] is data track, but this sector is audio\n"),
+				nLBA, subQ->byTrackNum);
 		}
+		else if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == 0 &&
+			(subQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
+			OutputLogString(fpLog,
+				_T("LBA %6d, Track[%02d] is audio track, but this sector is data\n"),
+				nLBA, subQ->byTrackNum);
+		}
+
 		// preserve first lba of data track offset
 		if(pLBAOfDataTrackList[subQ->byTrackNum-1][0] == -1 &&
 			(pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
@@ -555,7 +550,7 @@ BOOL ReadCDAll(
 	if(0 < pDiscData->nCombinedOffset) {
 		// read lead-out
 		bRet = ReadCDPartial(pDevData, pDiscData, pszOutFile, pDiscData->nLength,
-			pDiscData->nLength + pDiscData->nAdjustSectorNum, READ_CD_FLAG::CDDA, FALSE, TRUE);
+			pDiscData->nLength + pDiscData->nAdjustSectorNum - 1, READ_CD_FLAG::CDDA, FALSE, TRUE);
 		if(bRet) {
 			OutputLogString(fpLog, _T("Reading Lead-out: OK\n"));
 		}
@@ -567,7 +562,7 @@ BOOL ReadCDAll(
 	else if(pDiscData->nCombinedOffset < 0) {
 		// read lead-in
 		bRet = ReadCDPartial(pDevData, pDiscData, pszOutFile,
-			pDiscData->nAdjustSectorNum, 0, READ_CD_FLAG::CDDA, FALSE, TRUE);
+			pDiscData->nAdjustSectorNum, -1, READ_CD_FLAG::CDDA, FALSE, TRUE);
 		if(bRet) {
 			OutputLogString(fpLog, _T("Reading Lead-in: OK\n"));
 		}
@@ -1268,9 +1263,10 @@ BOOL ReadConfiguration(
 		bRet = TRUE;
 	}
 	else {
-		OutputLogString(fpLog, _T("\tCurrentMedia: "));
+		OutputLogString(fpLog, _T("\tCurrenProfile: "));
 		pDiscData->usCurrentMedia = MAKEWORD(pHeader.CurrentProfile[1], pHeader.CurrentProfile[0]);
 		OutputMmcFeatureProfileType(pDiscData->usCurrentMedia, fpLog);
+		OutputLogString(fpLog, _T("\n"));
 
 		ULONG ulAllLen = MAKELONG(MAKEWORD(pHeader.DataLength[3], pHeader.DataLength[2]), 
 			MAKEWORD(pHeader.DataLength[1], pHeader.DataLength[0])) + sizeof(pHeader.DataLength);
@@ -1897,7 +1893,6 @@ BOOL ReadTOCText(
 
 		PUCHAR pPTocText = NULL;
 		PCHAR pTmpText = NULL;
-		PWCHAR pTmpWText = NULL;
 		try {
 			size_t uiCDTextDataMaxSize = uiTocTextsize + uiCDTextDataSize;
 			if(NULL == (pPTocText = (PUCHAR)calloc(uiCDTextDataMaxSize + pDevData->AlignmentMask, sizeof(UCHAR)))) {
@@ -1923,7 +1918,7 @@ BOOL ReadTOCText(
 			}
 			size_t entrySize = 0;
 			BOOL bUnicode = FALSE;
-			while(entrySize <= uiTocTextEntries) {
+			while(entrySize < uiTocTextEntries) {
 				if(pDesc[entrySize].Unicode == 1) {
 					bUnicode = TRUE;
 					break;
@@ -1932,6 +1927,7 @@ BOOL ReadTOCText(
 			}
 			OutputMmcTocCDText(pDiscData, pDesc, pTmpText, entrySize, allTextSize, fpLog);
 			if(bUnicode) {
+				PWCHAR pTmpWText = NULL;
 				if(NULL == (pTmpWText = (PWCHAR)calloc(allTextSize, sizeof(UCHAR)))) {
 					OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 					throw;
