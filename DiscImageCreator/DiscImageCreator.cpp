@@ -58,6 +58,10 @@ int exec(_TCHAR* argv[], ExecType execType)
 		return FALSE;
 	}
 #endif
+	bRet = ReadTestUnitReady(hDevice);
+	if(!bRet) {
+		return FALSE;
+	}
 	bRet = ReadDeviceInfo(hDevice, pszVendorId, pszProductId, fpLog);
 	if(!bRet) {
 		return FALSE;
@@ -69,7 +73,10 @@ int exec(_TCHAR* argv[], ExecType execType)
 	BOOL bCanCDText = FALSE;
 	BOOL bC2ErrorData = FALSE;
 	SetCDSpeed(hDevice, _ttoi(argv[3]), fpLog);
-	ReadConfiguration(hDevice, &usFeatureProfileType, &bCanCDText, &bC2ErrorData, fpLog);
+	bRet = ReadConfiguration(hDevice, &usFeatureProfileType, &bCanCDText, &bC2ErrorData, fpLog);
+	if(!bRet) {
+		return FALSE;
+	}
 	if(usFeatureProfileType == ProfileCdrom || 
 		usFeatureProfileType == ProfileCdRecordable ||
 		usFeatureProfileType == ProfileCdRewritable ||
@@ -121,7 +128,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 		usFeatureProfileType == ProfileDvdDashRDualLayer || 
 		usFeatureProfileType == ProfileDvdDashRLayerJump || 
 		usFeatureProfileType == ProfileDvdPlusRW || 
-		usFeatureProfileType == ProfileInvalid ||
+//		usFeatureProfileType == ProfileInvalid ||
 		usFeatureProfileType == ProfileDvdPlusR) {
 		INT nDVDSectorSize = 0;
 		bRet = ReadDVDStructure(hDevice, &nDVDSectorSize, fpLog);

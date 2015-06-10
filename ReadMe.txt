@@ -8,6 +8,7 @@ Start cmd.exe & run exe. for more information, run in no arg.
 
 *System requirement
 Drive that can rip scrambled mode (mainly, "PLEXTOR" drive).
+	Recommend:not OEM drive(PX-708A,PX-712A,PX-716A,PX-755,PX-760A)
 In case of GD-ROM, refer to "tested drive".
 
 *Development Tool
@@ -66,7 +67,7 @@ VTech V.Flash
 -----------------------------------------
 
 *Unsupported Disc
-----------------------------------------------------------------------------
+------------------------------------------------------------------------------
 Blu-ray Disc (because I don't have a drive.)
 HD DVD (because I don't have a drive.)
 Protected Disc (because I don't have a disc.)
@@ -74,41 +75,41 @@ Protected Disc (because I don't have a disc.)
 Nintendo GameCube
 Nintendo Wii (because I don't implement a code to decrypt.)
              (if you have a supported drive, you can rip a "encrypted" image.)
-----------------------------------------------------------------------------
+------------------------------------------------------------------------------
 
 *Tested Drive
-Vendor					Model					Firmware	Lead-in	Lead-out	Scrambled	GD-ROM									Wii-ROM
--------------------------------------------------------------------------------------------------------------------------------------------
-HITACHI(HL-DT-ST)		GDR-8161B				0045		No		No			No			No(not open drive cover)				Yes
-HITACHI-LG(HL-DT-ST)	GWA-8164B(GDR8164B)		0M08		No		No			No			No(not open drive cover)				Yes
-HITACHI-LG(HL-DT-ST)	GDR-H20N				0D04		No		No			No			No(not open drive cover)				Yes
-LG(HL-DT-ST)			GCC-4320B				1.00		No		No			Yes			No(not open drive cover)				No
-HP(HL-DT-ST)			GDR-8163B				0B26		No		No			No			No(not open drive cover)				Yes
-HP(TSSTcorp)			TS-H353A				BA08		No		No			No			Yes										No
-HP(TSSTcorp)			TS-H353B				bc03(BC05)	No		No			Yes			No(not open drive cover)				No
-LITEON					DH-20A3S				9P56		No		No			Yes			No(not open drive cover)				No
-LITEON					DH-20A3S				9P58		No		No			Yes			No(not open drive cover)				No
-LITEON					LH-20A1S				9L09		Yes		Yes			No			No(not open drive cover)				No
-LITEON					LTD-163					GDHG		No		No			No			Partial(about 99:59:74)					No
-LITEON(JLMS)			LTD-166S(XJ-HD166S)		DS18		Yes		No			No			No(not open drive cover)				No
-LITEON(JLMS)			LTD-166S(XJ-HD166S)		DS1E		Yes		No			No			No(not open drive cover)				No
-LITEON					SOHW-812S(SOHW-832S)	CG5M		Yes		Yes			No			No(not open drive cover)				No
-NEC						CDR-1700A(286)			3.06		No		No			No			No(not open drive cover)				No
-NEC						CDR-3001A(28F)			3.32		No		No			No			No(not open drive cover)				No
-Optiarc					AD-7203S				1-B0		No		No			No			No(not open drive cover)				No
-PLEXTOR					PX-W1210TA(PX-W1210TA)	1.10		Yes		Yes			Yes			No(not open drive cover)				No
-PLEXTOR					PX-W8432T				1.09		Yes		Yes			Yes			No(not open drive cover)				No
-PLEXTOR					PX-320A					1.06		Yes		Yes			Yes			No(not open drive cover)				No
-PLEXTOR					PX-504A					1.02		No		No			No			No(not open drive cover)				No
-PLEXTOR					PX-712SA(PX-712A)		1.09		Yes		Yes			Yes			Partial(no swap disc)(limit 79:59:73)	No
-PLEXTOR					PX-755SA(PX-755A)		1.08		Yes		Yes			Yes			No(not open drive cover)				No
-Slimtype				DS8A3S					HAT9		No		No			Yes			No(not open drive cover)				No
-TSSTcorp				TS-H192C				HI03		No		No			No			Yes										No
-TSSTcorp				TS-H192C				IB01(IB00)	No		No			No			No(not open drive cover)				No
-TSSTcorp				TS-H352C				NE02		No		No			No			Yes										No
-TSSTcorp				TS-H492C				IB01		No		No			No			No(not open drive cover)				No
-TSSTcorp				TS-H652C(TS-H652D)		TI06		No		No			No			No(not open drive cover)				No
-TSSTcorp				TS-L162C				DE00		No		No			No			No(not open drive cover)				No
+Vendor					Model					Firmware	Offset				Lead-in	Lead-out	Scrambled		GD-ROM					Wii-ROM
+---------------------------------------------------------------------------------------------------------------------------------------------------
+HITACHI(HL-DT-ST)		GDR-8161B				0045		see driveOffset.txt	No		No			No				No						Yes
+HITACHI-LG(HL-DT-ST)	GWA-8164B(GDR8164B)		0M08		see driveOffset.txt	No		No			No				No						Yes
+HITACHI-LG(HL-DT-ST)	GDR-H20N				0D04		see driveOffset.txt	No		No			No				No						Yes
+LG(HL-DT-ST)			GCC-4320B				1.00		see driveOffset.txt	No		No			Yes				No						No
+HP(HL-DT-ST)			GDR-8163B				0B26		see driveOffset.txt	No		No			No				No						Yes
+HP(TSSTcorp)			TS-H353A				BA08		see driveOffset.txt	No		No			No				Yes						No
+HP(TSSTcorp)			TS-H353B				bc03(BC05)	see driveOffset.txt	No		No			Yes				No						No
+LITEON					DH-20A3S				9P58		see driveOffset.txt	No		No			Yes				No						No
+LITEON					LH-20A1S				9L09		see driveOffset.txt	Yes		Yes			No				No						No
+LITEON					LTD-163					GDHG		see driveOffset.txt	No		No			No				Partial(about 99:59:74)	No
+LITEON(JLMS)			LTD-166S(XJ-HD166S)		DS1E		see driveOffset.txt	Yes		No			No				No						No
+LITEON					SOHW-812S(SOHW-832S)	CG5M		see driveOffset.txt	Yes		Yes			No				No						No
+NEC						CDR-1700A(286)			3.06		see driveOffset.txt	No		No			No				No						No
+NEC						CDR-3001A(28F)			3.32		see driveOffset.txt	No		No			No				No						No
+Optiarc					AD-7203S				1-B0		see driveOffset.txt	No		No			No				No						No
+PLEXTOR					PX-W1210TA(PX-W1210A)	1.10		see driveOffset.txt	Yes		Yes			Yes(only pce)	No						No
+PLEXTOR					PX-W2410TA(PX-W2410A)	1.04		+686 is right		Yes		Yes			Yes(only pce)	No						No
+PLEXTOR					PX-W8432Ti(PX-W8432T)	1.09		see driveOffset.txt	Yes		Yes			Yes(only pce)	No						No
+PLEXTOR					PX-320A					1.06		+686 is right		Yes		Yes			Yes(only pce)	No						No
+PLEXTOR					PX-504A					1.02		see driveOffset.txt	No		No			No				No						No
+PLEXTOR					PX-712SA(PX-712A)		1.09		see driveOffset.txt	Yes		Yes			Yes				Partial(limit 79:59:73)	No
+PLEXTOR					PX-755SA(PX-755A)		1.08		see driveOffset.txt	Yes		Yes			Yes				No						No
+PLEXTOR					PX-760A					1.07		see driveOffset.txt	Yes		Yes			Yes				No						No
+Slimtype				DS8A3S					HAT9		see driveOffset.txt	No		No			Yes				No						No
+TSSTcorp				TS-H192C				HI03		see driveOffset.txt	No		No			No				Yes						No
+TSSTcorp				TS-H192C				IB01(IB00)	see driveOffset.txt	No		No			No				No						No
+TSSTcorp				TS-H352C				NE02		see driveOffset.txt	No		No			No				Yes						No
+TSSTcorp				TS-H492C				IB01		see driveOffset.txt	No		No			No				No						No
+TSSTcorp				TS-H652C(TS-H652D)		TI06		see driveOffset.txt	No		No			No				No						No
+TSSTcorp				TS-L162C				DE00		see driveOffset.txt	No		No			No				No						No
 
 **attention
 if you rip a GD-ROM, you should rip to internal(and/or NTSC) HDD. 

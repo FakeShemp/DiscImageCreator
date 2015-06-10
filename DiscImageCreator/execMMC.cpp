@@ -851,6 +851,11 @@ BOOL ReadCDForSearchingOffset(
 			bRet = GetWriteOffset(pBuf, nFirstDataLBA, nCombinedOffset);
 		}
 		else {
+			// PLEXTOR(PX-W8432, PX-W1210T, PX-W2410T)
+			// if Track1 is DataTrack (mostly game)
+			// ==>Sense data, Key:Asc:Ascq: 05:64:00(ILLEGAL_REQUEST. ILLEGAL MODE FOR THIS TRACK)
+			// else if Track1 isn't DataTrack (pc engine etc)
+			// ==>no error.
 			printf("This drive can't read data sector in scrambled mode.\n");
 			return FALSE;
 		}
@@ -1001,36 +1006,41 @@ BOOL ReadConfiguration(
 	aCmd[3] = FeatureProfileList;
 	aCmd[7] = HIBYTE(uiSize);
 	aCmd[8] = LOBYTE(uiSize);
-	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pHeader, 
-		(ULONG)uiSize, &byScsiStatus, __FUNCTION__, __LINE__) || 
-		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		*pusCurrentMedia = ProfileCdrom;
-		return TRUE;
-	}
 	OutputLogStringA(fpLog, "Configuration\n");
-	OutputLogStringA(fpLog, "\tCurrentMedia:");
-	*pusCurrentMedia = MAKEWORD(pHeader[7], pHeader[6]);
-	OutputFeatureProfileType(fpLog, *pusCurrentMedia);
-	OutputLogStringA(fpLog, "\n");
-	// 4 is DataLength size of GET_CONFIGURATION_HEADER
-	LONG lAllLen = MAKELONG(MAKEWORD(pHeader[3], pHeader[2]), 
-		MAKEWORD(pHeader[1], pHeader[0])) + 4;
+	BOOL bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pHeader, 
+		(ULONG)uiSize, &byScsiStatus, __FUNCTION__, __LINE__);
+	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		*pusCurrentMedia = ProfileCdrom;
+		// not false. because undefined mmc1..
+		OutputLogStringA(fpLog, "\tUndefined this drive\n");
+	}
+	else {
+		OutputLogStringA(fpLog, "\tCurrentMedia:");
+		*pusCurrentMedia = MAKEWORD(pHeader[7], pHeader[6]);
+		OutputFeatureProfileType(fpLog, *pusCurrentMedia);
+		OutputLogStringA(fpLog, "\n");
+		// 4 is DataLength size of GET_CONFIGURATION_HEADER
+		LONG lAllLen = MAKELONG(MAKEWORD(pHeader[3], pHeader[2]), 
+			MAKEWORD(pHeader[1], pHeader[0])) + 4;
 
-	PUCHAR pConf = (PUCHAR)malloc((size_t)lAllLen);
-	if(!pConf) {
-		printf("Can't alloc memory [F:%s][L:%d]\n", __FUNCTION__, __LINE__);
-		return FALSE;
-	}
-	aCmd[7] = HIBYTE(lAllLen);
-	aCmd[8] = LOBYTE(lAllLen);
-	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pConf, 
-		(size_t)lAllLen, &byScsiStatus, __FUNCTION__, __LINE__) || 
-		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		PUCHAR pConf = (PUCHAR)malloc((size_t)lAllLen);
+		if(!pConf) {
+			printf("Can't alloc memory [F:%s][L:%d]\n", __FUNCTION__, __LINE__);
+			return FALSE;
+		}
+		aCmd[7] = HIBYTE(lAllLen);
+		aCmd[8] = LOBYTE(lAllLen);
+		bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pConf, 
+			(size_t)lAllLen, &byScsiStatus, __FUNCTION__, __LINE__);
+		if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+			// not false. because undefined mmc1..
+			OutputLogStringA(fpLog, "\tUndefined this drive\n");
+		}
+		else {
+			OutputFeatureNumber(pConf, lAllLen, uiSize, bCanCDText, bC2ErrorData, fpLog);
+		}
 		FreeAndNull(pConf);
-		// because undefined mmc1..
-		return TRUE;
 	}
-	OutputFeatureNumber(pConf, lAllLen, uiSize, bCanCDText, bC2ErrorData, fpLog);
 	return TRUE;
 }
 
@@ -1410,6 +1420,23 @@ BOOL ReadDVDStructure(
 	UNREFERENCED_PARAMETER(fpLog);
 #endif
 	return bRet;
+}
+
+BOOL ReadTestUnitReady(
+	HANDLE hDevice
+	)
+{
+	UCHAR byScsiStatus = 0;
+	UCHAR aCmd[CDB6GENERIC_LENGTH];
+	ZeroMemory(aCmd, sizeof(aCmd));
+	aCmd[0] = SCSIOP_TEST_UNIT_READY;
+
+	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, NULL, 
+		0, &byScsiStatus, __FUNCTION__, __LINE__) || 
+		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+	return TRUE;
 }
 
 BOOL ReadTOC(

@@ -131,6 +131,10 @@ BOOL ReadDVDStructure(
 	FILE* fpLog
 	);
 
+BOOL ReadTestUnitReady(
+	HANDLE hDevice
+	);
+
 BOOL ReadTOC(
 	HANDLE hDevice,
 	PINT nLength,

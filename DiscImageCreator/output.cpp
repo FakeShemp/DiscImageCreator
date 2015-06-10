@@ -564,10 +564,10 @@ void OutputFeatureNumber(
 			OutputLogStringA(fpLog, "\tFeatureCdRead\n");
 			OutputLogStringA(fpLog, "\t\tCDText:%s\n", 
 				(pConf[uiSize+4+n] & 0x01) == 0x01 ? "Yes" : "No");
-			*bCanCDText = pConf[uiSize+4+n] & 0x01;
+			*bCanCDText = (BOOL)(pConf[uiSize+4+n] & 0x01);
 			OutputLogStringA(fpLog, "\t\tC2ErrorData:%s\n", 
 				(pConf[uiSize+4+n] & 0x02) == 0x02 ? "Yes" : "No");
-			*bC2ErrorData = (pConf[uiSize+4+n] & 0x02) >> 1;
+			*bC2ErrorData = (BOOL)((pConf[uiSize+4+n] & 0x02) >> 1);
 			OutputLogStringA(fpLog, "\t\tDigitalAudioPlay:%s\n", 
 				(pConf[uiSize+4+n] & 0x80) == 0x80 ? "Yes" : "No");
 			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
