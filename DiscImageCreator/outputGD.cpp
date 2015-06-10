@@ -22,11 +22,7 @@ BOOL DescrambleDataSector(
 		if(NULL == (fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".dec"), _T("wb"), 0, 0))) {
 			throw _T("Failed to open .dec\n");
 		}
-#ifdef UNIOCDE
-		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a, ccs=UTF-8"), 0, 0))) {
-#else
-		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a"), 0, 0))) {
-#endif
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T(AFLAG), 0, 0))) {
 			throw _T("Failed to open .log.txt\n");
 		}
 		if(NULL == (fpTbl = OpenProgrammabledFile(_T("scramble.bin"), _T("rb")))) {

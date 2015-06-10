@@ -161,3 +161,8 @@ create unicode version
 
 **2012-12-28
 support CDG(CD Graphics)
+fix Paragraph Boundary
+
+**2012-12-29
+fix crashing in x86 build
+delete bom in unicode build

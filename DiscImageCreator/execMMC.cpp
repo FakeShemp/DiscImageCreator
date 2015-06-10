@@ -1144,7 +1144,7 @@ BOOL ReadConfiguration(
 		else {
 			OutputFeatureNumber(pConf, ulAllLen, uiSize, bCanCDText, bC2ErrorData, fpLog);
 		}
-		FreeAndNull(pConf);
+		FreeAndNull(pPConf);
 	}
 	return TRUE;
 }
@@ -1186,10 +1186,10 @@ BOOL ReadDVD(
 	}
 	UCHAR byScsiStatus = 0;
 	UCHAR byTransferLen = 32;
-	PUCHAR pBuf = NULL;
+	PUCHAR pPBuf = NULL;
 	BOOL bRet = TRUE;
 	try {
-		PUCHAR pPBuf = (PUCHAR)malloc(CD_RAW_READ * (size_t)byTransferLen + PARAGRAPH_BOUNDARY_NUM);
+		pPBuf = (PUCHAR)malloc(CD_RAW_READ * (size_t)byTransferLen + PARAGRAPH_BOUNDARY_NUM);
 		if(pPBuf == NULL) {
 			throw _T("Can't alloc memory aBuf\n");
 		}
@@ -1295,7 +1295,7 @@ BOOL ReadDVD(
 		OutputErrorString(str);
 		bRet = FALSE;
 	}
-	FreeAndNull(pBuf);
+	FreeAndNull(pPBuf);
 	FcloseAndNull(fp);
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
@@ -1629,12 +1629,12 @@ BOOL ReadTOCFull(
 		return TRUE;
 	}
 	OutputLogString(fpLog, _T("CDROM_TOC_FULL_TOC_DATA:Length %d\n"), uiFulltocsize);
-	PUCHAR pBuf = (PUCHAR)malloc(uiFullTocDataMaxSize + PARAGRAPH_BOUNDARY_NUM);
-	if(!pBuf) {
+	PUCHAR pPFullToc = (PUCHAR)malloc(uiFullTocDataMaxSize + PARAGRAPH_BOUNDARY_NUM);
+	if(!pPFullToc) {
 		OutputString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
-	PUCHAR pFullToc = (PUCHAR)ConvParagraphBoundary(pBuf);
+	PUCHAR pFullToc = (PUCHAR)ConvParagraphBoundary(pPFullToc);
 	aCmd[7] = HIBYTE(uiFullTocDataMaxSize);
 	aCmd[8] = LOBYTE(uiFullTocDataMaxSize);
 	BOOL bRet = TRUE;
@@ -1710,7 +1710,7 @@ BOOL ReadTOCFull(
 		OutputErrorString(str);
 		bRet = FALSE;
 	}
-	FreeAndNull(pFullToc);
+	FreeAndNull(pPFullToc);
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
 #endif
@@ -1975,7 +1975,7 @@ BOOL ReadTOCText(
 		OutputErrorString(str);
 		bRet = FALSE;
 	}
-	FreeAndNull(pTocText);
+	FreeAndNull(pPTocText);
 	FreeAndNull(pInfo);
 	FreeAndNull(pTmpText);
 #ifdef _DEBUG

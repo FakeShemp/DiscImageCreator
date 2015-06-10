@@ -56,7 +56,12 @@ FILE* CreateOrOpenFileW(
 		// size of pszOutPath must be _MAX_PATH.
 		_tcsncpy(pszOutPath, szDstPath, _MAX_PATH);
 	}
-	return _tfopen(szDstPath, pszMode);
+	FILE* fp = _tfopen(szDstPath, pszMode);
+#ifdef UNICODE
+	// delete bom
+	fseek(fp, 0, SEEK_SET);
+#endif
+	return fp;
 }
 
 FILE* CreateOrOpenFileA(
@@ -228,11 +233,27 @@ void OutputInquiryData(
 		pInquiry->RelativeAddressing == 0 ? _T("No") :_T( "Yes"));
 
 	strncpy(pszVendorId, (PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId));
-	OutputLogString(fpLog, _T("\tVendorId:%.8s\n"), pInquiry->VendorId);
 	strncpy(pszProductId, (PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId));
+#ifdef UNICODE
+	TCHAR buf[20+1] = {0};
+	MultiByteToWideChar(CP_ACP, 0, 
+		(PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId), buf, sizeof(buf));
+	OutputLogString(fpLog, _T("\tVendorId:%.8s\n"), buf);
+	MultiByteToWideChar(CP_ACP, 0, 
+		(PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId), buf, sizeof(buf));
+	OutputLogString(fpLog, _T("\tProductId:%.16s\n"), buf);
+	MultiByteToWideChar(CP_ACP, 0, 
+		(PCHAR)pInquiry->ProductRevisionLevel, sizeof(pInquiry->ProductRevisionLevel), buf, sizeof(buf));
+	OutputLogString(fpLog, _T("\tProductRevisionLevel:%.4s\n"), buf);
+	MultiByteToWideChar(CP_ACP, 0, 
+		(PCHAR)pInquiry->VendorSpecific, sizeof(pInquiry->VendorSpecific), buf, sizeof(buf));
+	OutputLogString(fpLog, _T("\tVendorSpecific:%.20s\n"), buf);
+#else
+	OutputLogString(fpLog, _T("\tVendorId:%.8s\n"), pInquiry->VendorId);
 	OutputLogString(fpLog, _T("\tProductId:%.16s\n"), pInquiry->ProductId);
 	OutputLogString(fpLog, _T("\tProductRevisionLevel:%.4s\n"), pInquiry->ProductRevisionLevel);
 	OutputLogString(fpLog, _T("\tVendorSpecific:%.20s\n"), pInquiry->VendorSpecific);
+#endif
 
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
@@ -939,7 +960,7 @@ void OutputFeatureNumber(
 			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		default:
-			if(0xff00 <= nCode && nCode <= 0xffff) {
+			if(0xFF00 <= nCode && nCode <= 0xFFFF) {
 				OutputLogString(fpLog, 
 					_T("\tVendor Specific. FeatureCode[0x%04X]\n"), nCode);
 				OutputLogString(fpLog, _T("\t\tVendorSpecificData:["));
@@ -1784,9 +1805,9 @@ void OutputVolumeDescriptor(
 	OutputLogString(fpLog, _T("\tVolume Descriptor Type		%d\n"), buf[idx]);
 	_TCHAR str[CD_RAW_READ+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+1], 5, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
 #else
-	strncpy(str, (CHAR*)&buf[idx+1], 5); str[5] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 5); str[5] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tStandard Identifier			[%s]\n"), str);
 	OutputLogString(fpLog, _T("\tVolume Descriptor Version	%d\n"), buf[idx+6]);
@@ -1818,11 +1839,11 @@ void OutputBootRecord(
 {
 	_TCHAR str[2][32+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+7], 32, str[0], sizeof(str));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+39], 32, str[1], sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+7], 32, str[0], sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+39], 32, str[1], sizeof(str));
 #else
-	strncpy(str[0], (CHAR*)&buf[idx+7], 32); str[0][32] = '\0';
-	strncpy(str[1], (CHAR*)&buf[idx+39], 32); str[1][32] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+7], 32); str[0][32] = '\0';
+	strncpy(str[1], (PCHAR)&buf[idx+39], 32); str[1][32] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tBoot System Identifier		[%s]\n"), str);
 	OutputLogString(fpLog, _T("\tBoot Identifier				[%s]\n"), str);
@@ -1848,65 +1869,65 @@ void OutputPrimaryVolumeDescriptorForTime(
 	_TCHAR hour[4][2+1] = {0};
 	_TCHAR time[4][2+1] = {0};
 	_TCHAR second[4][2+1] = {0};
-	_TCHAR milisecond[4][2+1];
+	_TCHAR milisecond[4][2+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+813], 4, year[0], sizeof(year[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+817], 2, month[0], sizeof(month[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+819], 2, day[0], sizeof(day[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+821], 2, hour[0], sizeof(hour[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+823], 2, time[0], sizeof(time[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+825], 2, second[0], sizeof(second[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+827], 2, milisecond[0], sizeof(milisecond[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+830], 4, year[1], sizeof(year[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+834], 2, month[1], sizeof(month[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+836], 2, day[1], sizeof(day[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+838], 2, hour[1], sizeof(hour[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+840], 2, time[1], sizeof(time[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+842], 2, second[1], sizeof(second[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+844], 2, milisecond[1], sizeof(milisecond[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+847], 4, year[2], sizeof(year[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+851], 2, month[2], sizeof(month[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+853], 2, day[2], sizeof(day[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+855], 2, hour[2], sizeof(hour[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+857], 2, time[2], sizeof(time[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+859], 2, second[2], sizeof(second[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+861], 2, milisecond[2], sizeof(milisecond[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+864], 4, year[3], sizeof(year[3]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+868], 2, month[3], sizeof(month[3]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+870], 2, day[3], sizeof(day[3]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+872], 2, hour[3], sizeof(hour[3]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+874], 2, time[3], sizeof(time[3]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+876], 2, second[3], sizeof(second[3]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+878], 2, milisecond[3], sizeof(milisecond[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+813], 4, year[0], sizeof(year[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+817], 2, month[0], sizeof(month[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+819], 2, day[0], sizeof(day[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+821], 2, hour[0], sizeof(hour[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+823], 2, time[0], sizeof(time[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+825], 2, second[0], sizeof(second[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+827], 2, milisecond[0], sizeof(milisecond[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+830], 4, year[1], sizeof(year[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+834], 2, month[1], sizeof(month[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+836], 2, day[1], sizeof(day[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+838], 2, hour[1], sizeof(hour[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+840], 2, time[1], sizeof(time[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+842], 2, second[1], sizeof(second[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+844], 2, milisecond[1], sizeof(milisecond[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+847], 4, year[2], sizeof(year[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+851], 2, month[2], sizeof(month[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+853], 2, day[2], sizeof(day[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+855], 2, hour[2], sizeof(hour[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+857], 2, time[2], sizeof(time[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+859], 2, second[2], sizeof(second[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+861], 2, milisecond[2], sizeof(milisecond[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+864], 4, year[3], sizeof(year[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+868], 2, month[3], sizeof(month[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+870], 2, day[3], sizeof(day[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+872], 2, hour[3], sizeof(hour[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+874], 2, time[3], sizeof(time[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+876], 2, second[3], sizeof(second[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+878], 2, milisecond[3], sizeof(milisecond[3]));
 #else
-	strncpy(year[0], (CHAR*)&buf[idx+813], 4); year[0][4] = '\0';
-	strncpy(month[0], (CHAR*)&buf[idx+817], 2); month[0][2] = '\0';
-	strncpy(day[0], (CHAR*)&buf[idx+819], 2); day[0][2] = '\0';
-	strncpy(hour[0], (CHAR*)&buf[idx+821], 2); hour[0][2] = '\0';
-	strncpy(time[0], (CHAR*)&buf[idx+823], 2); time[0][2] = '\0';
-	strncpy(second[0], (CHAR*)&buf[idx+825], 2); second[0][2] = '\0';
-	strncpy(milisecond[0], (CHAR*)&buf[idx+827], 2); milisecond[0][2] = '\0';
-	strncpy(year[1], (CHAR*)&buf[idx+830], 4); year[1][4] = '\0';
-	strncpy(month[1], (CHAR*)&buf[idx+834], 2); month[1][2] = '\0';
-	strncpy(day[1], (CHAR*)&buf[idx+836], 2); day[1][2] = '\0';
-	strncpy(hour[1], (CHAR*)&buf[idx+838], 2); hour[1][2] = '\0';
-	strncpy(time[1], (CHAR*)&buf[idx+840], 2); time[1][2] = '\0';
-	strncpy(second[1], (CHAR*)&buf[idx+842], 2); second[1][2] = '\0';
-	strncpy(milisecond[1], (CHAR*)&buf[idx+844], 2); milisecond[1][2] = '\0';
-	strncpy(year[2], (CHAR*)&buf[idx+847], 4); year[2][4] = '\0';
-	strncpy(month[2], (CHAR*)&buf[idx+851], 2); month[2][2] = '\0';
-	strncpy(day[2], (CHAR*)&buf[idx+853], 2); day[2][2] = '\0';
-	strncpy(hour[2], (CHAR*)&buf[idx+855], 2); hour[2][2] = '\0';
-	strncpy(time[2], (CHAR*)&buf[idx+857], 2); time[2][2] = '\0';
-	strncpy(second[2], (CHAR*)&buf[idx+859], 2); second[2][2] = '\0';
-	strncpy(milisecond[2], (CHAR*)&buf[idx+861], 2); milisecond[2][2] = '\0';
-	strncpy(year[3], (CHAR*)&buf[idx+864], 4); year[3][4] = '\0';
-	strncpy(month[3], (CHAR*)&buf[idx+868], 2); month[3][2] = '\0';
-	strncpy(day[3], (CHAR*)&buf[idx+870], 2); day[3][2] = '\0';
-	strncpy(hour[3], (CHAR*)&buf[idx+872], 2); hour[3][2] = '\0';
-	strncpy(time[3], (CHAR*)&buf[idx+874], 2); time[3][2] = '\0';
-	strncpy(second[3], (CHAR*)&buf[idx+876], 2); second[3][2] = '\0';
-	strncpy(milisecond[3], (CHAR*)&buf[idx+878], 2); milisecond[3][2] = '\0';
+	strncpy(year[0], (PCHAR)&buf[idx+813], 4); year[0][4] = '\0';
+	strncpy(month[0], (PCHAR)&buf[idx+817], 2); month[0][2] = '\0';
+	strncpy(day[0], (PCHAR)&buf[idx+819], 2); day[0][2] = '\0';
+	strncpy(hour[0], (PCHAR)&buf[idx+821], 2); hour[0][2] = '\0';
+	strncpy(time[0], (PCHAR)&buf[idx+823], 2); time[0][2] = '\0';
+	strncpy(second[0], (PCHAR)&buf[idx+825], 2); second[0][2] = '\0';
+	strncpy(milisecond[0], (PCHAR)&buf[idx+827], 2); milisecond[0][2] = '\0';
+	strncpy(year[1], (PCHAR)&buf[idx+830], 4); year[1][4] = '\0';
+	strncpy(month[1], (PCHAR)&buf[idx+834], 2); month[1][2] = '\0';
+	strncpy(day[1], (PCHAR)&buf[idx+836], 2); day[1][2] = '\0';
+	strncpy(hour[1], (PCHAR)&buf[idx+838], 2); hour[1][2] = '\0';
+	strncpy(time[1], (PCHAR)&buf[idx+840], 2); time[1][2] = '\0';
+	strncpy(second[1], (PCHAR)&buf[idx+842], 2); second[1][2] = '\0';
+	strncpy(milisecond[1], (PCHAR)&buf[idx+844], 2); milisecond[1][2] = '\0';
+	strncpy(year[2], (PCHAR)&buf[idx+847], 4); year[2][4] = '\0';
+	strncpy(month[2], (PCHAR)&buf[idx+851], 2); month[2][2] = '\0';
+	strncpy(day[2], (PCHAR)&buf[idx+853], 2); day[2][2] = '\0';
+	strncpy(hour[2], (PCHAR)&buf[idx+855], 2); hour[2][2] = '\0';
+	strncpy(time[2], (PCHAR)&buf[idx+857], 2); time[2][2] = '\0';
+	strncpy(second[2], (PCHAR)&buf[idx+859], 2); second[2][2] = '\0';
+	strncpy(milisecond[2], (PCHAR)&buf[idx+861], 2); milisecond[2][2] = '\0';
+	strncpy(year[3], (PCHAR)&buf[idx+864], 4); year[3][4] = '\0';
+	strncpy(month[3], (PCHAR)&buf[idx+868], 2); month[3][2] = '\0';
+	strncpy(day[3], (PCHAR)&buf[idx+870], 2); day[3][2] = '\0';
+	strncpy(hour[3], (PCHAR)&buf[idx+872], 2); hour[3][2] = '\0';
+	strncpy(time[3], (PCHAR)&buf[idx+874], 2); time[3][2] = '\0';
+	strncpy(second[3], (PCHAR)&buf[idx+876], 2); second[3][2] = '\0';
+	strncpy(milisecond[3], (PCHAR)&buf[idx+878], 2); milisecond[3][2] = '\0';
 #endif
 	OutputLogString(fpLog, 
 		_T("\tVolume Creation Date and Time		%s-%s-%s %s:%s:%s.%s +%d\n"), 
@@ -1940,34 +1961,34 @@ void OutputPrimaryVolumeDescriptorForISO9660(
 {
 	_TCHAR str[10][CD_RAW_READ+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+8], 32, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+40], 32, str[1], sizeof(str[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+190], 128, str[2], sizeof(str[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+318], 128, str[3], sizeof(str[3]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+446], 128, str[4], sizeof(str[4]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+574], 128, str[5], sizeof(str[5]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+702], 37, str[6], sizeof(str[6]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+739], 37, str[7], sizeof(str[7]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+776], 37, str[8], sizeof(str[8]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+190], 128, str[2], sizeof(str[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+318], 128, str[3], sizeof(str[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+446], 128, str[4], sizeof(str[4]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+574], 128, str[5], sizeof(str[5]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+702], 37, str[6], sizeof(str[6]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 37, str[7], sizeof(str[7]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 37, str[8], sizeof(str[8]));
 #else
-	strncpy(str[0], (CHAR*)&buf[idx+8], 32); str[0][32] = '\0';
-	strncpy(str[1], (CHAR*)&buf[idx+40], 32); str[1][32] = '\0';
-	strncpy(str[2], (CHAR*)&buf[idx+190], 128); str[2][128] = '\0';
-	strncpy(str[3], (CHAR*)&buf[idx+318], 128); str[3][128] = '\0';
-	strncpy(str[4], (CHAR*)&buf[idx+446], 128); str[4][128] = '\0';
-	strncpy(str[5], (CHAR*)&buf[idx+574], 128); str[5][128] = '\0';
-	strncpy(str[6], (CHAR*)&buf[idx+702], 37); str[6][37] = '\0';
-	strncpy(str[7], (CHAR*)&buf[idx+739], 37); str[7][37] = '\0';
-	strncpy(str[8], (CHAR*)&buf[idx+776], 37); str[8][37] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+8], 32); str[0][32] = '\0';
+	strncpy(str[1], (PCHAR)&buf[idx+40], 32); str[1][32] = '\0';
+	strncpy(str[2], (PCHAR)&buf[idx+190], 128); str[2][128] = '\0';
+	strncpy(str[3], (PCHAR)&buf[idx+318], 128); str[3][128] = '\0';
+	strncpy(str[4], (PCHAR)&buf[idx+446], 128); str[4][128] = '\0';
+	strncpy(str[5], (PCHAR)&buf[idx+574], 128); str[5][128] = '\0';
+	strncpy(str[6], (PCHAR)&buf[idx+702], 37); str[6][37] = '\0';
+	strncpy(str[7], (PCHAR)&buf[idx+739], 37); str[7][37] = '\0';
+	strncpy(str[8], (PCHAR)&buf[idx+776], 37); str[8][37] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tSystem Identifier		[%s]\n"), str[0]);
 	OutputLogString(fpLog, _T("\tVolume Identifier		[%s]\n"), str[1]);
 	OutputLogString(fpLog, _T("\tVolume Space Size		%d\n"), buf[idx+80]);
 	if(buf[idx+0] == 2) {
 #ifdef UNICODE
-		MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+88], 32, str[9], sizeof(str[9]));
+		MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 32, str[9], sizeof(str[9]));
 #else
-		strncpy(str[9], (CHAR*)&buf[idx+88], 32); str[9][32] = '\0';
+		strncpy(str[9], (PCHAR)&buf[idx+88], 32); str[9][32] = '\0';
 #endif
 		OutputLogString(fpLog, _T("\tEscape Sequences		[%s]\n"), str[9]);
 	}
@@ -2042,23 +2063,23 @@ void OutputPrimaryVolumeDescriptorForJoliet(
 {
 	_TCHAR str[9][128+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+8], 16, str[0], sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 16, str[0], sizeof(str[0]));
 	LittleToBig(str[0], (_TCHAR*)&buf[idx+8], 16); str[0][16] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+40], 16, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 16, str[1], sizeof(str[1]));
 	LittleToBig(str[1], (_TCHAR*)&buf[idx+40], 16); str[1][16] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+190], 16, str[2], sizeof(str[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+190], 16, str[2], sizeof(str[2]));
 	LittleToBig(str[2], (_TCHAR*)&buf[idx+190], 64); str[2][64] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+318], 16, str[3], sizeof(str[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+318], 16, str[3], sizeof(str[3]));
 	LittleToBig(str[3], (_TCHAR*)&buf[idx+318], 64); str[3][64] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+446], 16, str[4], sizeof(str[4]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+446], 16, str[4], sizeof(str[4]));
 	LittleToBig(str[4], (_TCHAR*)&buf[idx+446], 64); str[4][64] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+574], 16, str[5], sizeof(str[5]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+574], 16, str[5], sizeof(str[5]));
 	LittleToBig(str[5], (_TCHAR*)&buf[idx+574], 64); str[5][64] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+702], 16, str[6], sizeof(str[6]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+702], 16, str[6], sizeof(str[6]));
 	LittleToBig(str[6], (_TCHAR*)&buf[idx+702], 18); str[6][18] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+739], 16, str[7], sizeof(str[7]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 16, str[7], sizeof(str[7]));
 	LittleToBig(str[7], (_TCHAR*)&buf[idx+739], 18); str[7][18] = '\0';
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+776], 16, str[8], sizeof(str[8]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 16, str[8], sizeof(str[8]));
 	LittleToBig(str[8], (_TCHAR*)&buf[idx+776], 18); str[8][18] = '\0';
 #else
 	_TCHAR str2[9][128+1] = {0};
@@ -2084,9 +2105,9 @@ void OutputPrimaryVolumeDescriptorForJoliet(
 	OutputLogString(fpLog, _T("\tSystem Identifier		[%s]\n"), str[0]);
 	OutputLogString(fpLog, _T("\tVolume Identifier		[%s]\n"), str[1]);
 	OutputLogString(fpLog, _T("\tVolume Space Size		%d\n"), buf[idx+80]);
-	_TCHAR str3[64+1];
+	_TCHAR str3[64+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+88], 16, str3, sizeof(str3));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 16, str3, sizeof(str3));
 #else
 	_tcsncpy(str3, (_TCHAR*)&buf[idx+88], 32); str3[32] = '\0';
 #endif
@@ -2162,11 +2183,11 @@ void OutputVolumePartitionDescriptor(
 {
 	_TCHAR str[2][CD_RAW_READ+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+8], 32, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+40], 32, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]));
 #else
-	strncpy(str[0], (CHAR*)&buf[idx+8], 32); str[0][32] = '\0';
-	strncpy(str[1], (CHAR*)&buf[idx+40], 32); str[1][32] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+8], 32); str[0][32] = '\0';
+	strncpy(str[1], (PCHAR)&buf[idx+40], 32); str[1][32] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tSystem Identifier				[%s]\n"), str[0]);
 	OutputLogString(fpLog, _T("\tVolume Partition Identifier	[%s]\n"), str[1]);
@@ -2198,9 +2219,9 @@ void OutputVolumeStructureDescriptorFormat(
 	OutputLogString(fpLog, _T("\tStructure Type		%d\n"), buf[idx]);
 	_TCHAR str[128+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+1], 5, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
 #else
-	strncpy(str, (CHAR*)&buf[idx+1], 5); str[5] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 5); str[5] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tStandard Identifier	[%s]\n"), str);
 	OutputLogString(fpLog, _T("\tStructure Version	%d\n"), buf[idx+6]);
@@ -2217,9 +2238,9 @@ void OutputVolumeRecognitionSequence(
 {
 	_TCHAR str[128+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+1], 5, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
 #else
-	strncpy(str, (CHAR*)&buf[idx+1], 5); str[5] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 5); str[5] = '\0';
 #endif
 	if(buf[idx] == 1 && !_tcscmp(str, _T("CD001"))) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
@@ -2281,15 +2302,15 @@ void OutputBootDescriptor(
 
 	_TCHAR str[4][CD_RAW_READ+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+9], 23, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+24], 8, str[1], sizeof(str[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+41], 23, str[2], sizeof(str[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+64], 8, str[3], sizeof(str[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+9], 23, str[0], sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 8, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+41], 23, str[2], sizeof(str[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+64], 8, str[3], sizeof(str[3]));
 #else
-	strncpy(str[0], (CHAR*)&buf[idx+9], 23); str[0][23] = '\0';
-	strncpy(str[1], (CHAR*)&buf[idx+24], 8); str[1][8] = '\0';
-	strncpy(str[2], (CHAR*)&buf[idx+41], 23); str[2][23] = '\0';
-	strncpy(str[3], (CHAR*)&buf[idx+64], 8); str[3][8] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+9], 23); str[0][23] = '\0';
+	strncpy(str[1], (PCHAR)&buf[idx+24], 8); str[1][8] = '\0';
+	strncpy(str[2], (PCHAR)&buf[idx+41], 23); str[2][23] = '\0';
+	strncpy(str[3], (PCHAR)&buf[idx+64], 8); str[3][8] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\t\tIdentifier	[%s]\n"), str[0]);
 	OutputLogString(fpLog, _T("\t\tIdentifier Suffix	[%s]\n"), str[1]);
@@ -2336,9 +2357,9 @@ void OutputCharspec(
 	OutputLogString(fpLog, _T("\t\tCharacter Set Type			%d\n"), buf[idx]);
 	_TCHAR str[23+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+1], 23, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str));
 #else
-	strncpy(str, (CHAR*)&buf[idx+1], 23); str[23] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 23); str[23] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\t\tCharacter Set Information	[%s]\n"), str);
 #ifdef _DEBUG
@@ -2372,9 +2393,9 @@ void OutputRegid(
 	OutputLogString(fpLog, _T("\t\tFlags				%d\n"), buf[idx]);
 	_TCHAR str[23+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+1], 23, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str));
 #else
-	strncpy(str, (CHAR*)&buf[idx+1], 23); str[23] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 23); str[23] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\t\tIdentifier			[%s]\n"), str);
 	OutputLogString(fpLog, _T("\t\tIdentifier Suffix	"));
@@ -2402,11 +2423,11 @@ void OutputPrimaryVolumeDescriptorForUDF(
 
 	_TCHAR str[2][128+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+24], 32, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+72], 128, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 32, str[0], sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+72], 128, str[1], sizeof(str[1]));
 #else
-	strncpy(str[0], (CHAR*)&buf[idx+24], 32); str[0][32] = '\0';
-	strncpy(str[1], (CHAR*)&buf[idx+72], 128); str[1][128] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+24], 32); str[0][32] = '\0';
+	strncpy(str[1], (PCHAR)&buf[idx+72], 128); str[1][128] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tVolume Identifier				[%s]\n"), str[0]);
 	OutputLogString(fpLog, _T("\tVolume Sequence Number			%d\n"), 
@@ -2508,15 +2529,15 @@ void OutputImplementationUseVolumeDescriptor(
 
 	_TCHAR str[4][128+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+116], 128, str[0], sizeof(str[0]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+244], 36, str[1], sizeof(str[1]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+280], 36, str[2], sizeof(str[2]));
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+316], 36, str[3], sizeof(str[3]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+116], 128, str[0], sizeof(str[0]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+244], 36, str[1], sizeof(str[1]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+280], 36, str[2], sizeof(str[2]));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+316], 36, str[3], sizeof(str[3]));
 #else
-	strncpy(str[0], (CHAR*)&buf[idx+116], 128); str[0][128] = '\0';
-	strncpy(str[1], (CHAR*)&buf[idx+244], 36); str[1][36] = '\0';
-	strncpy(str[2], (CHAR*)&buf[idx+280], 36); str[2][36] = '\0';
-	strncpy(str[3], (CHAR*)&buf[idx+316], 36); str[3][36] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+116], 128); str[0][128] = '\0';
+	strncpy(str[1], (PCHAR)&buf[idx+244], 36); str[1][36] = '\0';
+	strncpy(str[2], (PCHAR)&buf[idx+280], 36); str[2][36] = '\0';
+	strncpy(str[3], (PCHAR)&buf[idx+316], 36); str[3][36] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tLogical Volume Identifier		[%s]\n"), str[0]);
 	OutputLogString(fpLog, _T("\tLV Info 1			[%s]\n"), str[1]);
@@ -2610,9 +2631,9 @@ void OutputLogicalVolumeDescriptor(
 
 	_TCHAR str[128+1] = {0};
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (CHAR*)&buf[idx+84], 128, str, sizeof(str));
+	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+84], 128, str, sizeof(str));
 #else
-	strncpy(str, (CHAR*)&buf[idx+84], 128); str[128] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+84], 128); str[128] = '\0';
 #endif
 	OutputLogString(fpLog, _T("\tLogical Volume Identifier		[%s]\n"), str);
 	OutputLogString(fpLog, _T("\tLogical Block Size				%d\n"), 
