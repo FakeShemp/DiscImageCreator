@@ -208,7 +208,7 @@ BOOL SplitDescrambledFile(
 		INT nMaxTrackNum = byToc[nMaxToc+4*1+2];
 		pToc = (PLONG)malloc(nMaxTrackNum * sizeof(LONG));
 		if(!pToc) {
-			throw _T("Failed to alloc memory to toc");
+			throw _T("Failed to alloc memory to toc\n");
 		}
 
 		LONG lMaxLba = 0;
@@ -331,18 +331,19 @@ BOOL SplitDescrambledFile(
 			OutputString(_T("\rSplit File(num) %2d/%2d"), i, nMaxTrackNum);
 			if(NULL == (fpBin = CreateOrOpenFileW(pszInFilename, NULL,
 				NULL, NULL, _T(".bin"), _T("wb"), i, nMaxTrackNum))) {
-				throw _T("Failed to open .bin");
+				throw _T("Failed to open .bin\n");
 			}
 			size_t size = 
 				(size_t)(pToc[i-2] - pToc[i-3]) * CD_RAW_SECTOR_SIZE;
 			if(NULL == (pBuf = (PUCHAR)malloc(size))) {
-				throw _T("Failed alloc memory .bin");
+				throw _T("Failed alloc memory .bin\n");
 			}
 			fread(pBuf, sizeof(UCHAR), size, fpDescr);
 			fwrite(pBuf, sizeof(UCHAR), size, fpBin);
 			FcloseAndNull(fpBin);
 			FreeAndNull(pBuf);
 		}
+		OutputString(_T("\n"));
 	}
 	catch(LPTSTR str) {
 		OutputErrorString(str);

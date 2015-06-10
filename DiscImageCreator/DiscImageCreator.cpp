@@ -40,17 +40,32 @@ int exec(_TCHAR* argv[], ExecType execType)
 		OutputErrorString(_T("Device Open fail\n"));
 		return FALSE;
 	}
-	FILE* fpLog = NULL;
+
 	BOOL bRet = TRUE;
-	DISC_DATA discData = {0};
-	try {
-		if(execType == c) {
-			StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
-		}
-		else if(execType == s) {
-			StartStop(&devData, STOP_UNIT_CODE, STOP_UNIT_CODE);
-		}
-		else {
+	if(execType == c) {
+		StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
+	}
+	else if(execType == s) {
+		StartStop(&devData, STOP_UNIT_CODE, STOP_UNIT_CODE);
+	}
+	else {
+		TCHAR drive[_MAX_DRIVE] = {0};
+		TCHAR dir[_MAX_DIR] = {0};
+		TCHAR fname[_MAX_FNAME] = {0};
+		TCHAR ext[_MAX_EXT] = {0};
+		_tsplitpath(argv[4], drive, dir, fname, ext);
+		OutputString(
+			_T("Input File Name\n")
+			_T("\t path: %s\n")
+			_T("\tdrive: %s\n")
+			_T("\t  dir: %s\n")
+			_T("\tfname: %s\n")
+			_T("\t  ext: %s\n"),
+			argv[4], drive, dir, fname, ext);
+
+		FILE* fpLog = NULL;
+		DISC_DATA discData = {0};
+		try {
 			bRet = ReadTestUnitReady(&devData);
 			if(!bRet) {
 				throw FALSE;
@@ -216,25 +231,25 @@ int exec(_TCHAR* argv[], ExecType execType)
 				}
 			}
 		}
-	}
-	catch(BOOL bErr) {
-		bRet = bErr;
-	}
+		catch(BOOL bErr) {
+			bRet = bErr;
+		}
+		FreeAndNull(devData.adapterDescriptor);
+		FreeAndNull(discData.aSessionNum);
+		for(INT i = 0; i < discData.toc.LastTrack + 1; i++) {
+			FreeAndNull(discData.szISRC[i]);
+			FreeAndNull(discData.szTitle[i]);
+			FreeAndNull(discData.szPerformer[i]);
+			FreeAndNull(discData.szSongWriter[i]);
+		}
+		FreeAndNull(discData.szISRC);
+		FreeAndNull(discData.szTitle);
+		FreeAndNull(discData.szPerformer);
+		FreeAndNull(discData.szSongWriter);
 #ifndef _DEBUG
-	FcloseAndNull(fpLog);
+		FcloseAndNull(fpLog);
 #endif
-	FreeAndNull(devData.adapterDescriptor);
-	FreeAndNull(discData.aSessionNum);
-	for(INT i = 0; i < discData.toc.LastTrack + 1; i++) {
-		FreeAndNull(discData.szISRC[i]);
-		FreeAndNull(discData.szTitle[i]);
-		FreeAndNull(discData.szPerformer[i]);
-		FreeAndNull(discData.szSongWriter[i]);
 	}
-	FreeAndNull(discData.szISRC);
-	FreeAndNull(discData.szTitle);
-	FreeAndNull(discData.szPerformer);
-	FreeAndNull(discData.szSongWriter);
 	CloseHandle(devData.hDevice);
 	return bRet;
 }
@@ -335,6 +350,16 @@ int checkArg(int argc, _TCHAR* argv[], ExecType* execType)
 int _tmain(int argc, _TCHAR* argv[])
 {
 	OutputString(_T("DiscImageCreator BuildDate:[%s %s]\n"), _T(__DATE__), _T(__TIME__));
+
+    OSVERSIONINFO OSver;
+    OSver.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    GetVersionEx(&OSver);
+	OutputString(
+		_T("OS\n")
+		_T("\t BuildNumber: %d\n")
+		_T("\tMajorVersion: %d\n")
+		_T("\tMinorVersion: %d\n"),
+		OSver.dwBuildNumber, OSver.dwMajorVersion, OSver.dwMinorVersion);
 	ExecType execType;
 	if(!checkArg(argc, argv, &execType)) {
 		OutputString(

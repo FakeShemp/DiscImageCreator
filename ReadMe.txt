@@ -199,3 +199,7 @@ fix subchannel reading
 
 **2012-01-29
 fix cue file of CD-TEXT Disc.
+
+**2012-01-30
+fix crach close/stop command.
+add OS version log.

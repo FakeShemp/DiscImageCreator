@@ -34,7 +34,7 @@ BOOL GetDriveOffset(
 	FILE* fpDrive = OpenProgrammabledFile(_T("driveOffset.txt"), _T("r"));
 	if (!fpDrive) {
 		OutputErrorString(_T("Failed to open file [F:%s][L:%d]:%s"), 
-			_T(__FUNCTION__), __LINE__, "driveOffset.txt\n");
+			_T(__FUNCTION__), __LINE__, _T("driveOffset.txt\n"));
 		exit(-1);
 	}
 
