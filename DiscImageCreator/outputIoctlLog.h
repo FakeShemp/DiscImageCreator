@@ -4,11 +4,12 @@
 #pragma once
 #include "forwardDeclaration.h"
 
-VOID OutputIoctlInfoScsiStatus(
-	PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb,
-	LPBYTE byScsiStatus,
-	LPCTSTR pszFuncName,
-	LONG lLineNum
+VOID OutputIoctlSenseData(
+	PSENSE_DATA pSenseData
+	);
+
+VOID OutputIoctlScsiStatus(
+	BYTE byScsiStatus
 	);
 
 VOID OutputIoctlScsiAddress(
@@ -16,9 +17,11 @@ VOID OutputIoctlScsiAddress(
 	);
 
 VOID OutputIoctlStorageAdaptorDescriptor(
-	PSTORAGE_ADAPTER_DESCRIPTOR pAdapterDescriptor
+	PSTORAGE_ADAPTER_DESCRIPTOR pAdapterDescriptor,
+	PBOOL pBusTypeUSB
 	);
 
 VOID OutputIoctlFloppyInfo(
-	PDISK_GEOMETRY pGeom
+	PDISK_GEOMETRY pGeom,
+	DWORD dwGeomNum
 	);

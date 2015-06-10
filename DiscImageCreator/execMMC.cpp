@@ -18,78 +18,72 @@ BOOL GetConfiguration(
 	PDISC_DATA pDiscData
 	)
 {
+	CDB::_GET_CONFIGURATION cdb = { 0 };
+	cdb.OperationCode = SCSIOP_GET_CONFIGURATION;
+	cdb.RequestType = SCSI_GET_CONFIGURATION_REQUEST_TYPE_CURRENT;
+	cdb.StartingFeature[1] = FeatureProfileList;
+	cdb.AllocationLength[0] = HIBYTE(sizeof(GET_CONFIGURATION_HEADER));
+	cdb.AllocationLength[1] = LOBYTE(sizeof(GET_CONFIGURATION_HEADER));
+
+	_declspec(align(4)) GET_CONFIGURATION_HEADER configHeader = { 0 };
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-	GET_CONFIGURATION_HEADER configHeader = { 0 };
-	DWORD dwConfigHeaderSize = sizeof(GET_CONFIGURATION_HEADER);
-
-	cdb.GET_CONFIGURATION.OperationCode = SCSIOP_GET_CONFIGURATION;
-	cdb.GET_CONFIGURATION.RequestType = SCSI_GET_CONFIGURATION_REQUEST_TYPE_CURRENT;
-	cdb.GET_CONFIGURATION.StartingFeature[1] = FeatureProfileList;
-	cdb.GET_CONFIGURATION.AllocationLength[0] = HIBYTE(dwConfigHeaderSize);
-	cdb.GET_CONFIGURATION.AllocationLength[1] = LOBYTE(dwConfigHeaderSize);
-
-	OutputDriveLog(_T("Configuration\n"));
-	BOOL bRet = ScsiPassThroughDirect(pDevData, &cdb.GET_CONFIGURATION, CDB10GENERIC_LENGTH,
-		&configHeader, dwConfigHeaderSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
-	if (!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		pDiscData->wCurrentMedia = ProfileCdrom;
+	OutputDriveLogA("Configuration\n");
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, &configHeader,
+		sizeof(GET_CONFIGURATION_HEADER), &byScsiStatus, _T(__FUNCTION__), __LINE__) 
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		pDiscData->SCSI.wCurrentMedia = ProfileCdrom;
 		// not false. because undefined mmc1..
-		OutputDriveLog(
-			_T("\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n"));
-		bRet = TRUE;
+		OutputDriveLogA(
+			"\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n");
+		return TRUE;
+	}
+	OutputDriveLogA("\tCurrentProfile: ");
+	pDiscData->SCSI.wCurrentMedia =
+		MAKEWORD(configHeader.CurrentProfile[1], configHeader.CurrentProfile[0]);
+	OutputMmcFeatureProfileType(pDiscData->SCSI.wCurrentMedia);
+	OutputDriveLogA("\n");
+
+	DWORD dwAllLen =
+		MAKELONG(MAKEWORD(configHeader.DataLength[3], configHeader.DataLength[2]), 
+			MAKEWORD(configHeader.DataLength[1], configHeader.DataLength[0])) -
+			sizeof(configHeader.DataLength) + sizeof(GET_CONFIGURATION_HEADER);
+	LPBYTE pPConf = (LPBYTE)calloc(dwAllLen + pDevData->AlignmentMask, sizeof(BYTE));
+	if (!pPConf) {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		return FALSE;
+	}
+
+	LPBYTE lpConf = (LPBYTE)ConvParagraphBoundary(pDevData, pPConf);
+	cdb.AllocationLength[0] = HIBYTE(dwAllLen);
+	cdb.AllocationLength[1] = LOBYTE(dwAllLen);
+
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, lpConf, 
+		dwAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		// not false. because undefined mmc1..
+		OutputDriveLogA(
+			"\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n");
 	}
 	else {
-		OutputDriveLog(_T("\tCurrenProfile: "));
-		pDiscData->wCurrentMedia =
-			MAKEWORD(configHeader.CurrentProfile[1], configHeader.CurrentProfile[0]);
-		OutputMmcFeatureProfileType(pDiscData->wCurrentMedia);
-		OutputDriveLog(_T("\n"));
-
-		DWORD dwAllLen =
-			MAKELONG(MAKEWORD(configHeader.DataLength[3], configHeader.DataLength[2]), 
-				MAKEWORD(configHeader.DataLength[1], configHeader.DataLength[0])) +
-				sizeof(configHeader.DataLength);
-		LPBYTE pPConf = (LPBYTE)calloc(
-			(size_t)dwAllLen + pDevData->AlignmentMask, sizeof(BYTE));
-		if (!pPConf) {
-			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-			return FALSE;
-		}
-
-		LPBYTE lpConf = (LPBYTE)ConvParagraphBoundary(pDevData, pPConf);
-		cdb.GET_CONFIGURATION.AllocationLength[0] = HIBYTE(dwAllLen);
-		cdb.GET_CONFIGURATION.AllocationLength[1] = LOBYTE(dwAllLen);
-
-		bRet = ScsiPassThroughDirect(pDevData, &cdb.GET_CONFIGURATION, CDB10GENERIC_LENGTH,
-			lpConf, dwAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__);
-		if (!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			// not false. because undefined mmc1..
-			OutputDriveLog(
-				_T("\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n"));
-			bRet = TRUE;
-		}
-		else {
-			OutputMmcFeatureNumber(pDevData, lpConf, dwAllLen, dwConfigHeaderSize);
-		}
-		FreeAndNull(pPConf);
+		OutputMmcFeatureNumber(pDevData,
+			lpConf + sizeof(GET_CONFIGURATION_HEADER), dwAllLen - sizeof(GET_CONFIGURATION_HEADER));
 	}
-	return bRet;
+	FreeAndNull(pPConf);
+	return TRUE;
 }
 
 BOOL Inquiry(
 	PDEVICE_DATA pDevData
 	)
 {
+	CDB::_CDB6INQUIRY3 cdb = { 0 };
+	cdb.OperationCode = SCSIOP_INQUIRY;
+	cdb.AllocationLength = sizeof(INQUIRYDATA);
+
+	_declspec(align(4)) INQUIRYDATA inquiryData = { 0 };
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-	INQUIRYDATA inquiryData = { 0 };
-
-	cdb.CDB6INQUIRY3.OperationCode = SCSIOP_INQUIRY;
-	cdb.CDB6INQUIRY3.AllocationLength = sizeof(INQUIRYDATA);
-
-	if (!ScsiPassThroughDirect(pDevData, &cdb.CDB6INQUIRY3, CDB6GENERIC_LENGTH, &inquiryData, 
-		sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB6GENERIC_LENGTH, &inquiryData, 
+		sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -101,16 +95,15 @@ BOOL ReadBufferCapacity(
 	PDEVICE_DATA pDevData
 	)
 {
+	CDB::_READ_BUFFER_CAPACITY cdb = { 0 };
+	cdb.OperationCode = SCSIOP_READ_BUFFER_CAPACITY;
+	cdb.AllocationLength[0] = HIBYTE(sizeof(READ_BUFFER_CAPACITY_DATA));
+	cdb.AllocationLength[1] = LOBYTE(sizeof(READ_BUFFER_CAPACITY_DATA));
+
+	_declspec(align(4)) READ_BUFFER_CAPACITY_DATA readBufCapaData = { 0 };
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-	READ_BUFFER_CAPACITY_DATA readBufCapaData = { 0 };
-
-	cdb.READ_BUFFER_CAPACITY.OperationCode = SCSIOP_READ_BUFFER_CAPACITY;
-	cdb.READ_BUFFER_CAPACITY.AllocationLength[1] = sizeof(READ_BUFFER_CAPACITY_DATA);
-
-	if (!ScsiPassThroughDirect(pDevData, &cdb.READ_BUFFER_CAPACITY, 
-		CDB12GENERIC_LENGTH, &readBufCapaData, sizeof(READ_BUFFER_CAPACITY_DATA), 
-		&byScsiStatus, _T(__FUNCTION__), __LINE__)
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, &readBufCapaData, 
+		sizeof(READ_BUFFER_CAPACITY_DATA), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -122,16 +115,15 @@ BOOL ReadDiscInformation(
 	PDEVICE_DATA pDevData
 	)
 {
+	CDB::_READ_DISK_INFORMATION cdb = { 0 };
+	cdb.OperationCode = SCSIOP_READ_DISC_INFORMATION;
+	cdb.AllocationLength[0] = HIBYTE(sizeof(DISC_INFORMATION));
+	cdb.AllocationLength[1] = LOBYTE(sizeof(DISC_INFORMATION));
+
+	_declspec(align(4)) DISC_INFORMATION discInformation = { 0 };
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-	DISC_INFORMATION discInformation = { 0 };
-
-	cdb.READ_DISC_INFORMATION.OperationCode = SCSIOP_READ_DISC_INFORMATION;
-	cdb.READ_DISC_INFORMATION.AllocationLength[1] = sizeof(DISC_INFORMATION);
-
-	if (!ScsiPassThroughDirect(pDevData, &cdb.READ_DISC_INFORMATION, 
-		CDB10GENERIC_LENGTH, &discInformation, sizeof(DISC_INFORMATION), &byScsiStatus,
-		_T(__FUNCTION__), __LINE__) || 
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, &discInformation,
+		sizeof(DISC_INFORMATION), &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -145,27 +137,31 @@ BOOL ReadTOC(
 	PDISC_DATA pDiscData
 	)
 {
+	CDB::_READ_TOC cdb = { 0 };
+	cdb.OperationCode = SCSIOP_READ_TOC;
+	cdb.LogicalUnitNumber = pDevData->address.Lun;
+	cdb.Format2 = CDROM_READ_TOC_EX_FORMAT_TOC;
+	cdb.StartingTrack = 1;
+	cdb.AllocationLength[0] = HIBYTE(CDROM_TOC_SIZE);
+	cdb.AllocationLength[1] = LOBYTE(CDROM_TOC_SIZE);
+
+#ifdef _DEBUG
+	OutputString(_T("pDiscData->SCSI.toc address: %p\n"), &pDiscData->SCSI.toc);
+#endif
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-
-	cdb.READ_TOC.OperationCode = SCSIOP_READ_TOC;
-	cdb.READ_TOC.StartingTrack = 1;
-	cdb.READ_TOC.AllocationLength[0] = HIBYTE(CDROM_TOC_SIZE);
-	cdb.READ_TOC.AllocationLength[1] = LOBYTE(CDROM_TOC_SIZE);
-
-	if (!ScsiPassThroughDirect(pDevData, &cdb.READ_TOC, CDB10GENERIC_LENGTH, 
-		&pDiscData->toc, CDROM_TOC_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, &pDiscData->SCSI.toc,
+		CDROM_TOC_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		if (pDiscData->wCurrentMedia != ProfileDvdRom) {
+		if (pDiscData->SCSI.wCurrentMedia != ProfileDvdRom) {
 			return FALSE;
 		}
 	}
-	if (!InitTocData(pExecType, &pDiscData)) {
+	if (!InitLBAPerTrack(pExecType, &pDiscData)) {
 		return FALSE;
 	}
 	if (byScsiStatus == SCSISTAT_GOOD) {
-		pDiscData->bSuccessReadToc = TRUE;
-		SetAndOutputMmcToc(pDiscData);
+		pDevData->bSuccessReadToc = TRUE;
+		SetAndOutputMmcToc(pExecType, pDiscData);
 	}
 	return TRUE;
 }
@@ -176,108 +172,106 @@ BOOL ReadTOCFull(
 	FILE* fpCcd
 	)
 {
+	CDB::_READ_TOC cdb = { 0 };
+	cdb.OperationCode = SCSIOP_READ_TOC;
+	cdb.LogicalUnitNumber = pDevData->address.Lun;
+	cdb.Format2 = CDROM_READ_TOC_EX_FORMAT_FULL_TOC;
+	cdb.StartingTrack = 1;
+	cdb.AllocationLength[0] = HIBYTE(sizeof(CDROM_TOC_FULL_TOC_DATA));
+	cdb.AllocationLength[1] = LOBYTE(sizeof(CDROM_TOC_FULL_TOC_DATA));
+
+	_declspec(align(4)) CDROM_TOC_FULL_TOC_DATA fullToc = { 0 };
+#ifdef _DEBUG
+	OutputString(_T("fullToc address: %p\n"), &fullToc);
+#endif
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-	CDROM_TOC_FULL_TOC_DATA fullToc = { 0 };
-	DWORD dwFullTocHeaderSize = sizeof(CDROM_TOC_FULL_TOC_DATA);
-
-	cdb.READ_TOC.OperationCode = SCSIOP_READ_TOC;
-	cdb.READ_TOC.StartingTrack = 1;
-	cdb.READ_TOC.AllocationLength[0] = HIBYTE(dwFullTocHeaderSize);
-	cdb.READ_TOC.AllocationLength[1] = LOBYTE(dwFullTocHeaderSize);
-	cdb.READ_TOC.Format2 = CDROM_READ_TOC_EX_FORMAT_FULL_TOC;
-
-	if (!ScsiPassThroughDirect(pDevData, &cdb.READ_TOC, CDB10GENERIC_LENGTH, &fullToc,
-		dwFullTocHeaderSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, &fullToc,
+		sizeof(CDROM_TOC_FULL_TOC_DATA), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-
-	DWORD dwFullTocSize =
-		MAKEWORD(fullToc.Length[1], fullToc.Length[0]) - sizeof(fullToc.Length);
-	DWORD dwTocEntries = dwFullTocSize / sizeof(CDROM_TOC_FULL_TOC_DATA_BLOCK);
+	WORD wFullTocLen = MAKEWORD(fullToc.Length[1], fullToc.Length[0]);
+	WORD wTocEntriesAll = wFullTocLen - sizeof(fullToc.Length);
+	WORD wTocEntries = wTocEntriesAll / sizeof(CDROM_TOC_FULL_TOC_DATA_BLOCK);
 
 	if (fpCcd) {
-		WriteCcdFileForDisc(dwTocEntries, fullToc.LastCompleteSession, fpCcd);
+		WriteCcdFileForDisc(wTocEntries, fullToc.LastCompleteSession, fpCcd);
 		if (pDevData->bCanCDText) {
 			ReadTOCText(pDevData, pDiscData, fpCcd);
 		}
 	}
-	DWORD dwFullTocStructSize = dwFullTocSize + dwFullTocHeaderSize;
-	if (pDevData->bPlextor && pDevData->PLEX_DRIVE_TYPE.bPlextorPX712A && dwFullTocStructSize > 1028) {
-		OutputErrorString(
-			_T("This drive can't get CDROM_TOC_FULL_TOC_DATA of this disc\n"));
-		return TRUE;
-	}
-	DWORD dwFullTocFixStructSize = dwFullTocStructSize;
+
+	WORD wFullTocLenFix = wTocEntriesAll + sizeof(CDROM_TOC_FULL_TOC_DATA);
 	// 4 byte padding
-	if (dwFullTocFixStructSize % 4) {
-		dwFullTocFixStructSize = (dwFullTocFixStructSize / 4 + 1) * 4;
+	if (wFullTocLenFix % 4) {
+		wFullTocLenFix = (WORD)((wFullTocLenFix / 4 + 1) * 4);
 	}
 #ifdef _DEBUG
-	OutputDiscLog(
-		_T("FullTocSize: %d, FullTocStructSize: %d, FullTocFixStructSize: %d\n"),
-		dwFullTocSize, dwFullTocStructSize, dwFullTocFixStructSize);
+	OutputDiscLogA(
+		_T("FullTocLen: %u, TocEntriesAll: %u, TocEntries: %u, FullTocLenFix: %u\n"),
+		wFullTocLen, wTocEntriesAll, wTocEntries, wFullTocLenFix);
 #endif
 	LPBYTE pPFullToc = 
-		(LPBYTE)calloc(dwFullTocFixStructSize + pDevData->AlignmentMask, sizeof(BYTE));
+		(LPBYTE)calloc(wFullTocLenFix + pDevData->AlignmentMask, sizeof(BYTE));
 	if (!pPFullToc) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
 	LPBYTE pFullToc = (LPBYTE)ConvParagraphBoundary(pDevData, pPFullToc);
-
-	cdb.READ_TOC.AllocationLength[0] = HIBYTE(dwFullTocFixStructSize);
-	cdb.READ_TOC.AllocationLength[1] = LOBYTE(dwFullTocFixStructSize);
+#ifdef _DEBUG
+	OutputString(_T("pPFullToc address: %p\n"), &pPFullToc);
+	OutputString(_T("pFullToc address: %p\n"), &pFullToc);
+#endif
+	cdb.AllocationLength[0] = HIBYTE(wFullTocLenFix);
+	cdb.AllocationLength[1] = LOBYTE(wFullTocLenFix);
 
 	BOOL bRet = TRUE;
 	LPBYTE aBuf2 = NULL;
 	try {
-		if (!ScsiPassThroughDirect(pDevData, &cdb.READ_TOC, CDB10GENERIC_LENGTH, pFullToc, 
-			dwFullTocFixStructSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
+		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, pFullToc, 
+			wFullTocLenFix, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
 		}
-		CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData = 
-			((CDROM_TOC_FULL_TOC_DATA*)pFullToc)->Descriptors;
+		PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData = 
+			((PCDROM_TOC_FULL_TOC_DATA)pFullToc)->Descriptors;
 		if (fpCcd) {
-			size_t uiIdx = 0;
+			BYTE bySession = 0;
 			// session1, session2
-			INT aLBA[] = {0, pDiscData->nFirstDataLBA};
-			for (size_t b = 0; b < dwTocEntries; b++) {
-				if (pTocData[b].Point < 100 && uiIdx < pTocData[b].SessionNumber) {
-					aBuf2 = (LPBYTE)calloc(
-						CD_RAW_SECTOR_WITH_SUBCODE_SIZE + pDevData->AlignmentMask, sizeof(BYTE));
-					if (!aBuf2) {
-						throw FALSE;
-					}
-					LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevData, aBuf2);
-					BYTE aCmd2[CDB12GENERIC_LENGTH] = { 0 };
-					SetReadCDCommand(pDevData, NULL, aCmd2, FALSE, READ_CD_FLAG::All, 1);
+			INT aLBA[] = { 0, pDiscData->SCSI.nFirstLBAofDataTrack };
+			aBuf2 = (LPBYTE)calloc(
+				CD_RAW_SECTOR_WITH_SUBCODE_SIZE + pDevData->AlignmentMask, sizeof(BYTE));
+			if (!aBuf2) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				throw FALSE;
+			}
+			LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevData, aBuf2);
+			CDB::_READ_CD cdb = { 0 };
+			SetReadCDCommand(pDevData, NULL, &cdb, TRUE, READ_CD_FLAG::All, 1, TRUE);
 
-					BYTE byMode = 0;
-					BOOL bMCN = FALSE;
-					for (INT nLBA = aLBA[uiIdx]; nLBA < aLBA[uiIdx] + 100; nLBA++) {
-						aCmd2[2] = HIBYTE(HIWORD(nLBA));
-						aCmd2[3] = LOBYTE(HIWORD(nLBA));
-						aCmd2[4] = HIBYTE(LOWORD(nLBA));
-						aCmd2[5] = LOBYTE(LOWORD(nLBA));
-
-						if (!ScsiPassThroughDirect(pDevData, aCmd2, CDB12GENERIC_LENGTH, lpBuf,
+			for (WORD b = 0; b < wTocEntries; b++) {
+				if (pTocData[b].Point < 100 && bySession < pTocData[b].SessionNumber) {
+					BYTE byMode = DATA_BLOCK_MODE0;
+					for (INT nLBA = aLBA[bySession]; nLBA < aLBA[bySession] + 100; nLBA++) {
+						cdb.StartingLBA[0] = HIBYTE(HIWORD(nLBA));
+						cdb.StartingLBA[1] = LOBYTE(HIWORD(nLBA));
+						cdb.StartingLBA[2] = HIBYTE(LOWORD(nLBA));
+						cdb.StartingLBA[3] = LOBYTE(LOWORD(nLBA));
+						if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, lpBuf,
 							CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 							|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 							throw FALSE;
 						}
-						if (nLBA == aLBA[uiIdx]) {
-							byMode = GetMode(lpBuf);
+						BYTE lpSubcode[CD_RAW_READ_SUBCODE_SIZE] = { 0 };
+						AlignRowSubcode(lpBuf + CD_RAW_SECTOR_SIZE, lpSubcode);
+						if (nLBA == aLBA[bySession]) {
+							BYTE byCtl = (BYTE)((lpSubcode[12] >> 4) & 0x0f);
+							byMode = GetMode(lpBuf, byCtl);
 						}
 						if (pTocData[b].SessionNumber == 1) {
-							BYTE lpSubcode[CD_RAW_READ_SUBCODE_SIZE] = { 0 };
-							AlignRowSubcode(lpBuf + CD_RAW_SECTOR_SIZE, lpSubcode);
-
-							BYTE byAdr = (BYTE)(lpSubcode[12] & 0x0F);
+							BYTE byAdr = (BYTE)(lpSubcode[12] & 0x0f);
 							if (byAdr == ADR_ENCODES_MEDIA_CATALOG) {
-								bMCN = IsValidMCN(lpSubcode);
+								BOOL bMCN = IsValidSubQMcn(lpSubcode);
 								_TCHAR szCatalog[META_CATALOG_SIZE] = { 0 };
 								SetMCNToString(pDiscData, lpSubcode, szCatalog, bMCN);
 								WriteCcdFileForDiscCatalog(pDiscData, fpCcd);
@@ -288,18 +282,16 @@ BOOL ReadTOCFull(
 							break;
 						}
 					}
-					FreeAndNull(aBuf2);
 					WriteCcdFileForSession(pTocData[b].SessionNumber, byMode, fpCcd);
-					uiIdx++;
+					bySession++;
 				}
 			}
 		}
-		SetAndOutputMmcTocFull(pDiscData, &fullToc, pTocData, dwTocEntries, fpCcd);
+		SetAndOutputMmcTocFull(pDiscData, &fullToc, pTocData, wTocEntries, fpCcd);
 	}
-	catch(BOOL ret) {
+	catch (BOOL ret) {
 		bRet = ret;
 	}
-	fflush(fpCcd);
 	FreeAndNull(pPFullToc);
 	FreeAndNull(aBuf2);
 	return bRet;
@@ -311,102 +303,115 @@ BOOL ReadTOCText(
 	FILE* fpCcd
 	)
 {
+	CDB::_READ_TOC cdb = { 0 };
+	cdb.OperationCode = SCSIOP_READ_TOC;
+	cdb.LogicalUnitNumber = pDevData->address.Lun;
+	cdb.Format2 = CDROM_READ_TOC_EX_FORMAT_CDTEXT;
+	cdb.AllocationLength[0] = HIBYTE(sizeof(CDROM_TOC_CD_TEXT_DATA));
+	cdb.AllocationLength[1] = LOBYTE(sizeof(CDROM_TOC_CD_TEXT_DATA));
+
+	_declspec(align(4)) CDROM_TOC_CD_TEXT_DATA tocText = { 0 };
+#ifdef _DEBUG
+	OutputString(_T("tocText address: %p\n"), &tocText);
+#endif
+	OutputDiscLogA("CDTEXT on SCSIOP_READ_TOC\n");
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-	CDROM_TOC_CD_TEXT_DATA tocText = { 0 };
-	UINT uiCDTextDataSize = sizeof(CDROM_TOC_CD_TEXT_DATA);
-
-	cdb.READ_TOC.OperationCode = SCSIOP_READ_TOC;
-	cdb.READ_TOC.AllocationLength[0] = HIBYTE(uiCDTextDataSize);
-	cdb.READ_TOC.AllocationLength[1] = LOBYTE(uiCDTextDataSize);
-	cdb.READ_TOC.Format2 = CDROM_READ_TOC_EX_FORMAT_CDTEXT;
-
-	BOOL bRet = ScsiPassThroughDirect(pDevData, &cdb.READ_TOC, CDB10GENERIC_LENGTH, &tocText,
-		(DWORD)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
-	OutputDiscLog(_T("CDTEXT on SCSIOP_READ_TOC\n"));
-	if (!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, &tocText,
+		sizeof(CDROM_TOC_CD_TEXT_DATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) 
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false. because undefined mmc1..
-		OutputDiscLog(
-			_T("\tUndefined CDROM_READ_TOC_EX_FORMAT_CDTEXT on this drive\n"));
-		bRet = TRUE;
+		OutputErrorString(
+			_T("\tNothing CDTEXT or Undefined CDROM_READ_TOC_EX_FORMAT_CDTEXT on this drive\n"));
+		return TRUE;
 	}
-	else {
-		UINT uiTocTextsize = 
-			MAKEWORD(tocText.Length[1], tocText.Length[0]) - sizeof(tocText.Length);
-		WriteCcdFileForDiscCDTextLength(uiTocTextsize, fpCcd);
+	WORD wTocTextLen = MAKEWORD(tocText.Length[1], tocText.Length[0]);
+	WORD wTocTextEntriesAll = wTocTextLen - sizeof(tocText.Length);
 
-		UINT uiTocTextEntries = uiTocTextsize / sizeof(CDROM_TOC_CD_TEXT_DATA_BLOCK);
-		if (!uiTocTextEntries) {
-			OutputDiscLog(_T("\tNothing\n"));
-			// many CD is nothing text
-			return TRUE;
+	WriteCcdFileForDiscCDTextLength(wTocTextEntriesAll, fpCcd);
+	if (!wTocTextEntriesAll) {
+		OutputDiscLogA("\tNothing\n");
+		// many CD is nothing text
+		return TRUE;
+	}
+
+	WORD wTocTextEntries = wTocTextEntriesAll / sizeof(CDROM_TOC_CD_TEXT_DATA_BLOCK);
+	WriteCcdFileForCDText(wTocTextEntries, fpCcd);
+
+	WORD wTocTextLenFix = wTocTextEntriesAll + sizeof(CDROM_TOC_CD_TEXT_DATA);
+	// 4 byte padding
+	if (wTocTextLenFix % 4) {
+		wTocTextLenFix = (WORD)((wTocTextLenFix / 4 + 1) * 4);
+	}
+#ifdef _DEBUG
+	OutputDiscLogA(
+		_T("TocTextLen: %u, TocTextEntriesAll: %u, TocTextEntries: %u, TocTextLenFix: %u\n"),
+		wTocTextLen, wTocTextEntriesAll, wTocTextEntries, wTocTextLenFix);
+#endif
+	LPBYTE pPTocText = 
+		(LPBYTE)calloc(wTocTextLenFix + pDevData->AlignmentMask, sizeof(BYTE));
+	if(!pPTocText) {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		return FALSE;
+	}
+	LPBYTE pTocText = (LPBYTE)ConvParagraphBoundary(pDevData, pPTocText);
+#ifdef _DEBUG
+	OutputString(_T("pPTocText address: %p\n"), &pPTocText);
+	OutputString(_T("pTocText address: %p\n"), &pTocText);
+#endif
+	cdb.AllocationLength[0] = HIBYTE(wTocTextLenFix);
+	cdb.AllocationLength[1] = LOBYTE(wTocTextLenFix);
+
+	PCHAR pTmpText = NULL;
+	BOOL bRet = TRUE;
+	try {
+		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB10GENERIC_LENGTH, pTocText, 
+			wTocTextLenFix, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
+			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+			throw FALSE;
 		}
-		WriteCcdFileForCDText(uiTocTextEntries, fpCcd);
+		PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc = 
+			((PCDROM_TOC_CD_TEXT_DATA)pTocText)->Descriptors;
+		WriteCcdFileForCDTextEntry(pDesc, wTocTextEntries, fpCcd);
 
-		LPBYTE pPTocText = NULL;
-		UINT uiCDTextDataMaxSize = uiTocTextsize + uiCDTextDataSize;
-		if (NULL == (pPTocText = (LPBYTE)calloc(
-			uiCDTextDataMaxSize + pDevData->AlignmentMask, sizeof(BYTE)))) {
+		WORD wAllTextSize = wTocTextEntries * sizeof(pDesc->Text);
+		if (NULL == (pTmpText = (PCHAR)calloc(wAllTextSize, sizeof(_TCHAR)))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-			return FALSE;
+			throw FALSE;
 		}
-		LPBYTE pTocText = (LPBYTE)ConvParagraphBoundary(pDevData, pPTocText);
-		cdb.READ_TOC.AllocationLength[0] = HIBYTE(uiCDTextDataMaxSize);
-		cdb.READ_TOC.AllocationLength[1] = LOBYTE(uiCDTextDataMaxSize);
-		PCHAR pTmpText = NULL;
-		try {
-			if (!ScsiPassThroughDirect(pDevData, &cdb.READ_TOC, CDB10GENERIC_LENGTH, pTocText, 
-				(DWORD)uiCDTextDataMaxSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
-				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-				throw FALSE;
+		WORD wEntrySize = 0;
+		BOOL bUnicode = FALSE;
+		while (wEntrySize < wTocTextEntries) {
+			if (pDesc[wEntrySize].Unicode == 1) {
+				bUnicode = TRUE;
+				break;
 			}
-			PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc = 
-				((PCDROM_TOC_CD_TEXT_DATA)pTocText)->Descriptors;
-			WriteCcdFileForCDTextEntry(pDesc, uiTocTextEntries, fpCcd);
-
-			UINT uiAllTextSize = uiTocTextEntries * sizeof(pDesc->Text);
-			if (NULL == (pTmpText = (PCHAR)calloc(uiAllTextSize, sizeof(_TCHAR)))) {
+			wEntrySize++;
+		}
+		SetAndOutputMmcTocCDText(pDiscData, pDesc, pTmpText, wEntrySize, wAllTextSize);
+		if (bUnicode) {
+			PWCHAR pTmpWText = NULL;
+			if (NULL == (pTmpWText = (PWCHAR)calloc(wAllTextSize, sizeof(BYTE)))) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
-			UINT entrySize = 0;
-			BOOL bUnicode = FALSE;
-			while(entrySize < uiTocTextEntries) {
-				if (pDesc[entrySize].Unicode == 1) {
-					bUnicode = TRUE;
-					break;
-				}
-				entrySize++;
-			}
-			SetAndOutputMmcTocCDText(pDiscData, pDesc, pTmpText, entrySize, uiAllTextSize);
-			if (bUnicode) {
-				PWCHAR pTmpWText = NULL;
-				if (NULL == (pTmpWText = (PWCHAR)calloc(uiAllTextSize, sizeof(BYTE)))) {
-					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-					throw FALSE;
-				}
-				SetAndOutputMmcTocCDWText(pDiscData, pDesc, pTmpText,
-					entrySize, uiTocTextEntries, uiAllTextSize);
-				FreeAndNull(pTmpWText);
-			}
+			SetAndOutputMmcTocCDWText(pDiscData, pDesc, 
+				pTmpText, wEntrySize, wTocTextEntries, wAllTextSize);
+			FreeAndNull(pTmpWText);
 		}
-		catch(BOOL ret) {
-			bRet = ret;
-		}
-		FreeAndNull(pPTocText);
-		FreeAndNull(pTmpText);
 	}
+	catch (BOOL ret) {
+		bRet = ret;
+	}
+	FreeAndNull(pPTocText);
+	FreeAndNull(pTmpText);
 	return bRet;
 }
 
 BOOL SetCDSpeed(
 	PDEVICE_DATA pDevData,
-	UINT uiCDSpeedNum
+	DWORD dwCDSpeedNum
 	)
 {
-	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-	CDROM_SET_SPEED setspeed;
 	WORD wCDSpeedList[] = {
 		0xFFFF,									// MAX
 		CD_RAW_SECTOR_SIZE * 75 * 1 / 1000,		// 176.400 Kbytes/sec
@@ -483,15 +488,19 @@ BOOL SetCDSpeed(
 		CD_RAW_SECTOR_SIZE * 75 * 72 / 1000, 	// 12700.800 Kbytes/sec
 	};
 
-	if (uiCDSpeedNum > DRIVE_MAX_SPEED) {
-		uiCDSpeedNum = 0;
+	if (dwCDSpeedNum > DRIVE_MAX_SPEED) {
+		dwCDSpeedNum = 0;
 	}
-	cdb.SET_CD_SPEED.OperationCode = SCSIOP_SET_CD_SPEED;
-	cdb.SET_CD_SPEED.ReadSpeed[0] = HIBYTE(wCDSpeedList[uiCDSpeedNum]);
-	cdb.SET_CD_SPEED.ReadSpeed[1] = LOBYTE(wCDSpeedList[uiCDSpeedNum]);
 
-	if (!ScsiPassThroughDirect(pDevData, &cdb.SET_CD_SPEED, CDB12GENERIC_LENGTH, 
-		&setspeed, sizeof(CDROM_SET_SPEED), &byScsiStatus, _T(__FUNCTION__), __LINE__)
+	CDB::_SET_CD_SPEED cdb = { 0 };
+	cdb.OperationCode = SCSIOP_SET_CD_SPEED;
+	cdb.ReadSpeed[0] = HIBYTE(wCDSpeedList[dwCDSpeedNum]);
+	cdb.ReadSpeed[1] = LOBYTE(wCDSpeedList[dwCDSpeedNum]);
+
+	_declspec(align(4)) CDROM_SET_SPEED setspeed;
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH, &setspeed, 
+		sizeof(CDROM_SET_SPEED), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
@@ -505,14 +514,13 @@ BOOL StartStopUnit(
 	BYTE LoadEject
 	)
 {
+	CDB::_START_STOP cdb = { 0 };
+	cdb.OperationCode = SCSIOP_START_STOP_UNIT;
+	cdb.Start = Start;
+	cdb.LoadEject = LoadEject;
+
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-
-	cdb.START_STOP.OperationCode = SCSIOP_START_STOP_UNIT;
-	cdb.START_STOP.Start = Start;
-	cdb.START_STOP.LoadEject = LoadEject;
-
-	if (!ScsiPassThroughDirect(pDevData, &cdb.START_STOP, CDB6GENERIC_LENGTH, 
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB6GENERIC_LENGTH,
 		NULL, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -524,15 +532,127 @@ BOOL TestUnitReady(
 	PDEVICE_DATA pDevData
 	)
 {
+	CDB::_CDB6GENERIC cdb = { 0 };
+	cdb.OperationCode = SCSIOP_TEST_UNIT_READY;
+	cdb.LogicalUnitNumber = pDevData->address.Lun;
+
 	BYTE byScsiStatus = 0;
-	CDB cdb = { 0 };
-
-	cdb.CDB6GENERIC.OperationCode = SCSIOP_TEST_UNIT_READY;
-
-	if (!ScsiPassThroughDirect(pDevData, &cdb.CDB6GENERIC, CDB6GENERIC_LENGTH, 
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB6GENERIC_LENGTH,
 		NULL, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
 	return TRUE;
 }
+
+// feature Plextor drive below
+BOOL Reset(
+	PDEVICE_DATA pDevData
+	)
+{
+	CDB::_CDB6GENERIC cdb = { 0 };
+	cdb.OperationCode = SCSIOP_PLEX_RESET;
+
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB6GENERIC_LENGTH,
+		NULL, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL ReadEeprom(
+	PDEVICE_DATA pDevData
+	)
+{
+	DWORD tLen = 128;
+	BOOL bHigh = FALSE;
+	INT nLife = 0;
+	switch (pDevData->byPlexType) {
+	case PLEX_DRIVE_TYPE::PXW5224:
+		tLen = 160;
+		break;
+	case PLEX_DRIVE_TYPE::PXW5232:
+	case PLEX_DRIVE_TYPE::Premium2:
+		tLen = 256;
+		break;
+	case PLEX_DRIVE_TYPE::PX708:
+	case PLEX_DRIVE_TYPE::PX712:
+		tLen = 512;
+		nLife = 1;
+		break;
+	case PLEX_DRIVE_TYPE::PX716:
+	case PLEX_DRIVE_TYPE::PX755:
+	case PLEX_DRIVE_TYPE::PX760:
+		tLen = 256;
+		nLife = 2;
+		bHigh = TRUE;
+		break;
+	}
+	DWORD BufLen = tLen;
+	LPBYTE pPBuf =
+		(LPBYTE)calloc(tLen + pDevData->AlignmentMask, sizeof(BYTE));
+	if (!pPBuf) {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		return FALSE;
+	}
+	LPBYTE pBuf = (LPBYTE)ConvParagraphBoundary(pDevData, pPBuf);
+
+	CDB::_CDB12 cdb = { 0 };
+	cdb.OperationCode = SCSIOP_PLEX_READ_EEPROM;
+	cdb.RelativeAddress = (BYTE)bHigh;
+
+	BYTE byScsiStatus = 0;
+	OutputDriveLogA("EEPROM\n");
+	for (BYTE idx = 0; idx < 4; idx++) {
+		cdb.TransferLength[0] = HIBYTE(HIWORD(tLen));
+		cdb.TransferLength[1] = LOBYTE(HIWORD(tLen));
+		cdb.TransferLength[2] = HIBYTE(LOWORD(tLen));
+		cdb.TransferLength[3] = LOBYTE(LOWORD(tLen));
+		if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH,
+			pBuf, BufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+			return FALSE;
+		}
+		OutputEeprom(pBuf, tLen, idx, nLife);
+		if (bHigh) {
+			tLen += 0x10000;
+		}
+		else {
+			break;
+		}
+	}
+	FreeAndNull(pPBuf);
+	return TRUE;
+}
+
+BOOL SetSpeedRead(
+	PDEVICE_DATA pDevData,
+	BOOL bState
+	)
+{
+	CONST WORD size = 8;
+	BYTE buf[size] = { 0 };
+
+	CDB::_CDB12 cdb = { 0 };
+	cdb.OperationCode = SCSIOP_PLEX_EXTEND;
+	cdb.DisablePageOut = TRUE;
+	cdb.LogicalBlock[0] = PLEX_FLAG_SPEED_READ;
+	cdb.LogicalBlock[1] = (BYTE)bState;
+	cdb.Reserved2 = 0x08;
+
+	BYTE byScsiStatus = 0;
+	if (!ScsiPassThroughDirect(pDevData, &cdb, CDB12GENERIC_LENGTH,
+		buf, sizeof(buf), &byScsiStatus, _T(__FUNCTION__), __LINE__)
+		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+#if 0
+	for (INT i = 0; i < size; i++) {
+		OutputString(_T("%02x "), buf[i]);
+	}
+	OutputString(_T("\n");
+#endif
+	return TRUE;
+	}

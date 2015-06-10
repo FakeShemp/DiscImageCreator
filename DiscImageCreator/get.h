@@ -8,7 +8,8 @@
 BOOL GetCreatedFileList(
 	PHANDLE h,
 	PWIN32_FIND_DATA lp,
-	LPTSTR szPathWithoutFileName
+	LPTSTR szPathWithoutFileName,
+	size_t szPathSize
 	);
 
 BOOL GetDriveOffset(
@@ -27,10 +28,17 @@ UINT64 GetFileSize64(
 	);
 
 BYTE GetMode(
-	LPBYTE lpBuf
+	LPBYTE lpBuf,
+	BYTE byCtl
 	);
 
 BOOL GetWriteOffset(
 	PDISC_DATA pDiscData,
 	LPBYTE lpBuf
+	);
+
+BOOL GetEccEdcCheckCmd(
+	LPTSTR pszCmd,
+	size_t cmdSize,
+	LPCTSTR pszImgPath
 	);

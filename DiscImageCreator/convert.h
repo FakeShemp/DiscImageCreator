@@ -23,16 +23,16 @@ BYTE DecToBcd(
 	);
 
 INT MSFtoLBA(
-	BYTE byFrame,
+	BYTE byMinute,
 	BYTE bySecond,
-	BYTE byMinute
+	BYTE byFrame
 	);
 
 VOID LBAtoMSF(
 	INT nLBA,
-	LPBYTE byFrame,
+	LPBYTE byMinute,
 	LPBYTE bySecond,
-	LPBYTE byMinute
+	LPBYTE byFrame
 	);
 
 VOID LittleToBig(
@@ -41,7 +41,7 @@ VOID LittleToBig(
 	INT nCnt
 	);
 
-LPBYTE ConvParagraphBoundary(
+LPVOID ConvParagraphBoundary(
 	PDEVICE_DATA pDevData,
 	LPBYTE pv
 	);

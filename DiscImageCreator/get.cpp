@@ -8,7 +8,7 @@
 #include "get.h"
 #include "output.h"
 
-// These global variable is set at pringAndSetArg().
+// These global variable is set at printAndSetArg().
 extern _TCHAR g_szCurrentdir[_MAX_PATH];
 extern _TCHAR g_drive[_MAX_DRIVE];
 extern _TCHAR g_dir[_MAX_DIR];
@@ -16,14 +16,16 @@ extern _TCHAR g_dir[_MAX_DIR];
 BOOL GetCreatedFileList(
 	PHANDLE h,
 	PWIN32_FIND_DATA lp,
-	LPTSTR szPathWithoutFileName
+	LPTSTR szPathWithoutFileName,
+	size_t szPathSize
 	)
 {
 	_TCHAR drive[_MAX_DRIVE] = { 0 };
 	_TCHAR dir[_MAX_DIR] = { 0 };
-	if (g_drive[0] == 0 || g_dir[0] == 0) {
-		_TCHAR szTmpPath[_MAX_PATH] = { 0 };
+	if (!g_drive[0] || !g_dir[0]) {
+		_TCHAR szTmpPath[_MAX_PATH + 1] = { 0 };
 		_tcsncpy(szTmpPath, g_szCurrentdir, _MAX_PATH);
+		szTmpPath[_MAX_PATH] = 0;
 		if (!PathAddBackslash(szTmpPath)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
@@ -35,7 +37,8 @@ BOOL GetCreatedFileList(
 		_tcsncpy(dir, g_dir, _MAX_DIR);
 	}
 	// "*" is wild card
-	_stprintf(szPathWithoutFileName, _T("%s\\%s\\*"), drive, dir);
+	_sntprintf(szPathWithoutFileName, szPathSize, _T("%s\\%s\\*"), drive, dir);
+	szPathWithoutFileName[szPathSize - 1] = 0;
 
 	*h = FindFirstFile(szPathWithoutFileName, lp);
 	if (*h == INVALID_HANDLE_VALUE) {
@@ -87,11 +90,11 @@ BOOL GetDriveOffset(
 			break;
 		}
 	}
-	if (pId != NULL) {
+	if (pId) {
 		PCHAR pTrimBuf[10] = { 0 };
 		CHAR lpBuf[1024] = { 0 };
 
-		while((fgets(lpBuf, sizeof(lpBuf), fpDrive)) != NULL) {
+		while ((fgets(lpBuf, sizeof(lpBuf), fpDrive))) {
 			pTrimBuf[0] = strtok(lpBuf, " 	"); // space & tab
 			for (INT nRoop = 1; nRoop < 10; nRoop++) {
 				pTrimBuf[nRoop] = strtok(NULL, " 	"); // space & tab
@@ -147,11 +150,13 @@ UINT64 GetFileSize64(
 }
 
 BYTE GetMode(
-	LPBYTE lpBuf
+	LPBYTE lpBuf,
+	BYTE byCtl
 	)
 {
 	BYTE byMode = DATA_BLOCK_MODE0;
-	if (IsValidDataHeader(lpBuf)) {
+	if ((byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+		IsValidDataHeader(lpBuf)) {
 		if ((lpBuf[15] & 0x60) == 0x60) {
 			byMode = BcdToDec((BYTE)(lpBuf[15] ^ 0x60));
 		}
@@ -173,12 +178,36 @@ BOOL GetWriteOffset(
 			BYTE sm = BcdToDec((BYTE)(lpBuf[i + 12] ^ 0x01));
 			BYTE ss = BcdToDec((BYTE)(lpBuf[i + 13] ^ 0x80));
 			BYTE sf = BcdToDec((BYTE)(lpBuf[i + 14]));
-			INT tmpLBA = MSFtoLBA(sf, ss, sm) - 150;
-			pDiscData->nCombinedOffset = 
-				CD_RAW_SECTOR_SIZE * -(tmpLBA - pDiscData->nFirstDataLBA) + i;
+			INT tmpLBA = MSFtoLBA(sm, ss, sf) - 150;
+			pDiscData->MAIN_CHANNEL.nCombinedOffset = 
+				CD_RAW_SECTOR_SIZE * -(tmpLBA - pDiscData->SCSI.nFirstLBAofDataTrack) + i;
 			bRet = TRUE;
 			break;
 		}
+	}
+	return bRet;
+}
+
+BOOL GetEccEdcCheckCmd(
+	LPTSTR pszCmd,
+	size_t cmdSize,
+	LPCTSTR pszImgPath
+	)
+{
+	_TCHAR path[_MAX_PATH] = { 0 };
+	if (!::GetModuleFileName(NULL, path, _MAX_PATH)) {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		return FALSE;
+	}
+	BOOL bRet = FALSE;
+	_TCHAR drive[_MAX_DRIVE] = { 0 };
+	_TCHAR dir[_MAX_DIR] = { 0 };
+	_tsplitpath(path, drive, dir, NULL, NULL);
+	_tmakepath(path, drive, dir, _T("EccEdc"), _T("exe"));
+	if (PathFileExists(path)) {
+		_sntprintf(pszCmd, cmdSize, 
+			_T("\"\"%s\" check \"%s\"\""), path, pszImgPath);
+		bRet = TRUE;
 	}
 	return bRet;
 }

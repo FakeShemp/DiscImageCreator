@@ -13,6 +13,11 @@ BOOL ReadDVD(
 	LPCTSTR pszPath
 	);
 
+BOOL ReadDVDForCMI(
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData
+	);
+
 BOOL ReadDVDRaw(
 	PDEVICE_DATA pDevData,
 	LPCSTR szVendorId,

@@ -2,7 +2,6 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-
 #include "_external/crc16ccitt.h"
 #include "_external/crc32.h"
 #include "_external/md5.h"

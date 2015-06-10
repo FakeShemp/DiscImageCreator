@@ -1,0 +1,188 @@
+================================= Change Log ==================================
+*2011-11-xx
+*2012-03-21
+*2012-05-26
+http://www.mediafire.com/?d4erewg5zbvtjma
+*2012-06-20
+http://www.mediafire.com/?78v9tp30o82ca2b
+*2012-07-01
+http://www.mediafire.com/?el57y5whhic2bz7
+*2012-07-07
+http://www.mediafire.com/?ro6zxax547pnifi
+forgot
+
+*2012-11-02
+http://www.mediafire.com/?j258gadpvpffpnq
+[DC]
+delete .offset .toc file
+ => integration .log file
+create .gdi file
+ => need fix index of track2 manually
+
+[other]
+create unicode version
+
+*2012-12-28
+http://www.mediafire.com/?t84vdvk60cipx3i
+support CDG(CD Graphics)
+fix Paragraph Boundary
+
+*2012-12-29
+http://www.mediafire.com/?6j70xu3awnyfbl6
+fix crashing in x86 build
+delete bom in unicode build
+
+*2013-01-03
+http://www.mediafire.com/?1ruflslt9v975b3
+fix checking & data of subchannel
+
+*2013-01-05
+http://www.mediafire.com/?octpobk6qnzp7jn
+refactoring
+improved subchannel data
+
+*2013-01-07
+http://www.mediafire.com/?2667q8f7ab1syau
+refactoring
+add STORAGE ADAPTER DESCRIPTOR log
+=> for getting alignmentMask of drive
+
+*2013-01-17
+http://www.mediafire.com/?7sbj5nluwtevv47
+improved PC Engine CD dumping
+1. if subchannel and TOC don't sync, TOC has priority.
+2. if audio sector exists in data track, their sector is descrambled.
+
+*2013-01-18
+http://www.mediafire.com/?uc2web2xkdw52zx
+fix checking subchannel(RelativeTime)
+
+*2013-01-19
+http://www.mediafire.com/?w1585tm93k9vso9
+fix ReadTOCText function
+=> because mmc1 drive isn't defined.
+
+*2013-01-24
+http://www.mediafire.com/?l8z42uu6wb0i8un
+fix subchannel reading
+ plextor + audio only disc => read cd command(0xbe) + read subchannel(0x100[pack])
+=> because if R-W channel bit is full on, reading speed is very slow.
+
+*2013-01-29
+http://www.mediafire.com/?5sivdapd7ysdpcr
+fix cue file of CD-TEXT Disc.
+
+*2013-01-30
+http://www.mediafire.com/?931v52igjl4qbr6
+fix crash close/stop command.
+add OS version log.
+
+*2013-02-03
+http://www.mediafire.com/?yej1m0db6b6a7t0
+improved CD-TEXT analyze.
+=> support unicode flag
+
+*2013-02-22
+http://www.mediafire.com/?ldsv1lwebz1lq0d
+add Macintosh disc log.
+fix x64 reading.
+=>padded with a multiple of four the DataTransferLength of CDROM_READ_TOC_EX_FORMAT_FULL_TOC
+fix logic
+=>if combined offset is plus and can't read lead-out, tool doesn't work.
+  Or if combined offset is minus and can't read lead-in, tool doesn't work.
+
+*2013-03-07
+http://www.mediafire.com/?j7r14knf62kkzsc
+fixed ripping CD-TEXT disc.
+improved ripping MCN(EAN) including disc.
+
+*2013-03-09
+http://www.mediafire.com/?suyd5pwrb034rsr
+fixed ccd file (added FLAGS)
+improved ripping CD including INDEX 0 in Track 1 disc.
+
+*2013-03-27
+http://www.mediafire.com/?f9sv2rnmg1lgiyt
+fixed ripping DVD DL
+fixed ISO9660 PVD log
+added DiscInformation(0x51) log
+added reading floppy (WIP)
+
+*2013-04-07
+http://www.mediafire.com/?iiui97cbtvi7v9f
+added C2 error log (check only one, not re-read)
+
+*2013-06-19
+http://www.mediafire.com/?hf5fr3mmeqvxm6q/
+added "pre" argument for ripping index0 in track1 (for SaGaFrontier Original Soundtrack Disc3)
+added "isrc" argument for ignoring invalid ISRC (for Valis II[PCE])
+Divided log (drive, disc, error)
+
+*2013-11-24
+http://www.mediafire.com/?ja083rxnjk7km9l/
+rewrote many code
+added reread and fix sector for C2 error disc. (Supported C2 error flag in 0xD8 command)
+added "add" argument for audio only disc. (offset correction manually)
+added "fua" argument for DVD (to defeat the cache)
+added store scrambled image to scm file
+added output hash (crc32, md5, sha1) to log file.
+added check & autodetect data order (main+c2+sub or main+sub+c2)
+added check process. (if isobuster running, don't run this tool)
+fixed return Win API error log message
+fixed ccd file (PregapMode)
+improved EAN sector reading
+improved ripping GD-ROM
+  added "-rgd" command for HD area (integrated "-ra", "-dec", "-split")
+  omitted "-dec", "-split" command
+
+*2013-12-17
+http://www.mediafire.com/?o9rdgpkq6cmx8qh/
+fixed output hash file (support over 4GB file)
+fixed create file
+  if subdirectory don't exist, create it.
+fixed DiscInformation(0x51) log
+
+*2013-12-21
+http://www.mediafire.com/?vjo27xx3jgcv37y/
+fixed create file
+  if subdirectory don't exist, create it. (re-fix)
+
+*2014-01-10
+http://www.mediafire.com/download/rex9fufshe16k3u/
+refactoring
+fixed StorageQueryProperty log
+
+*2014-06-21
+rewrote many code
+- changed: argment format
+- added: reset command (for PLEXTOR only)
+- added: /l option (for PlayStation LibCrypt disc)
+- added: /m option (for [MCD]WonderMega Collection)
+- added: /r option (for ripping from last to first)
+- added: cue file for img file
+- added: xxx_infolog.txt (for no error info)
+- added: using GetProductInfo, CreateMutex
+- added: fixes SubRtoW
+- added: exec EccEdc.exe
+- added: checking main data (A header exist or not) (for [PCE]Faerie Dust Story - Meikyuu no Elfeene)
+- added: CDI directive in cue
+- added: output a list of file in 3DO disc in xxx_disclog.txt (using the code of http://kaele.com/~kashima/games/3do_dir.html)
+- added: PCE log in 1st/2nd sector of 1st track to xxx_disclog.txt
+- added: Hash of .img to xxx_disclog.txt
+- added: writing multiple indexes for track 1 to cue file
+- added: SpeedRead (for PLEXTOR only)
+- added: output EEPROM (for PLEXTOR only)
+- deleted: CDG directive in cue
+- improved: SubQ of adr 2(=EAN sector)(if adr is correct but EAN data is wrong, fixed it.)
+- improved: SubQ of adr 3(=ISRC sector)(if adr is correct but ISRC data is wrong, fixed it.)
+- improved: ripping AMSF from 00:00:00 to 00:01:74
+- improved: /c2 option (support PX-4824)
+- fixed: checking a product id of a plextor drive(CD-R   PREMIUM)
+- fixed: ripping a floppy disk
+- fixed: ScsiGetAddress (Don't call this function if you use a drive via USB.)
+- fixed: ripping a MCN sector on LBA 0 in track 1 only disc
+- fixed: allocate memory in ReadTOCFull
+- fixed: analize SubQ(relative time)
+- fixed: transfer length (because speed down gd-rom ripping)
+- fixed: c2 error fix logic
+- fixed: check CD+G per track (for [MCD]WonderMega Collection)

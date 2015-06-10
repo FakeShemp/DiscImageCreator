@@ -12,32 +12,41 @@ BOOL DiskGetMediaTypes(
 	LPCTSTR pszPath
 	)
 {
-	FILE* fp = CreateOrOpenFileW(pszPath, NULL, NULL, NULL, _T(".bin"), _T("wb"), 0, 0);
+	FILE* fp = CreateOrOpenFileW(
+		pszPath, NULL, NULL, NULL, NULL, _T(".bin"), _T("wb"), 0, 0);
 	if (!fp) {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
 
-	DWORD dwReturned = 0;
 	DISK_GEOMETRY geom[20] = { 0 };
-	BOOL bRet = DeviceIoControl(pDevData->hDevice,
-		IOCTL_DISK_GET_MEDIA_TYPES, 0, 0, &geom, sizeof(geom), &dwReturned, 0);
+	DWORD dwReturned = 0;
+	BOOL bRet = DeviceIoControl(pDevData->hDevice, IOCTL_DISK_GET_MEDIA_TYPES, 
+		NULL, 0, &geom, sizeof(geom), &dwReturned, 0);
 	if (bRet) {
-		OutputIoctlFloppyInfo(geom);
-		DWORD dwFloppySize = geom[0].Cylinders.LowPart *
-			geom[0].TracksPerCylinder * geom[0].SectorsPerTrack * geom[0].BytesPerSector;
-		LPBYTE lpBuf = (LPBYTE)calloc(dwFloppySize, sizeof(BYTE));
-		if (!lpBuf) {
-			FcloseAndNull(fp);
-			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-			return FALSE;
-		}
-		DWORD dwBytesRead = 0;
-		bRet = ReadFile(pDevData->hDevice, lpBuf, dwFloppySize, &dwBytesRead, 0);
+		OutputIoctlFloppyInfo(geom, dwReturned / sizeof(DISK_GEOMETRY));
+		bRet = DeviceIoControl(pDevData->hDevice, IOCTL_DISK_GET_DRIVE_GEOMETRY, 
+			NULL, 0, &geom, sizeof(DISK_GEOMETRY), &dwReturned, 0);
 		if (bRet) {
-			fwrite(lpBuf, sizeof(BYTE), dwFloppySize, fp);
+			OutputIoctlFloppyInfo(geom, 1);
+			DWORD dwFloppySize = geom[0].Cylinders.LowPart *
+				geom[0].TracksPerCylinder * geom[0].SectorsPerTrack * geom[0].BytesPerSector;
+			LPBYTE lpBuf = (LPBYTE)calloc(dwFloppySize, sizeof(BYTE));
+			if (!lpBuf) {
+				FcloseAndNull(fp);
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				return FALSE;
+			}
+			DWORD dwBytesRead = 0;
+			bRet = ReadFile(pDevData->hDevice, lpBuf, dwFloppySize, &dwBytesRead, 0);
+			if (bRet) {
+				fwrite(lpBuf, sizeof(BYTE), dwFloppySize, fp);
+			}
+			FreeAndNull(lpBuf);
 		}
-		FreeAndNull(lpBuf);
+		else {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		}
 	}
 	else {
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
@@ -66,8 +75,8 @@ BOOL ScsiGetAddress(
 
 BOOL ScsiPassThroughDirect(
 	PDEVICE_DATA pDevData,
-	PVOID lpCdbCmd,
-	BYTE byCdbCmdLength,
+	PVOID lpCdb,
+	BYTE byCdbLength,
 	PVOID pvBuffer,
 	DWORD dwBufferLength,
 	LPBYTE byScsiStatus,
@@ -80,43 +89,45 @@ BOOL ScsiPassThroughDirect(
 	swb.ScsiPassThroughDirect.PathId = pDevData->address.PathId;
 	swb.ScsiPassThroughDirect.TargetId = pDevData->address.TargetId;
 	swb.ScsiPassThroughDirect.Lun = pDevData->address.Lun;
-	swb.ScsiPassThroughDirect.CdbLength = byCdbCmdLength;
-	swb.ScsiPassThroughDirect.SenseInfoLength = SPTWB_SENSE_LENGTH;
+	swb.ScsiPassThroughDirect.CdbLength = byCdbLength;
+	swb.ScsiPassThroughDirect.SenseInfoLength = SENSE_BUFFER_SIZE;
 	swb.ScsiPassThroughDirect.DataIn = SCSI_IOCTL_DATA_IN;
 	swb.ScsiPassThroughDirect.DataTransferLength = dwBufferLength;
-	swb.ScsiPassThroughDirect.TimeOutValue = 2;
+	swb.ScsiPassThroughDirect.TimeOutValue = 60;
 	swb.ScsiPassThroughDirect.DataBuffer = pvBuffer;
 	swb.ScsiPassThroughDirect.SenseInfoOffset = 
-		offsetof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER, SenseInfoBuffer);
-	memcpy(swb.ScsiPassThroughDirect.Cdb, lpCdbCmd, byCdbCmdLength);
+		offsetof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER, SenseData);
+	memcpy(swb.ScsiPassThroughDirect.Cdb, lpCdb, byCdbLength);
+
 	DWORD dwLength = sizeof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER);
-
-	SetLastError(NO_ERROR);
-
 	DWORD dwReturned = 0;
-	BOOL bRet = DeviceIoControl(pDevData->hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT,
-		&swb, dwLength, &swb, dwLength, &dwReturned, NULL);
-	*byScsiStatus = swb.ScsiPassThroughDirect.ScsiStatus;
-
-	if (bRet) {
-		OutputIoctlInfoScsiStatus(&swb, byScsiStatus, pszFuncName, lLineNum);
-	}
-	else {
+	BOOL bRet = TRUE;
+	SetLastError(NO_ERROR);
+	if (!DeviceIoControl(pDevData->hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT,
+		&swb, dwLength, &swb, dwLength, &dwReturned, NULL)) {
 		OutputLastErrorNumAndString(pszFuncName, lLineNum);
+		bRet = FALSE;
 	}
+	else if (swb.ScsiPassThroughDirect.ScsiStatus >= SCSISTAT_CHECK_CONDITION &&
+		swb.SenseData.SenseKey > SCSI_SENSE_NO_SENSE) {
+		OutputIoctlScsiStatus(swb.ScsiPassThroughDirect.ScsiStatus);
+		OutputIoctlSenseData(&swb.SenseData);
+	}
+	*byScsiStatus = swb.ScsiPassThroughDirect.ScsiStatus;
 	return bRet;
 }
 
 BOOL StorageQueryProperty(
-	PDEVICE_DATA pDevData
+	PDEVICE_DATA pDevData,
+	PBOOL pBusTypeUSB
 	)
 {
-	DWORD dwReturned = 0;
-	STORAGE_DESCRIPTOR_HEADER header = { 0 };
 	STORAGE_PROPERTY_QUERY query;
 	query.QueryType = PropertyStandardQuery;
 	query.PropertyId = StorageAdapterProperty;
 
+	STORAGE_DESCRIPTOR_HEADER header = { 0 };
+	DWORD dwReturned = 0;
 	if (!DeviceIoControl(pDevData->hDevice, IOCTL_STORAGE_QUERY_PROPERTY,
 		&query, sizeof(STORAGE_PROPERTY_QUERY), &header,
 		sizeof(STORAGE_DESCRIPTOR_HEADER), &dwReturned, FALSE)) {
@@ -133,7 +144,7 @@ BOOL StorageQueryProperty(
 		&query, sizeof(STORAGE_PROPERTY_QUERY), adapterDescriptor,
 		header.Size, &dwReturned, FALSE);
 	if (bRet) {
-		OutputIoctlStorageAdaptorDescriptor(adapterDescriptor);
+		OutputIoctlStorageAdaptorDescriptor(adapterDescriptor, pBusTypeUSB);
 		pDevData->uiMaxTransferLength = adapterDescriptor->MaximumTransferLength;
 		pDevData->AlignmentMask = (UINT_PTR)(adapterDescriptor->AlignmentMask);
 	}

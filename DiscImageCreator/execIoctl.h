@@ -25,5 +25,6 @@ BOOL ScsiPassThroughDirect(
 	);
 
 BOOL StorageQueryProperty(
-	PDEVICE_DATA pDevData
+	PDEVICE_DATA pDevData,
+	PBOOL pBusTypeUSB
 	);

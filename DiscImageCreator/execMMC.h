@@ -44,7 +44,7 @@ BOOL ReadTOCText(
 
 BOOL SetCDSpeed(
 	PDEVICE_DATA pDevData,
-	UINT uiCDSpeedNum
+	DWORD dwCDSpeedNum
 	);
 
 BOOL StartStopUnit(
@@ -55,4 +55,18 @@ BOOL StartStopUnit(
 
 BOOL TestUnitReady(
 	PDEVICE_DATA pDevData
+	);
+
+// feature Plextor drive below
+BOOL Reset(
+	PDEVICE_DATA pDevData
+	);
+
+BOOL ReadEeprom(
+	PDEVICE_DATA pDevData
+	);
+
+BOOL SetSpeedRead(
+	PDEVICE_DATA pDevData,
+	BOOL bState
 	);

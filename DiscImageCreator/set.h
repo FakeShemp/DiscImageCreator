@@ -3,51 +3,50 @@
  */
 #pragma once
 #include "forwardDeclaration.h"
+#include "enum.h"
 
 BOOL PreserveTrackAttribution(
+	PEXT_ARG pExtArg,
 	PDISC_DATA pDiscData,
 	INT nLBA,
 	LPBYTE lpCurrentTrackNum,
 	PSUB_Q_DATA pSubQ,
 	PSUB_Q_DATA pPrevSubQ,
-	PSUB_Q_DATA pPrevPrevSubQ,
-	LPBYTE lpCtlList,
-	LPBYTE lpModeList,
-	LPINT* lpLBAStartList,
-	LPINT* lpLBAOfDataTrackList
+	PSUB_Q_DATA pPrevPrevSubQ
 	);
 
-VOID SetAndOutputC2ErrorData(
-	PC2_ERROR_DATA c2ErrorData,
+VOID SetAndOutputc2ErrorDataPerSector(
+	PC2_ERROR_DATA pC2ErrorData,
+	PC2_ERROR_DATA_PER_SECTOR pC2ErrorDataPerSector,
 	INT nLBA,
+	DWORD dwAllBufLen,
 	UINT uiC2ErrorLBACnt
 	);
 
 VOID SetAndOutputC2NoErrorData(
-	PC2_ERROR_DATA c2ErrorData,
+	PC2_ERROR_DATA_PER_SECTOR pC2ErrorDataPerSector,
 	LPBYTE lpBuf,
 	INT nLBA,
 	DWORD dwAllBufLen,
-	UINT uiC2ErrorLBACnt,
-	UINT i
+	UINT uiC2ErrorLBACnt
 	);
 
 VOID SetAndOutputC2NoErrorByteErrorData(
-	PC2_ERROR_DATA c2ErrorData,
+	PC2_ERROR_DATA_PER_SECTOR pC2ErrorDataPerSector,
 	LPBYTE lpBuf,
 	INT nLBA,
 	DWORD dwAllBufLen,
-	UINT uiC2ErrorLBACnt,
-	UINT i
+	UINT uiC2ErrorLBACnt
 	);
 
 VOID SetC2ErrorBackup(
-	PC2_ERROR_DATA c2ErrorData,
+	PC2_ERROR_DATA_PER_SECTOR pC2ErrorDataPerSector,
 	UINT uiC2ErrorLBACntBackup,
 	DWORD dwAllBufLen
 	);
 
 VOID SetAndOutputMmcToc(
+	PEXEC_TYPE pExecType,
 	PDISC_DATA pDiscData
 	);
 
@@ -63,31 +62,40 @@ VOID SetAndOutputMmcTocCDText(
 	PDISC_DATA pDiscData,
 	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	PCHAR pTmpText,
-	size_t uiTocTextEntries,
-	size_t uiAllTextSize
+	WORD wTocTextEntries,
+	WORD wAllTextSize
 	);
 
 VOID SetAndOutputMmcTocCDWText(
 	PDISC_DATA pDiscData,
 	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	PCHAR pTmpText,
-	size_t uiFirstEntries,
-	size_t uiTocTextEntries,
-	size_t uiAllTextSize
+	WORD wFirstEntries,
+	WORD wTocTextEntries,
+	WORD wAllTextSize
+	);
+
+VOID SetMmcFeatureCdRead(
+	PFEATURE_DATA_CD_READ pCDRead,
+	PDEVICE_DATA pDevData
 	);
 
 VOID SetCDOffsetData(
 	PDISC_DATA pDiscData,
-	PCD_OFFSET_DATA pCdOffsetData,
 	INT nStartLBA,
 	INT nEndLBA
+	);
+
+VOID SetCDTransferData(
+	PDEVICE_DATA pDevData,
+	DRIVE_DATA_ORDER order
 	);
 
 VOID SetISRCToString(
 	PDISC_DATA pDiscData,
 	LPBYTE lpSubcode,
 	LPTSTR pszOutString,
-	INT nTrackNum,
+	BYTE byTrackNum,
 	BOOL bCopy
 	);
 
@@ -101,29 +109,32 @@ VOID SetMCNToString(
 VOID SetReadCDCommand(
 	PDEVICE_DATA pDevData,
 	PEXT_ARG pExtArg,
-	LPBYTE lpCmd,
-	BOOL bCDG,
-	READ_CD_FLAG::SECTOR_TYPE flg,
-	BYTE byTransferLen
+	CDB::_READ_CD* cdb,
+	BOOL bSub,
+	READ_CD_FLAG::SECTOR_TYPE type,
+	UINT uiTransferLen,
+	BOOL bCheckReading
 	);
 
 VOID SetReadD8Command(
 	PDEVICE_DATA pDevData,
 	PEXT_ARG pExtArg,
-	LPBYTE lpCmd,
-	BYTE byTransferLen,
+	CDB::_PLXTR_READ_CDDA* cdb,
+	UINT uiTransferLen,
+	BOOL bSub,
 	BOOL bCheckReading
 	);
 
 VOID SetSubQDataFromReadCD(
+	PDISC_DATA pDiscData,
 	PSUB_Q_DATA pSubQ,
-	PCD_OFFSET_DATA pCdOffsetData,
 	LPBYTE lpBuf,
 	LPBYTE lpSubcode
 	);
 
-BOOL UpdateSubchannelQData(
+BOOL UpdateSubQData(
 	PSUB_Q_DATA pSubQ,
 	PSUB_Q_DATA pPrevSubQ,
-	PSUB_Q_DATA pPrevPrevSubQ
+	PSUB_Q_DATA pPrevPrevSubQ,
+	BOOL bLibCrypt
 	);

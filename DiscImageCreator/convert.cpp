@@ -118,7 +118,7 @@ BYTE BcdToDec(
 	BYTE bySrc
 	)
 {
-	return (BYTE)(((bySrc >> 4) & 0x0F) * 10 + (bySrc & 0x0F));
+	return (BYTE)(((bySrc >> 4) & 0x0f) * 10 + (bySrc & 0x0f));
 }
 
 BYTE DecToBcd(
@@ -132,20 +132,24 @@ BYTE DecToBcd(
 	return (BYTE)(m << 4 | n);
 }
 
+// 00:00:00 <= MSF <= 89:59:74
+// 90:00:00 <= MSF <= 99:59:74 is TODO
 INT MSFtoLBA(
-	BYTE byFrame, 
+	BYTE byMinute,
 	BYTE bySecond, 
-	BYTE byMinute
+	BYTE byFrame
 	)
 {
-	return byFrame + 75 * (bySecond + 60 * byMinute);
+	return (byMinute * 60 + bySecond) * 75 + byFrame;
 }
 
+// -451150 <= LBA <= -151 is TODO
+// -150 <= LBA <= 404849
 VOID LBAtoMSF(
 	INT nLBA, 
-	LPBYTE byFrame, 
+	LPBYTE byMinute,
 	LPBYTE bySecond, 
-	LPBYTE byMinute
+	LPBYTE byFrame
 	)
 {
 	*byFrame = (BYTE)(nLBA % 75);
@@ -166,10 +170,12 @@ VOID LittleToBig(
 	}
 }
 
-LPBYTE ConvParagraphBoundary(
+// http://msdn.microsoft.com/ja-jp/library/83ythb65.aspx
+// http://senbee.seesaa.net/article/19124170.html
+LPVOID ConvParagraphBoundary(
 	PDEVICE_DATA pDevData,
 	LPBYTE pv
 	)
 {
-	return (LPBYTE)(((UINT_PTR)pv + pDevData->AlignmentMask) & ~pDevData->AlignmentMask);
+	return (LPVOID)(((UINT_PTR)pv + pDevData->AlignmentMask) & ~pDevData->AlignmentMask);
 }

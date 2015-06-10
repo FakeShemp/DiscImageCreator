@@ -7,433 +7,3072 @@
 #include "output.h"
 #include "outputIoctlLog.h"
 
-VOID OutputIoctlInfoSense(
-	BYTE byKey,
+VOID OutputIoctlAdditionalSenseCodeQualifier0x00(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("NO ADDITIONAL SENSE INFORMATION"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("I/O PROCESS TERMINATED"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("AUDIO PLAY OPERATION IN PROGRES"));
+		break;
+	case 0x12:
+		OutputErrorString(_T("AUDIO PLAY OPERATION PAUSED"));
+		break;
+	case 0x13:
+		OutputErrorString(_T("AUDIO PLAY OPERATION SUCCESSFULLY COMPLETED"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("AUDIO PLAY OPERATION STOPPED DUE TO ERROR"));
+		break;
+	case 0x15:
+		OutputErrorString(_T("NO CURRENT AUDIO STATUS TO RETURN"));
+		break;
+	case 0x16:
+		OutputErrorString(_T("OPERATION IN PROGRESS"));
+		break;
+	case 0x17:
+		OutputErrorString(_T("CLEANING REQUESTED"));
+		break;
+	case 0x1d:
+		OutputErrorString(_T("ATA PASS THROUGH INFORMATION AVAILABLE"));
+		break;
+	case 0x1e:
+		OutputErrorString(_T("CONFLICTING SA CREATION REQUE"));
+		break;
+	case 0x1f:
+		OutputErrorString(_T("LOGICAL UNIT TRANSITIONING TO ANOTHER POWER CONDITION"));
+		break;
+	case 0x20:
+		OutputErrorString(_T("EXTENDED COPY INFORMATION AVAILABLE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x01(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("NO INDEX/SECTOR SIGNAL"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x02(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("NO SEEK COMPLETE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x03(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("PERIPHERAL DEVICE WRITE FAULT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x04(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case SCSI_SENSEQ_CAUSE_NOT_REPORTABLE:
+		OutputErrorString(_T("LUN_NOT_READY - CAUSE_NOT_REPORTABLE"));
+		break;
+	case SCSI_SENSEQ_BECOMING_READY:
+		OutputErrorString(_T("LUN_NOT_READY - BECOMING_READY"));
+		break;
+	case SCSI_SENSEQ_INIT_COMMAND_REQUIRED:
+		OutputErrorString(_T("LUN_NOT_READY - INIT_COMMAND_REQUIRED"));
+		break;
+	case SCSI_SENSEQ_MANUAL_INTERVENTION_REQUIRED:
+		OutputErrorString(_T("LUN_NOT_READY - MANUAL_INTERVENTION_REQUIRED"));
+		break;
+	case SCSI_SENSEQ_FORMAT_IN_PROGRESS:
+		OutputErrorString(_T("LUN_NOT_READY - FORMAT_IN_PROGRESS"));
+		break;
+	case SCSI_SENSEQ_REBUILD_IN_PROGRESS:
+		OutputErrorString(_T("LUN_NOT_READY - REBUILD_IN_PROGRESS"));
+		break;
+	case SCSI_SENSEQ_RECALCULATION_IN_PROGRESS:
+		OutputErrorString(_T("LUN_NOT_READY - RECALCULATION_IN_PROGRESS"));
+		break;
+	case SCSI_SENSEQ_OPERATION_IN_PROGRESS:
+		OutputErrorString(_T("LUN_NOT_READY - OPERATION_IN_PROGRESS"));
+		break;
+	case SCSI_SENSEQ_LONG_WRITE_IN_PROGRESS:
+		OutputErrorString(_T("LUN_NOT_READY - LONG_WRITE_IN_PROGRESS"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("LUN_NOT_READY - SELF-TEST IN PROGRESS"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("LUN_NOT_READY - ASYMMETRIC ACCESS STATE TRANSITION"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("LUN_NOT_READY - TARGET PORT IN STANDBY STATE"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("LUN_NOT_READY - TARGET PORT IN UNAVAILABLE STATE"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("LUN_NOT_READY - AUXILIARY MEMORY NOT ACCESSIBLE"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("LUN_NOT_READY - NOTIFY (ENABLE SPINUP) REQUIRED"));
+		break;
+	case 0x13:
+		OutputErrorString(_T("LUN_NOT_READY - SA CREATION IN PROGRESS"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("LUN_NOT_READY - SPACE ALLOCATION IN PROGRESS"));
+		break;
+	case 0x1a:
+		OutputErrorString(_T("LUN_NOT_READY - START STOP UNIT COMMAND IN PROGRESS"));
+		break;
+	case 0x1b:
+		OutputErrorString(_T("LUN_NOT_READY - SANITIZE IN PROGRESS"));
+		break;
+	case 0x1c:
+		OutputErrorString(_T("LUN_NOT_READY - ADDITIONAL POWER USE NOT YET GRANTED"));
+		break;
+	case 0x1d:
+		OutputErrorString(_T("LUN_NOT_READY - CONFIGURATION IN PROGRESS"));
+		break;
+	case 0x1e:
+		OutputErrorString(_T("LUN_NOT_READY - MICROCODE ACTIVATION REQUIRED"));
+		break;
+	case 0x1f:
+		OutputErrorString(_T("LUN_NOT_READY - MICROCODE DOWNLOAD REQUIRED"));
+		break;
+	case 0x20:
+		OutputErrorString(_T("LUN_NOT_READY - LOGICAL UNIT RESET REQUIRED"));
+		break;
+	case 0x21:
+		OutputErrorString(_T("LUN_NOT_READY - HARD RESET REQUIRED"));
+		break;
+	case 0x22:
+		OutputErrorString(_T("LUN_NOT_READY - POWER CYCLE REQUIRED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x05(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("LOGICAL UNIT DOES NOT RESPOND TO SELECTION"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x06(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("NO REFERENCE POSITION FOUND"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x07(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("MULTIPLE PERIPHERAL DEVICES SELECTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x08(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case SCSI_SENSEQ_COMM_FAILURE:
+		OutputErrorString(_T("LUN_COMMUNICATION - COMM_FAILURE"));
+		break;
+	case SCSI_SENSEQ_COMM_TIMEOUT:
+		OutputErrorString(_T("LUN_COMMUNICATION - COMM_TIMEOUT"));
+		break;
+	case SCSI_SENSEQ_COMM_PARITY_ERROR:
+		OutputErrorString(_T("LUN_COMMUNICATION - COMM_PARITY_ERROR"));
+		break;
+	case SCSI_SESNEQ_COMM_CRC_ERROR:
+		OutputErrorString(_T("LUN_COMMUNICATION - COMM_CRC_ERROR"));
+		break;
+	case SCSI_SENSEQ_UNREACHABLE_TARGET:
+		OutputErrorString(_T("LUN_COMMUNICATION - UNREACHABLE_TARGET"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x09(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("TRACK FOLLOWING ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("TRACKING SERVO FAILURE"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("FOCUS SERVO FAILURE"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("SPINDLE SERVO FAILURE"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("HEAD SELECT FAULT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x0a(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ERROR LOG OVERFLOW"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x0b(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("WARNING"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("WARNING - SPECIFIED TEMPERATURE EXCEEDED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("WARNING - ENCLOSURE DEGRADED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("WARNING - BACKGROUND SELF-TEST FAILED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("WARNING - BACKGROUND PRE-SCAN DETECTED MEDIUM ERROR"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("WARNING - BACKGROUND MEDIUM SCAN DETECTED MEDIUM ERROR"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("WARNING - NON-VOLATILE CACHE NOW VOLATILE"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("WARNING - DEGRADED POWER TO NON-VOLATILE CACHE"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("WARNING - POWER LOSS EXPECTED"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("WARNING - DEVICE STATISTICS NOTIFICATION ACTIVE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x0c(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("WRITE ERROR"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("WRITE ERROR - AUTO REALLOCATION FAILED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("WRITE ERROR - RECOMMEND REASSIGNMENT"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("WRITE ERROR - COMPRESSION CHECK MISCOMPARE ERROR"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("WRITE ERROR - DATA EXPANSION OCCURRED DURING COMPRESSION"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("WRITE ERROR - BLOCK NOT COMPRESSIBLE"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("WRITE ERROR - RECOVERY NEEDED"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("WRITE ERROR - RECOVERY FAILED"));
+		break;
+	case SCSI_SENSEQ_LOSS_OF_STREAMING:
+		OutputErrorString(_T("WRITE ERROR - LOSS OF STREAMING"));
+		break;
+	case SCSI_SENSEQ_PADDING_BLOCKS_ADDED:
+		OutputErrorString(_T("WRITE ERROR - PADDING BLOCKS ADDED"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("WRITE ERROR - AUXILIARY MEMORY WRITE ERROR"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("WRITE ERROR - UNEXPECTED UNSOLICITED DATA"));
+		break;
+	case 0x0d:
+		OutputErrorString(_T("WRITE ERROR - NOT ENOUGH UNSOLICITED DATA"));
+		break;
+	case 0x0f:
+		OutputErrorString(_T("WRITE ERROR - DEFECTS IN ERROR WINDOW"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x0d(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ERROR DETECTED BY THIRD PARTY TEMPORARY INITIATOR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("THIRD PARTY DEVICE FAILURE"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("COPY TARGET DEVICE NOT REACHABLE"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("INCORRECT COPY TARGET DEVICE TYPE"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("COPY TARGET DEVICE DATA UNDERRUN"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("COPY TARGET DEVICE DATA OVERRUN"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x0e(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INVALID INFORMATION UNIT"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("INFORMATION UNIT TOO SHORT"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("INFORMATION UNIT TOO LONG"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("INVALID FIELD IN COMMAND INFORMATION UNIT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x10(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ID CRC OR ECC ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("LOGICAL BLOCK GUARD CHECK FAIL"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("LOGICAL BLOCK APPLICATION TAG CHECK FAILED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("LOGICAL BLOCK REFERENCE TAG CHECK FAILED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x11(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("UNRECOVERED READ ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("READ RETRIES EXHAUSTED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("ERROR TOO LONG TO CORRECT"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("MULTIPLE READ ERRORS"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("UNRECOVERED READ ERROR - AUTO REALLOCATE FAILED"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("L-EC UNCORRECTABLE ERROR"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("CIRC UNRECOVERED ERROR"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("DATA RE-SYNCHRONIZATION ERROR"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("MISCORRECTED ERROR"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("UNRECOVERED READ ERROR - RECOMMEND REASSIGNMENT"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("UNRECOVERED READ ERROR - RECOMMEND REWRITE THE DATA"));
+		break;
+	case 0x0d:
+		OutputErrorString(_T("DE-COMPRESSION CRC ERROR"));
+		break;
+	case 0x0e:
+		OutputErrorString(_T("CANNOT DECOMPRESS USING DECLARED ALGORITHM"));
+		break;
+	case 0x0f:
+		OutputErrorString(_T("ERROR READING UPC/EAN NUMBER"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("ERROR READING ISRC NUMBER"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("READ ERROR - LOSS OF STREAMING"));
+		break;
+	case 0x12:
+		OutputErrorString(_T("AUXILIARY MEMORY READ ERROR"));
+		break;
+	case 0x13:
+		OutputErrorString(_T("READ ERROR - FAILED RETRANSMISSION REQUEST"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("READ ERROR - LBA MARKED BAD BY APPLICATION CLIENT"));
+		break;
+	case 0x15:
+		OutputErrorString(_T("WRITE AFTER SANITIZE REQUIRED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x12(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ADDRESS MARK NOT FOUND FOR ID FIELD"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x13(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ADDRESS MARK NOT FOUND FOR DATA FIELD"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x14(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("TRACK_ERROR - RECORDED ENTITY NOT FOUND"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("TRACK_ERROR - RECORD NOT FOUND"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("TRACK_ERROR - RECORD NOT FOUND - RECOMMEND REASSIGNMENT"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("TRACK_ERROR - RECORD NOT FOUND - DATA AUTO-REALLOCATED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x15(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("SEEK_ERROR - RANDOM POSITIONING ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("SEEK_ERROR - MECHANICAL POSITIONING ERROR"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("SEEK_ERROR - POSITIONING ERROR DETECTED BY READ OF MEDIUM"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x16(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("DATA SYNCHRONIZATION MARK ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("DATA SYNC ERROR - DATA REWRITTEN"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("DATA SYNC ERROR - RECOMMEND REWRITE"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("DATA SYNC ERROR - DATA AUTO-REALLOCATED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("DATA SYNC ERROR - RECOMMEND REASSIGNMENT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x17(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITH NO ERROR CORRECTION APPLIED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITH RETRIES"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITH POSITIVE HEAD OFFSET"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITH NEGATIVE HEAD OFFSET"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITH RETRIES AND/OR CIRC APPLIED"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA USING PREVIOUS SECTOR ID"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITHOUT ECC - DATA AUTO-REALLOCATED"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITHOUT ECC - RECOMMEND REASSIGNMENT"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITHOUT ECC - RECOMMEND REWRITE"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("REC_DATA_NOECC - RECOVERED DATA WITHOUT ECC - DATA REWRITTEN"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x18(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA WITH ERROR CORRECTION APPLIED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA WITH ERROR CORR. & RETRIES APPLIED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA - DATA AUTO-REALLOCATED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA WITH CIRC"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA WITH L-EC"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA - RECOMMEND REASSIGNMENT"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA - RECOMMEND REWRITE"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA WITH ECC - DATA REWRITTEN"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("REC_DATA_ECC - RECOVERED DATA WITH LINKING"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x19(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("DEFECT LIST ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("DEFECT LIST NOT AVAILABLE"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("DEFECT LIST ERROR IN PRIMARY LIST"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("DEFECT LIST ERROR IN GROWN LIST"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x1a(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("PARAMETER LIST LENGTH ERROR"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x1b(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("SYNCHRONOUS DATA TRANSFER ERROR"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x1c(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("DEFECT LIST NOT FOUND"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("PRIMARY DEFECT LIST NOT FOUND"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("GROWN DEFECT LIST NOT FOUND"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x1d(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("MISCOMPARE DURING VERIFY OPERATION"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("MISCOMPARE VERIFY OF UNMAPPED LBA"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x1e(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("RECOVERED ID WITH ECC CORRECTION"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x1f(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("PARTIAL DEFECT LIST TRANSFER"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x20(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INVALID COMMAND OPERATION CODE"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("ILLEGAL_COMMAND - ACCESS DENIED - INITIATOR PENDING-ENROLLED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("ILLEGAL_COMMAND - ACCESS DENIED - NO ACCESS RIGHTS"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("ILLEGAL_COMMAND - ACCESS DENIED - INVALID MGMT ID KEY"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("ILLEGAL_COMMAND - ACCESS DENIED - ENROLLMENT CONFLICT"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("ILLEGAL_COMMAND - ACCESS DENIED - INVALID LU IDENTIFIER"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("ILLEGAL_COMMAND - ACCESS DENIED - INVALID PROXY TOKEN"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("ILLEGAL_COMMAND - ACCESS DENIED - ACL LUN CONFLICT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x21(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("LOGICAL BLOCK ADDRESS OUT OF RANGE"));
+		break;
+	case SCSI_SENSEQ_ILLEGAL_ELEMENT_ADDR:
+		OutputErrorString(_T("ILLEGAL_BLOCK - MISCOMPARE DURING VERIFY OPERATION"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("ILLEGAL_BLOCK - INVALID ADDRESS FOR WRITE"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("ILLEGAL_BLOCK - INVALID WRITE CROSSING LAYER JUMP"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x22(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ILLEGAL FUNCTION"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x23(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, CAUSE NOT REPORTABLE"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, UNSUPPORTED TOKEN TYPE"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, REMOTE TOKEN USAGE NOT SUPPORTED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, REMOTE ROD TOKEN CREATION NOT SUPPORTED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, TOKEN UNKNOWN"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, TOKEN CORRUPT"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, TOKEN REVOKED"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, TOKEN EXPIRED"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, TOKEN CANCELLED"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, TOKEN DELETED"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("INVALID TOKEN OPERATION, INVALID TOKEN LENGTH"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x24(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INVALID FIELD IN CDB"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("CDB DECRYPTION ERROR"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("INVALID XCDB"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x25(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("LOGICAL UNIT NOT SUPPORTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x26(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INVALID FIELD IN PARAMETER LIST"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("PARAMETER NOT SUPPORTED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("PARAMETER VALUE INVALID"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("THRESHOLD PARAMETERS NOT SUPPORTED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("INVALID RELEASE OF PERSISTENT RESERVATION"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("DATA DECRYPTION ERROR"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("TOO MANY TARGET DESCRIPTORS"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("UNSUPPORTED SEGMENT DESCRIPTOR TYPE CODE"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("TOO MANY SEGMENT DESCRIPTORS"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("UNSUPPORTED SEGMENT DESCRIPTOR TYPE CODE"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("UNEXPECTED INEXACT SEGMENT"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("INLINE DATA LENGTH EXCEEDED"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("INVALID OPERATION FOR COPY SOURCE OR DESTINATION"));
+		break;
+	case 0x0d:
+		OutputErrorString(_T("COPY SEGMENT GRANULARITY VIOLATION"));
+		break;
+	case 0x0e:
+		OutputErrorString(_T("INVALID PARAMETER WHILE PORT IS ENABLED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x27(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("WRITE PROTECTED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("HARDWARE WRITE PROTECTED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("LOGICAL UNIT SOFTWARE WRITE PROTECTED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("ASSOCIATED WRITE PROTECT"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("PERSISTENT WRITE PROTECT"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("PERMANENT WRITE PROTECT"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("CONDITIONAL WRITE PROTECT"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("SPACE ALLOCATION FAILED WRITE PROTECT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x28(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("NOT READY TO READY CHANGE, MEDIUM MAY HAVE CHANGED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("IMPORT OR EXPORT ELEMENT ACCESSED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("FORMAT-LAYER MAY HAVE CHANGED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x29(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("POWER ON, RESET, OR BUS DEVICE RESET OCCURRED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("POWER ON OCCURRED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("SCSI BUS RESET OCCURRED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("BUS DEVICE RESET FUNCTION OCCURRED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("DEVICE INTERNAL RESET"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("TRANSCEIVER MODE CHANGED TO SINGLE-ENDED"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("TRANSCEIVER MODE CHANGED TO LVD"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("I_T NEXUS LOSS OCCURRED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x2a(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("PARAMETERS CHANGED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("MODE PARAMETERS CHANGED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("LOG PARAMETERS CHANGED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("RESERVATIONS PREEMPTED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("RESERVATIONS RELEASED"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("REGISTRATIONS PREEMPTED"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("ASYMMETRIC ACCESS STATE CHANGED"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("IMPLICIT ASYMMETRIC ACCESS STATE TRANSITION FAILED"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("PRIORITY CHANGED"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("CAPACITY DATA HAS CHANGED"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("ERROR HISTORY I_T NEXUS CLEARED"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("ERROR HISTORY SNAPSHOT RELEASED"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("TIMESTAMP CHANGED"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("SA CREATION CAPABILITIES DATA HAS CHANGED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x2b(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("COPY CANNOT EXECUTE SINCE HOST CANNOT DISCONNECT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x2c(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("COMMAND SEQUENCE ERROR"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("CURRENT PROGRAM AREA IS NOT EMPTY"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("CURRENT PROGRAM AREA IS EMPTY"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("PERSISTENT PREVENT CONFLICT"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("PREVIOUS BUSY STATUS"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("PREVIOUS TASK SET FULL STATUS"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("PREVIOUS RESERVATION CONFLICT STATUS"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("ORWRITE GENERATION DOES NOT MATCH"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x2e(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INSUFFICIENT TIME FOR OPERATION"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("COMMAND TIMEOUT BEFORE PROCESSING"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("COMMAND TIMEOUT DURING PROCESSING"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("COMMAND TIMEOUT DURING PROCESSING DUE TO ERROR RECOVERY"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x2f(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("COMMANDS CLEARED BY ANOTHER INITIATOR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("COMMANDS CLEARED BY POWER LOSS NOTIFICATION"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("COMMANDS CLEARED BY DEVICE SERVER"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("SOME COMMANDS CLEARED BY QUEUING LAYER EVENT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x30(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INCOMPATIBLE MEDIUM INSTALLED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("CANNOT READ MEDIUM - UNKNOWN FORMAT"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("CANNOT READ MEDIUM - INCOMPATIBLE FORMAT"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("CLEANING CARTRIDGE INSTALLED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("CANNOT WRITE MEDIUM - UNKNOWN FORMAT"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("CANNOT WRITE MEDIUM - INCOMPATIBLE FORMAT"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("CANNOT FORMAT MEDIUM - INCOMPATIBLE MEDIUM"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("CLEANING FAILURE"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("CANNOT WRITE - APPLICATION CODE MISMATCH"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("CURRENT SESSION NOT FIXATED FOR APPEND"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("CLEANING REQUEST REJECTED"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("MEDIUM NOT FORMATTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x31(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("MEDIUM FORMAT CORRUPTED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("FORMAT COMMAND FAILED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("ZONED FORMATTING FAILED DUE TO SPARE LINKING"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("SANITIZE COMMAND FAILED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x32(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("NO DEFECT SPARE LOCATION AVAILABLE"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("DEFECT LIST UPDATE FAILURE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x34(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ENCLOSURE FAILURE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x35(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ENCLOSURE SERVICES FAILURE"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("UNSUPPORTED ENCLOSURE FUNCTION"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("ENCLOSURE SERVICES UNAVAILABLE"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("ENCLOSURE SERVICES TRANSFER FAILURE"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("ENCLOSURE SERVICES TRANSFER REFUSED"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("ENCLOSURE SERVICES CHECKSUM ERROR"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x37(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ROUNDED PARAMETER"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x38(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x07:
+		OutputErrorString(_T("THIN PROVISIONING SOFT THRESHOLD REACHED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x39(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("SAVING PARAMETERS NOT SUPPORTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x3a(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("MEDIUM NOT PRESENT"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("MEDIUM NOT PRESENT - TRAY CLOSED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("MEDIUM NOT PRESENT - TRAY OPEN"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("MEDIUM NOT PRESENT - LOADABLE"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("MEDIUM NOT PRESENT - MEDIUM AUXILIARY MEMORY ACCESSIBLE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x3b(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case SCSI_SENSEQ_DESTINATION_FULL:
+		OutputErrorString(_T("MEDIUM DESTINATION ELEMENT FULL"));
+		break;
+	case SCSI_SENSEQ_SOURCE_EMPTY:
+		OutputErrorString(_T("MEDIUM SOURCE ELEMENT EMPTY"));
+		break;
+	case 0x0f:
+		OutputErrorString(_T("END OF MEDIUM REACHED"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("MEDIUM MAGAZINE NOT ACCESSIBLE"));
+		break;
+	case 0x12:
+		OutputErrorString(_T("MEDIUM MAGAZINE REMOVED"));
+		break;
+	case 0x13:
+		OutputErrorString(_T("MEDIUM MAGAZINE INSERTED"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("MEDIUM MAGAZINE LOCKED"));
+		break;
+	case 0x15:
+		OutputErrorString(_T("MEDIUM MAGAZINE UNLOCKED"));
+		break;
+	case 0x16:
+		OutputErrorString(_T("MECHANICAL POSITIONING OR CHANGER ERROR"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x3d(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INVALID BITS IN IDENTIFY MESSAGE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x3e(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("LOGICAL UNIT HAS NOT SELF-CONFIGURED YET"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("LOGICAL UNIT FAILURE"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("TIMEOUT ON LOGICAL UNIT"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("LOGICAL UNIT FAILED SELF-TEST"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("LOGICAL UNIT UNABLE TO UPDATE SELF-TEST LOG"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x3f(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case SCSI_SENSEQ_TARGET_OPERATING_CONDITIONS_CHANGED:
+		OutputErrorString(_T("TARGET_OPERATING_CONDITIONS_CHANGED"));
+		break;
+	case SCSI_SENSEQ_MICROCODE_CHANGED:
+		OutputErrorString(_T("MICROCODE_CHANGED"));
+		break;
+	case SCSI_SENSEQ_OPERATING_DEFINITION_CHANGED:
+		OutputErrorString(_T("OPERATING_DEFINITION_CHANGED"));
+		break;
+	case SCSI_SENSEQ_INQUIRY_DATA_CHANGED:
+		OutputErrorString(_T("INQUIRY_DATA_CHANGED"));
+		break;
+	case SCSI_SENSEQ_COMPONENT_DEVICE_ATTACHED:
+		OutputErrorString(_T("COMPONENT_DEVICE_ATTACHED"));
+		break;
+	case SCSI_SENSEQ_DEVICE_IDENTIFIER_CHANGED:
+		OutputErrorString(_T("DEVICE_IDENTIFIER_CHANGED"));
+		break;
+	case SCSI_SENSEQ_REDUNDANCY_GROUP_MODIFIED:
+		OutputErrorString(_T("REDUNDANCY_GROUP_MODIFIED"));
+		break;
+	case SCSI_SENSEQ_REDUNDANCY_GROUP_DELETED:
+		OutputErrorString(_T("REDUNDANCY_GROUP_DELETED"));
+		break;
+	case SCSI_SENSEQ_SPARE_MODIFIED:
+		OutputErrorString(_T("SPARE_MODIFIED"));
+		break;
+	case SCSI_SENSEQ_SPARE_DELETED:
+		OutputErrorString(_T("SPARE_DELETED"));
+		break;
+	case SCSI_SENSEQ_VOLUME_SET_MODIFIED:
+		OutputErrorString(_T("VOLUME_SET_MODIFIED"));
+		break;
+	case SCSI_SENSEQ_VOLUME_SET_DELETED:
+		OutputErrorString(_T("VOLUME SET DELETED"));
+		break;
+	case SCSI_SENSEQ_VOLUME_SET_DEASSIGNED:
+		OutputErrorString(_T("VOLUME SET DEASSIGNED"));
+		break;
+	case SCSI_SENSEQ_VOLUME_SET_REASSIGNED:
+		OutputErrorString(_T("VOLUME SET REASSIGNED"));
+		break;
+	case SCSI_SENSEQ_REPORTED_LUNS_DATA_CHANGED:
+		OutputErrorString(_T("REPORTED_LUNS_DATA_CHANGED"));
+		break;
+	case SCSI_SENSEQ_ECHO_BUFFER_OVERWRITTEN:
+		OutputErrorString(_T("ECHO_BUFFER_OVERWRITTEN"));
+		break;
+	case SCSI_SENSEQ_MEDIUM_LOADABLE:
+		OutputErrorString(_T("MEDIUM LOADABLE"));
+		break;
+	case SCSI_SENSEQ_MEDIUM_AUXILIARY_MEMORY_ACCESSIBLE:
+		OutputErrorString(_T("MEDIUM_AUXILIARY_MEMORY_ACCESSIBLE"));
+		break;
+	case 0x12:
+		OutputErrorString(_T("iSCSI IP ADDRESS ADDED"));
+		break;
+	case 0x13:
+		OutputErrorString(_T("iSCSI IP ADDRESS REMOVED"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("iSCSI IP ADDRESS CHANGED"));
+		break;
+	case 0x15:
+		OutputErrorString(_T("INSPECT REFERRALS SENSE DESCRIPTORS"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x40(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("RAM FAILURE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x41(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("DATA PATH FAILURE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x42(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("POWER-ON OR SELF-TEST FAILURE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x43(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("MESSAGE ERROR"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x44(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INTERNAL TARGET FAILURE"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("PERSISTENT RESERVATION INFORMATION LOST"));
+		break;
+	case 0x71:
+		OutputErrorString(_T("ATA DEVICE FAILED SET FEATURES"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x45(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("SELECT OR RESELECT FAILURE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x46(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("UNSUCCESSFUL SOFT RESET"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x47(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("SCSI PARITY ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("DATA PHASE CRC ERROR DETECTED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("SCSI PARITY ERROR DETECTED DURING ST DATA PHASE"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("INFORMATION UNIT iuCRC ERROR DETECTED"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("ASYNCHRONOUS INFORMATION PROTECTION ERROR DETECTED"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("PROTOCOL SERVICE CRC ERROR"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("PHY TEST FUNCTION IN PROGRESS"));
+		break;
+	case 0x7f:
+		OutputErrorString(_T("SOME COMMANDS CLEARED BY ISCSI PROTOCOL EVENT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x48(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INITIATOR DETECTED ERROR MESSAGE RECEIVED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x49(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("INVALID MESSAGE ERROR"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x4a(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("COMMAND PHASE ERROR"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x4b(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("DATA PHASE ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("INVALID TARGET PORT TRANSFER TAG RECEIVED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("TOO MUCH WRITE DATA"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("ACK/NAK TIMEOUT"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("NAK RECEIVED"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("DATA OFFSET ERROR"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("INITIATOR RESPONSE TIMEOUT"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("CONNECTION LOST"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("DATA-IN BUFFER OVERFLOW - DATA BUFFER SIZE"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("DATA-IN BUFFER OVERFLOW - DATA BUFFER DESCRIPTOR AREA"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("DATA-IN BUFFER ERROR"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("DATA-OUT BUFFER OVERFLOW - DATA BUFFER SIZE"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("DATA-OUT BUFFER OVERFLOW - DATA BUFFER DESCRIPTOR AREA"));
+		break;
+	case 0x0d:
+		OutputErrorString(_T("DATA-OUT BUFFER ERROR"));
+		break;
+	case 0x0e:
+		OutputErrorString(_T("PCIE FABRIC ERROR"));
+		break;
+	case 0x0f:
+		OutputErrorString(_T("PCIE COMPLETION TIMEOUT"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("PCIE COMPLETER ABORT"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("PCIE POISONED TLP RECEIVED"));
+		break;
+	case 0x12:
+		OutputErrorString(_T("PCIE ECRC CHECK FAILED"));
+		break;
+	case 0x13:
+		OutputErrorString(_T("PCIE UNSUPPORTED REQUEST"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("PCIE ACS VIOLATION"));
+		break;
+	case 0x15:
+		OutputErrorString(_T("PCIE TLP PREFIX BLOCKED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x4c(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("LOGICAL UNIT FAILED SELF-CONFIGURATION"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x4e(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("OVERLAPPED COMMANDS ATTEMPTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x51(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ERASE FAILURE"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("ERASE FAILURE - INCOMPLETE ERASE OPERATION DETECTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x53(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("MEDIA LOAD OR EJECT FAILED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("MEDIUM REMOVAL PREVENTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x55(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x01:
+		OutputErrorString(_T("SYSTEM BUFFER FULL"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("INSUFFICIENT RESERVATION RESOURCES"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("INSUFFICIENT RESOURCES"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("INSUFFICIENT REGISTRATION RESOURCES"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("INSUFFICIENT ACCESS CONTROL RESOURCES"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("AUXILIARY MEMORY OUT OF SPACE"));
+		break;
+	case 0x0b:
+		OutputErrorString(_T("INSUFFICIENT POWER FOR OPERATION"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("INSUFFICIENT RESOURCES TO CREATE ROD"));
+		break;
+	case 0x0d:
+		OutputErrorString(_T("INSUFFICIENT RESOURCES TO CREATE ROD TOKEN"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x57(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("UNABLE TO RECOVER TABLE-OF-CONTENTS"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x58(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("GENERATION DOES NOT EXIST"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x59(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("UPDATED BLOCK READ"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x5a(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case SCSI_SENSEQ_STATE_CHANGE_INPUT:
+		OutputErrorString(_T("OPERATOR REQUEST OR STATE CHANGE INPUT"));
+		break;
+	case SCSI_SENSEQ_MEDIUM_REMOVAL:
+		OutputErrorString(_T("OPERATOR MEDIUM REMOVAL REQUEST"));
+		break;
+	case SCSI_SENSEQ_WRITE_PROTECT_ENABLE:
+		OutputErrorString(_T("OPERATOR SELECTED WRITE PROTECT"));
+		break;
+	case SCSI_SENSEQ_WRITE_PROTECT_DISABLE:
+		OutputErrorString(_T("OPERATOR SELECTED WRITE PERMIT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x5b(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("LOG EXCEPTION"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("THRESHOLD CONDITION MET"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("LOG COUNTER AT MAXIMUM"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("LOG LIST CODES EXHAUSTED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x5c(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("RPL STATUS CHANGE"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("SPINDLES SYNCHRONIZED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("SPINDLES NOT SYNCHRONIZED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x5d(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("FAILURE PREDICTION THRESHOLD EXCEEDED"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("MEDIA FAILURE PREDICTION THRESHOLD EXCEEDED"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("LOGICAL UNIT FAILURE PREDICTION THRESHOLD EXCEEDED"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("SPARE AREA EXHAUSTION PREDICTION THRESHOLD EXCEEDED"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE GENERAL HARD DRIVE FAILURE"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE DRIVE ERROR RATE TOO HIGH"));
+		break;
+	case 0x12:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE DATA ERROR RATE TOO HIGH"));
+		break;
+	case 0x13:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE SEEK ERROR RATE TOO HIGH"));
+		break;
+	case 0x14:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE TOO MANY BLOCK REASSIGNS"));
+		break;
+	case 0x15:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE ACCESS TIMES TOO HIGH"));
+		break;
+	case 0x16:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE START UNIT TIMES TOO HIGH"));
+		break;
+	case 0x17:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE CHANNEL PARAMETRICS"));
+		break;
+	case 0x18:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE CONTROLLER DETECTED"));
+		break;
+	case 0x19:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE THROUGHPUT PERFORMANCE"));
+		break;
+	case 0x1a:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE SEEK TIME PERFORMANCE"));
+		break;
+	case 0x1b:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE SPIN-UP RETRY COUNT"));
+		break;
+	case 0x1c:
+		OutputErrorString(_T("HARDWARE IMPENDING FAILURE DRIVE CALIBRATION RETRY COUNT"));
+		break;
+	case 0x20:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE GENERAL HARD DRIVE FAILURE"));
+		break;
+	case 0x21:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE DRIVE ERROR RATE TOO HIGH"));
+		break;
+	case 0x22:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE DATA ERROR RATE TOO HIGH"));
+		break;
+	case 0x23:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE SEEK ERROR RATE TOO HIGH"));
+		break;
+	case 0x24:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE TOO MANY BLOCK REASSIGNS"));
+		break;
+	case 0x25:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE ACCESS TIMES TOO HIGH"));
+		break;
+	case 0x26:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE START UNIT TIMES TOO HIGH"));
+		break;
+	case 0x27:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE CHANNEL PARAMETRICS"));
+		break;
+	case 0x28:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE CONTROLLER DETECTED"));
+		break;
+	case 0x29:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE THROUGHPUT PERFORMANCE"));
+		break;
+	case 0x2a:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE SEEK TIME PERFORMANCE"));
+		break;
+	case 0x2b:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE SPIN-UP RETRY COUNT"));
+		break;
+	case 0x2c:
+		OutputErrorString(_T("CONTROLLER IMPENDING FAILURE DRIVE CALIBRATION RETRY COUNT"));
+		break;
+	case 0x30:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE GENERAL HARD DRIVE FAILURE"));
+		break;
+	case 0x31:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE DRIVE ERROR RATE TOO HIGH"));
+		break;
+	case 0x32:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE DATA ERROR RATE TOO HIGH"));
+		break;
+	case 0x33:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE SEEK ERROR RATE TOO HIGH"));
+		break;
+	case 0x34:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE TOO MANY BLOCK REASSIGNS"));
+		break;
+	case 0x35:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE ACCESS TIMES TOO HIGH"));
+		break;
+	case 0x36:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE START UNIT TIMES TOO HIGH"));
+		break;
+	case 0x37:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE CHANNEL PARAMETRICS"));
+		break;
+	case 0x38:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE CONTROLLER DETECTED"));
+		break;
+	case 0x39:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE THROUGHPUT PERFORMANCE"));
+		break;
+	case 0x3a:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE SEEK TIME PERFORMANCE"));
+		break;
+	case 0x3b:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE SPIN-UP RETRY COUNT"));
+		break;
+	case 0x3c:
+		OutputErrorString(_T("DATA CHANNEL IMPENDING FAILURE DRIVE CALIBRATION RETRY COUNT"));
+		break;
+	case 0x40:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE GENERAL HARD DRIVE FAILURE"));
+		break;
+	case 0x41:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE DRIVE ERROR RATE TOO HIGH"));
+		break;
+	case 0x42:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE DATA ERROR RATE TOO HIGH"));
+		break;
+	case 0x43:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE SEEK ERROR RATE TOO HIGH"));
+		break;
+	case 0x44:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE TOO MANY BLOCK REASSIGNS"));
+		break;
+	case 0x45:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE ACCESS TIMES TOO HIGH"));
+		break;
+	case 0x46:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE START UNIT TIMES TOO HIGH"));
+		break;
+	case 0x47:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE CHANNEL PARAMETRICS"));
+		break;
+	case 0x48:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE CONTROLLER DETECTED"));
+		break;
+	case 0x49:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE THROUGHPUT PERFORMANCE"));
+		break;
+	case 0x4a:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE SEEK TIME PERFORMANCE"));
+		break;
+	case 0x4b:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE SPIN-UP RETRY COUNT"));
+		break;
+	case 0x4c:
+		OutputErrorString(_T("SERVO IMPENDING FAILURE DRIVE CALIBRATION RETRY COUNT"));
+		break;
+	case 0x50:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE GENERAL HARD DRIVE FAILURE"));
+		break;
+	case 0x51:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE DRIVE ERROR RATE TOO HIGH"));
+		break;
+	case 0x52:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE DATA ERROR RATE TOO HIGH"));
+		break;
+	case 0x53:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE SEEK ERROR RATE TOO HIGH"));
+		break;
+	case 0x54:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE TOO MANY BLOCK REASSIGNS"));
+		break;
+	case 0x55:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE ACCESS TIMES TOO HIGH"));
+		break;
+	case 0x56:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE START UNIT TIMES TOO HIGH"));
+		break;
+	case 0x57:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE CHANNEL PARAMETRICS"));
+		break;
+	case 0x58:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE CONTROLLER DETECTED"));
+		break;
+	case 0x59:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE THROUGHPUT PERFORMANCE"));
+		break;
+	case 0x5a:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE SEEK TIME PERFORMANCE"));
+		break;
+	case 0x5b:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE SPIN-UP RETRY COUNT"));
+		break;
+	case 0x5c:
+		OutputErrorString(_T("SPINDLE IMPENDING FAILURE DRIVE CALIBRATION RETRY COUNT"));
+		break;
+	case 0x60:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE GENERAL HARD DRIVE FAILURE"));
+		break;
+	case 0x61:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE DRIVE ERROR RATE TOO HIGH"));
+		break;
+	case 0x62:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE DATA ERROR RATE TOO HIGH"));
+		break;
+	case 0x63:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE SEEK ERROR RATE TOO HIGH"));
+		break;
+	case 0x64:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE TOO MANY BLOCK REASSIGNS"));
+		break;
+	case 0x65:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE ACCESS TIMES TOO HIGH"));
+		break;
+	case 0x66:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE START UNIT TIMES TOO HIGH"));
+		break;
+	case 0x67:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE CHANNEL PARAMETRICS"));
+		break;
+	case 0x68:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE CONTROLLER DETECTED"));
+		break;
+	case 0x69:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE THROUGHPUT PERFORMANCE"));
+		break;
+	case 0x6a:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE SEEK TIME PERFORMANCE"));
+		break;
+	case 0x6b:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE SPIN-UP RETRY COUNT"));
+		break;
+	case 0x6c:
+		OutputErrorString(_T("FIRMWARE IMPENDING FAILURE DRIVE CALIBRATION RETRY COUNT"));
+		break;
+	case 0xff:
+		OutputErrorString(_T("FAILURE PREDICTION THRESHOLD EXCEEDED (FALSE)"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x5e(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("LOW POWER CONDITION ON"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("IDLE CONDITION ACTIVATED BY TIMER"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("STANDBY CONDITION ACTIVATED BY TIMER"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("IDLE CONDITION ACTIVATED BY COMMAND"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("STANDBY CONDITION ACTIVATED BY COMMAND"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("IDLE_B CONDITION ACTIVATED BY TIMER"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("IDLE_B CONDITION ACTIVATED BY COMMAND"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("IDLE_C CONDITION ACTIVATED BY TIMER"));
+		break;
+	case 0x08:
+		OutputErrorString(_T("IDLE_C CONDITION ACTIVATED BY COMMAND"));
+		break;
+	case 0x09:
+		OutputErrorString(_T("STANDBY_Y CONDITION ACTIVATED BY TIMER"));
+		break;
+	case 0x0a:
+		OutputErrorString(_T("STANDBY_Y CONDITION ACTIVATED BY COMMAND"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x63(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("END OF USER AREA ENCOUNTERED ON THIS TRACK"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("PACKET DOES NOT FIT IN AVAILABLE SPACE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x64(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("ILLEGAL MODE FOR THIS TRACK"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("INVALID PACKET SIZE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x65(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("VOLTAGE FAULT"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x67(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x0a:
+		OutputErrorString(_T("SET TARGET PORT GROUPS COMMAND FAILED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x68(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x0a:
+		OutputErrorString(_T("SUBSIDIARY LOGICAL UNIT NOT CONFIGURED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x6f(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case SCSI_SENSEQ_AUTHENTICATION_FAILURE:
+		OutputErrorString(_T("COPY PROTECTION KEY EXCHANGE FAILURE - AUTHENTICATION FAILURE"));
+		break;
+	case SCSI_SENSEQ_KEY_NOT_PRESENT:
+		OutputErrorString(_T("COPY PROTECTION KEY EXCHANGE FAILURE - KEY NOT PRESENT"));
+		break;
+	case SCSI_SENSEQ_KEY_NOT_ESTABLISHED:
+		OutputErrorString(_T("COPY PROTECTION KEY EXCHANGE FAILURE - KEY NOT ESTABLISHED"));
+		break;
+	case SCSI_SENSEQ_READ_OF_SCRAMBLED_SECTOR_WITHOUT_AUTHENTICATION:
+		OutputErrorString(_T("READ OF SCRAMBLED SECTOR WITHOUT AUTHENTICATION"));
+		break;
+	case SCSI_SENSEQ_MEDIA_CODE_MISMATCHED_TO_LOGICAL_UNIT:
+		OutputErrorString(_T("MEDIA REGION CODE IS MISMATCHED TO LOGICAL UNIT REGION"));
+		break;
+	case SCSI_SENSEQ_LOGICAL_UNIT_RESET_COUNT_ERROR:
+		OutputErrorString(_T("DRIVE REGION MUST BE PERMANENT/REGION RESET COUNT ERROR"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("INSUFFICIENT BLOCK COUNT FOR BINDING NONCE RECORDING"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("CONFLICT IN BINDING NONCE RECORDING"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x72(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("SESSION FIXATION ERROR"));
+		break;
+	case 0x01:
+		OutputErrorString(_T("SESSION FIXATION ERROR WRITING LEAD-IN"));
+		break;
+	case 0x02:
+		OutputErrorString(_T("SESSION FIXATION ERROR WRITING LEAD-OUT"));
+		break;
+	case 0x03:
+		OutputErrorString(_T("SESSION FIXATION ERROR - INCOMPLETE TRACK IN SESSION"));
+		break;
+	case 0x04:
+		OutputErrorString(_T("EMPTY OR PARTIALLY WRITTEN RESERVED TRACK"));
+		break;
+	case 0x05:
+		OutputErrorString(_T("NO MORE TRACK RESERVATIONS ALLOWED"));
+		break;
+	case 0x06:
+		OutputErrorString(_T("RMZ EXTENSION IS NOT ALLOWED"));
+		break;
+	case 0x07:
+		OutputErrorString(_T("NO MORE TEST ZONE EXTENSIONS ARE ALLOWED"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x73(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x00:
+		OutputErrorString(_T("CD CONTROL ERROR"));
+		break;
+	case SCSI_SENSEQ_POWER_CALIBRATION_AREA_ALMOST_FULL:
+		OutputErrorString(_T("POWER CALIBRATION AREA ALMOST FULL"));
+		break;
+	case SCSI_SENSEQ_POWER_CALIBRATION_AREA_FULL:
+		OutputErrorString(_T("POWER CALIBRATION AREA IS FULL"));
+		break;
+	case SCSI_SENSEQ_POWER_CALIBRATION_AREA_ERROR:
+		OutputErrorString(_T("POWER CALIBRATION AREA ERROR"));
+		break;
+	case SCSI_SENSEQ_PMA_RMA_UPDATE_FAILURE:
+		OutputErrorString(_T("PROGRAM MEMORY AREA UPDATE FAILURE"));
+		break;
+	case SCSI_SENSEQ_PMA_RMA_IS_FULL:
+		OutputErrorString(_T("RMA/PMA IS ALMOST FULL"));
+		break;
+	case SCSI_SENSEQ_PMA_RMA_ALMOST_FULL:
+		OutputErrorString(_T("CURRENT POWER CALIBRATION AREA ALMOST FULL"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("CURRENT POWER CALIBRATION AREA IS FULL"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("RDZ IS FULL"));
+		break;
+	case 0x17:
+		OutputErrorString(_T("OTHER"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+VOID OutputIoctlAdditionalSenseCodeQualifier0x74(
+	BYTE byAscq
+	)
+{
+	switch (byAscq) {
+	case 0x08:
+		OutputErrorString(_T("DIGITAL SIGNATURE VALIDATION FAILURE"));
+		break;
+	case 0x0c:
+		OutputErrorString(_T("UNABLE TO DECRYPT PARAMETER LIST"));
+		break;
+	case 0x10:
+		OutputErrorString(_T("SA CREATION PARAMETER VALUE INVALID"));
+		break;
+	case 0x11:
+		OutputErrorString(_T("SA CREATION PARAMETER VALUE REJECTED"));
+		break;
+	case 0x12:
+		OutputErrorString(_T("INVALID SA USAGE"));
+		break;
+	case 0x30:
+		OutputErrorString(_T("SA CREATION PARAMETER NOT SUPPORTED"));
+		break;
+	case 0x40:
+		OutputErrorString(_T("AUTHENTICATION FAILED"));
+		break;
+	case 0x71:
+		OutputErrorString(_T("LOGICAL UNIT ACCESS NOT AUTHORIZED"));
+		break;
+	case 0x79:
+		OutputErrorString(_T("SECURITY CONFLICT IN TRANSLATED DEVICE"));
+		break;
+	default:
+		OutputErrorString(_T("OTHER"));
+		break;
+	}
+}
+
+// reference
+// http://www.t10.org/lists/asc-num.htm
+// http://www.t10.org/lists/op-num.htm
+// use below
+//  Direct Access Block Device (SBC-3)
+//  C/DVD Device (MMC-6)
+//  Optical Memory Block Device (SBC)
+VOID OutputIoctlAdditionalSenseCode(
 	BYTE byAsc,
 	BYTE byAscq
 	)
 {
-	UINT_PTR aSenseKey[][2] = {
-		{SCSI_SENSE_NO_SENSE, (UINT_PTR)_T("NO_SENSE")},
-		{SCSI_SENSE_RECOVERED_ERROR, (UINT_PTR)_T("RECOVERED_ERROR")}, 
-		{SCSI_SENSE_NOT_READY, (UINT_PTR)_T("NOT_READY")}, 
-		{SCSI_SENSE_MEDIUM_ERROR, (UINT_PTR)_T("MEDIUM_ERROR")}, 
-		{SCSI_SENSE_HARDWARE_ERROR, (UINT_PTR)_T("HARDWARE_ERROR")}, 
-		{SCSI_SENSE_ILLEGAL_REQUEST, (UINT_PTR)_T("ILLEGAL_REQUEST")}, 
-		{SCSI_SENSE_UNIT_ATTENTION, (UINT_PTR)_T("UNIT_ATTENTION")}, 
-		{SCSI_SENSE_DATA_PROTECT, (UINT_PTR)_T("DATA_PROTECT")}, 
-		{SCSI_SENSE_BLANK_CHECK, (UINT_PTR)_T("BLANK_CHECK")}, 
-		{SCSI_SENSE_UNIQUE, (UINT_PTR)_T("UNIQUE")}, 
-		{SCSI_SENSE_COPY_ABORTED, (UINT_PTR)_T("COPY_ABORTED")}, 
-		{SCSI_SENSE_ABORTED_COMMAND, (UINT_PTR)_T("ABORTED_COMMAND")}, 
-		{SCSI_SENSE_EQUAL, (UINT_PTR)_T("EQUAL")}, 
-		{SCSI_SENSE_VOL_OVERFLOW, (UINT_PTR)_T("VOL_OVERFLOW")}, 
-		{SCSI_SENSE_MISCOMPARE, (UINT_PTR)_T("MISCOMPARE")} 
-	};
-	// only C/DVD Device (MMC-6)
-	UINT_PTR aSenseAscAscq[][3] = {
-		{SCSI_ADSENSE_NO_SENSE, 0x00, (UINT_PTR)_T("NO SENSE")},
-		{SCSI_ADSENSE_NO_SEEK_COMPLETE, 0x00, (UINT_PTR)_T("NO SEEK COMPLETE")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, SCSI_SENSEQ_CAUSE_NOT_REPORTABLE, (UINT_PTR)_T("LUN_NOT_READY - CAUSE_NOT_REPORTABLE")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, SCSI_SENSEQ_BECOMING_READY, (UINT_PTR)_T("LUN_NOT_READY - BECOMING_READY")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, SCSI_SENSEQ_INIT_COMMAND_REQUIRED, (UINT_PTR)_T("LUN_NOT_READY - INIT_COMMAND_REQUIRED")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, SCSI_SENSEQ_MANUAL_INTERVENTION_REQUIRED, (UINT_PTR)_T("LUN_NOT_READY - MANUAL_INTERVENTION_REQUIRED")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, SCSI_SENSEQ_FORMAT_IN_PROGRESS, (UINT_PTR)_T("LUN_NOT_READY - FORMAT_IN_PROGRESS")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, SCSI_SENSEQ_OPERATION_IN_PROGRESS, (UINT_PTR)_T("LUN_NOT_READY - OPERATION_IN_PROGRESS")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, SCSI_SENSEQ_LONG_WRITE_IN_PROGRESS, (UINT_PTR)_T("LUN_NOT_READY - LONG_WRITE_IN_PROGRESS")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, 0x09, (UINT_PTR)_T("LUN_NOT_READY - SELF-TEST IN PROGRESS")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, 0x0A, (UINT_PTR)_T("LUN_NOT_READY - ASYMMETRIC ACCESS STATE TRANSITION")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, 0x0B, (UINT_PTR)_T("LUN_NOT_READY - TARGET PORT IN STANDBY STATE")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, 0x0C, (UINT_PTR)_T("LUN_NOT_READY - TARGET PORT IN UNAVAILABLE STATE")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, 0x10, (UINT_PTR)_T("LUN_NOT_READY - AUXILIARY MEMORY NOT ACCESSIBLE")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, 0x11, (UINT_PTR)_T("LUN_NOT_READY - NOTIFY (ENABLE SPINUP) REQUIRED")}, 
-		{SCSI_ADSENSE_LUN_NOT_READY, 0x13, (UINT_PTR)_T("LUN_NOT_READY - SA CREATION IN PROGRESS")}, 
-		{0x05, 0x00, (UINT_PTR)_T("LOGICAL UNIT DOES NOT RESPOND TO SELECTION")}, 
-		{0x06, 0x00, (UINT_PTR)_T("NO REFERENCE POSITION FOUND")}, 
-		{0x07, 0x00, (UINT_PTR)_T("MULTIPLE PERIPHERAL DEVICES SELECTED")}, 
-		{SCSI_ADSENSE_LUN_COMMUNICATION, SCSI_SENSEQ_COMM_FAILURE, (UINT_PTR)_T("LUN_COMMUNICATION - COMM_FAILURE")}, 
-		{SCSI_ADSENSE_LUN_COMMUNICATION, SCSI_SENSEQ_COMM_TIMEOUT, (UINT_PTR)_T("LUN_COMMUNICATION - COMM_TIMEOUT")}, 
-		{SCSI_ADSENSE_LUN_COMMUNICATION, SCSI_SENSEQ_COMM_PARITY_ERROR, (UINT_PTR)_T("LUN_COMMUNICATION - COMM_PARITY_ERROR")}, 
-		{SCSI_ADSENSE_LUN_COMMUNICATION, SCSI_SESNEQ_COMM_CRC_ERROR, (UINT_PTR)_T("LUN_COMMUNICATION - COMM_CRC_ERROR")}, 
-		{SCSI_ADSENSE_LUN_COMMUNICATION, SCSI_SENSEQ_UNREACHABLE_TARGET, (UINT_PTR)_T("LUN_COMMUNICATION - UNREACHABLE_TARGET")}, 
-		{0x09, 0x00, (UINT_PTR)_T("TRACK FOLLOWING ERROR")}, 
-		{0x09, 0x01, (UINT_PTR)_T("TRACKING SERVO FAILURE")}, 
-		{0x09, 0x02, (UINT_PTR)_T("FOCUS SERVO FAILURE")}, 
-		{0x09, 0x03, (UINT_PTR)_T("SPINDLE SERVO FAILURE")}, 
-		{0x09, 0x04, (UINT_PTR)_T("HEAD SELECT FAULT")}, 
-		{0x0A, 0x00, (UINT_PTR)_T("ERROR LOG OVERFLOW")}, 
-		{0x0B, 0x00, (UINT_PTR)_T("WARNING")}, 
-		{0x0B, 0x01, (UINT_PTR)_T("WARNING - SPECIFIED TEMPERATURE EXCEEDED")}, 
-		{0x0B, 0x02, (UINT_PTR)_T("WARNING - ENCLOSURE DEGRADED")}, 
-		{0x0B, 0x03, (UINT_PTR)_T("WARNING - BACKGROUND SELF-TEST FAILED")}, 
-		{0x0B, 0x04, (UINT_PTR)_T("WARNING - BACKGROUND PRE-SCAN DETECTED MEDIUM ERROR")}, 
-		{0x0B, 0x05, (UINT_PTR)_T("WARNING - BACKGROUND MEDIUM SCAN DETECTED MEDIUM ERROR")}, 
-		{0x0B, 0x06, (UINT_PTR)_T("WARNING - NON-VOLATILE CACHE NOW VOLATILE")}, 
-		{0x0B, 0x07, (UINT_PTR)_T("WARNING - DEGRADED POWER TO NON-VOLATILE CACHE")}, 
-		{0x0B, 0x08, (UINT_PTR)_T("WARNING - POWER LOSS EXPECTED")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x00, (UINT_PTR)_T("WRITE ERROR")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x06, (UINT_PTR)_T("BLOCK NOT COMPRESSIBLE")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x07, (UINT_PTR)_T("WRITE ERROR - RECOVERY NEEDED")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x08, (UINT_PTR)_T("WRITE ERROR - RECOVERY FAILED")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, SCSI_SENSEQ_LOSS_OF_STREAMING, (UINT_PTR)_T("WRITE ERROR - LOSS OF STREAMING")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, SCSI_SENSEQ_PADDING_BLOCKS_ADDED, (UINT_PTR)_T("WRITE ERROR - PADDING BLOCKS ADDED")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x0B, (UINT_PTR)_T("AUXILIARY MEMORY WRITE ERROR")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x0C, (UINT_PTR)_T("WRITE ERROR - UNEXPECTED UNSOLICITED DATA")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x0D, (UINT_PTR)_T("WRITE ERROR - NOT ENOUGH UNSOLICITED DATA")}, 
-		{SCSI_ADSENSE_WRITE_ERROR, 0x0F, (UINT_PTR)_T("DEFECTS IN ERROR WINDOW")}, 
-		{0x0D, 0x00, (UINT_PTR)_T("ERROR DETECTED BY THIRD PARTY TEMPORARY INITIATOR")}, 
-		{0x0D, 0x01, (UINT_PTR)_T("THIRD PARTY DEVICE FAILURE")}, 
-		{0x0D, 0x02, (UINT_PTR)_T("COPY TARGET DEVICE NOT REACHABLE")}, 
-		{0x0D, 0x03, (UINT_PTR)_T("INCORRECT COPY TARGET DEVICE TYPE")}, 
-		{0x0D, 0x04, (UINT_PTR)_T("COPY TARGET DEVICE DATA UNDERRUN")}, 
-		{0x0D, 0x05, (UINT_PTR)_T("COPY TARGET DEVICE DATA OVERRUN")}, 
-		{0x0E, 0x00, (UINT_PTR)_T("INVALID INFORMATION UNIT")}, 
-		{0x0E, 0x01, (UINT_PTR)_T("INFORMATION UNIT TOO SHORT")}, 
-		{0x0E, 0x02, (UINT_PTR)_T("INFORMATION UNIT TOO LONG")}, 
-		{0x0E, 0x03, (UINT_PTR)_T("INVALID FIELD IN COMMAND INFORMATION UNIT")}, 
-		{0x11, 0x00, (UINT_PTR)_T("UNRECOVERED READ ERROR")}, 
-		{0x11, 0x01, (UINT_PTR)_T("READ RETRIES EXHAUSTED")}, 
-		{0x11, 0x02, (UINT_PTR)_T("ERROR TOO LONG TO CORRECT")}, 
-		{0x11, 0x05, (UINT_PTR)_T("L-EC UNCORRECTABLE ERROR")}, 
-		{0x11, 0x06, (UINT_PTR)_T("CIRC UNRECOVERED ERROR")}, 
-		{0x11, 0x0D, (UINT_PTR)_T("DE-COMPRESSION CRC ERROR")}, 
-		{0x11, 0x0E, (UINT_PTR)_T("CANNOT DECOMPRESS USING DECLARED ALGORITHM")}, 
-		{0x11, 0x0F, (UINT_PTR)_T("ERROR READING UPC/EAN NUMBER")}, 
-		{0x11, 0x10, (UINT_PTR)_T("ERROR READING ISRC NUMBER")}, 
-		{0x11, 0x11, (UINT_PTR)_T("READ ERROR - LOSS OF STREAMING")}, 
-		{0x11, 0x12, (UINT_PTR)_T("AUXILIARY MEMORY READ ERROR")}, 
-		{0x11, 0x13, (UINT_PTR)_T("READ ERROR - FAILED RETRANSMISSION REQUEST")}, 
-		{SCSI_ADSENSE_TRACK_ERROR, 0x00, (UINT_PTR)_T("TRACK_ERROR - RECORDED ENTITY NOT FOUND")}, 
-		{SCSI_ADSENSE_TRACK_ERROR, 0x01, (UINT_PTR)_T("TRACK_ERROR - RECORD NOT FOUND")}, 
-		{SCSI_ADSENSE_SEEK_ERROR, 0x00, (UINT_PTR)_T("SEEK_ERROR - RANDOM POSITIONING ERROR")}, 
-		{SCSI_ADSENSE_SEEK_ERROR, 0x01, (UINT_PTR)_T("SEEK_ERROR - MECHANICAL POSITIONING ERROR")}, 
-		{SCSI_ADSENSE_SEEK_ERROR, 0x02, (UINT_PTR)_T("SEEK_ERROR - POSITIONING ERROR DETECTED BY READ OF MEDIUM")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x00, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITH NO ERROR CORRECTION APPLIED")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x01, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITH RETRIES")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x02, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITH POSITIVE HEAD OFFSET")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x03, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITH NEGATIVE HEAD OFFSET")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x04, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITH RETRIES AND/OR CIRC APPLIED")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x05, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA USING PREVIOUS SECTOR ID")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x07, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITHOUT ECC - RECOMMEND REASSIGNMENT")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x08, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITHOUT ECC - RECOMMEND REWRITE")}, 
-		{SCSI_ADSENSE_REC_DATA_NOECC, 0x09, (UINT_PTR)_T("REC_DATA_NOECC - RECOVERED DATA WITHOUT ECC - DATA REWRITTEN")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x00, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA WITH ERROR CORRECTION APPLIED")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x01, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA WITH ERROR CORR. & RETRIES APPLIED")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x02, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA - DATA AUTO-REALLOCATED")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x03, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA WITH CIRC")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x04, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA WITH L-EC")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x05, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA - RECOMMEND REASSIGNMENT")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x06, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA - RECOMMEND REWRITE")}, 
-		{SCSI_ADSENSE_REC_DATA_ECC, 0x08, (UINT_PTR)_T("REC_DATA_ECC - RECOVERED DATA WITH LINKING")}, 
-		{SCSI_ADSENSE_PARAMETER_LIST_LENGTH, 0x00, (UINT_PTR)_T("PARAMETER LIST LENGTH ERROR")}, 
-		{0x1B, 0x00, (UINT_PTR)_T("SYNCHRONOUS DATA TRANSFER ERROR")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x00, (UINT_PTR)_T("INVALID COMMAND OPERATION CODE")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x01, (UINT_PTR)_T("ILLEGAL_COMMAND - ACCESS DENIED - INITIATOR PENDING-ENROLLED")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x02, (UINT_PTR)_T("ILLEGAL_COMMAND - ACCESS DENIED - NO ACCESS RIGHTS")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x03, (UINT_PTR)_T("ILLEGAL_COMMAND - ACCESS DENIED - INVALID MGMT ID KEY")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x08, (UINT_PTR)_T("ILLEGAL_COMMAND - ACCESS DENIED - ENROLLMENT CONFLICT")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x09, (UINT_PTR)_T("ILLEGAL_COMMAND - ACCESS DENIED - INVALID LU IDENTIFIER")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x0A, (UINT_PTR)_T("ILLEGAL_COMMAND - ACCESS DENIED - INVALID PROXY TOKEN")}, 
-		{SCSI_ADSENSE_ILLEGAL_COMMAND, 0x0B, (UINT_PTR)_T("ILLEGAL_COMMAND - ACCESS DENIED - ACL LUN CONFLICT")}, 
-		{SCSI_ADSENSE_ILLEGAL_BLOCK, 0x00, (UINT_PTR)_T("LOGICAL BLOCK ADDRESS OUT OF RANGE")}, 
-		{SCSI_ADSENSE_ILLEGAL_BLOCK, SCSI_SENSEQ_ILLEGAL_ELEMENT_ADDR, (UINT_PTR)_T("ILLEGAL_BLOCK - MISCOMPARE DURING VERIFY OPERATION")}, 
-		{SCSI_ADSENSE_ILLEGAL_BLOCK, 0x02, (UINT_PTR)_T("ILLEGAL_BLOCK - INVALID ADDRESS FOR WRITE")}, 
-		{SCSI_ADSENSE_ILLEGAL_BLOCK, 0x03, (UINT_PTR)_T("ILLEGAL_BLOCK - INVALID WRITE CROSSING LAYER JUMP")}, 
-		{0x23, 0x00, (UINT_PTR)_T("INVALID TOKEN OPERATION, CAUSE NOT REPORTABLE")}, 
-		{SCSI_ADSENSE_INVALID_CDB, 0x00, (UINT_PTR)_T("INVALID FIELD IN CDB")}, 
-		{SCSI_ADSENSE_INVALID_CDB, 0x01, (UINT_PTR)_T("CDB DECRYPTION ERROR")}, 
-		{SCSI_ADSENSE_INVALID_CDB, 0x08, (UINT_PTR)_T("INVALID XCDB")}, 
-		{SCSI_ADSENSE_INVALID_LUN, 0x00, (UINT_PTR)_T("LOGICAL UNIT NOT SUPPORTED")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x00, (UINT_PTR)_T("INVALID FIELD IN PARAMETER LIST")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x01, (UINT_PTR)_T("PARAMETER NOT SUPPORTED")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x02, (UINT_PTR)_T("PARAMETER VALUE INVALID")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x03, (UINT_PTR)_T("THRESHOLD PARAMETERS NOT SUPPORTED")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x04, (UINT_PTR)_T("INVALID RELEASE OF PERSISTENT RESERVATION")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x05, (UINT_PTR)_T("DATA DECRYPTION ERROR")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x06, (UINT_PTR)_T("TOO MANY TARGET DESCRIPTORS")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x07, (UINT_PTR)_T("UNSUPPORTED SEGMENT DESCRIPTOR TYPE CODE")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x08, (UINT_PTR)_T("TOO MANY SEGMENT DESCRIPTORS")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x09, (UINT_PTR)_T("UNSUPPORTED SEGMENT DESCRIPTOR TYPE CODE")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x0A, (UINT_PTR)_T("UNEXPECTED INEXACT SEGMENT")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x0B, (UINT_PTR)_T("INLINE DATA LENGTH EXCEEDED")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x0C, (UINT_PTR)_T("INVALID OPERATION FOR COPY SOURCE OR DESTINATION")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x0D, (UINT_PTR)_T("COPY SEGMENT GRANULARITY VIOLATION")}, 
-		{SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST, 0x0E, (UINT_PTR)_T("INVALID PARAMETER WHILE PORT IS ENABLED")}, 
-		{SCSI_ADSENSE_WRITE_PROTECT, 0x00, (UINT_PTR)_T("WRITE PROTECTED")}, 
-		{SCSI_ADSENSE_WRITE_PROTECT, 0x01, (UINT_PTR)_T("HARDWARE WRITE PROTECTED")}, 
-		{SCSI_ADSENSE_WRITE_PROTECT, 0x02, (UINT_PTR)_T("LOGICAL UNIT SOFTWARE WRITE PROTECTED")}, 
-		{SCSI_ADSENSE_WRITE_PROTECT, 0x03, (UINT_PTR)_T("ASSOCIATED WRITE PROTECT")}, 
-		{SCSI_ADSENSE_WRITE_PROTECT, 0x04, (UINT_PTR)_T("PERSISTENT WRITE PROTECT")}, 
-		{SCSI_ADSENSE_WRITE_PROTECT, 0x05, (UINT_PTR)_T("PERMANENT WRITE PROTECT")}, 
-		{SCSI_ADSENSE_WRITE_PROTECT, 0x06, (UINT_PTR)_T("CONDITIONAL WRITE PROTECT")}, 
-		{SCSI_ADSENSE_MEDIUM_CHANGED, 0x00, (UINT_PTR)_T("NOT READY TO READY CHANGE, MEDIUM MAY HAVE CHANGED")}, 
-		{SCSI_ADSENSE_MEDIUM_CHANGED, 0x01, (UINT_PTR)_T("IMPORT OR EXPORT ELEMENT ACCESSED")}, 
-		{SCSI_ADSENSE_MEDIUM_CHANGED, 0x02, (UINT_PTR)_T("FORMAT-LAYER MAY HAVE CHANGED")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x00, (UINT_PTR)_T("POWER ON, RESET, OR BUS DEVICE RESET OCCURRED")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x01, (UINT_PTR)_T("POWER ON OCCURRED")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x02, (UINT_PTR)_T("SCSI BUS RESET OCCURRED")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x03, (UINT_PTR)_T("BUS DEVICE RESET FUNCTION OCCURRED")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x04, (UINT_PTR)_T("DEVICE INTERNAL RESET")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x05, (UINT_PTR)_T("TRANSCEIVER MODE CHANGED TO SINGLE-ENDED")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x06, (UINT_PTR)_T("TRANSCEIVER MODE CHANGED TO LVD")}, 
-		{SCSI_ADSENSE_BUS_RESET, 0x07, (UINT_PTR)_T("I_T NEXUS LOSS OCCURRED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x00, (UINT_PTR)_T("PARAMETERS CHANGED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x01, (UINT_PTR)_T("MODE PARAMETERS CHANGED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x02, (UINT_PTR)_T("LOG PARAMETERS CHANGED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x03, (UINT_PTR)_T("RESERVATIONS PREEMPTED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x04, (UINT_PTR)_T("RESERVATIONS RELEASED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x05, (UINT_PTR)_T("REGISTRATIONS PREEMPTED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x06, (UINT_PTR)_T("ASYMMETRIC ACCESS STATE CHANGED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x07, (UINT_PTR)_T("IMPLICIT ASYMMETRIC ACCESS STATE TRANSITION FAILED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x08, (UINT_PTR)_T("PRIORITY CHANGED")}, 
-		{SCSI_ADSENSE_PARAMETERS_CHANGED, 0x14, (UINT_PTR)_T("SA CREATION CAPABILITIES DATA HAS CHANGED")}, 
-		{0x2B, 0x00, (UINT_PTR)_T("COPY CANNOT EXECUTE SINCE HOST CANNOT DISCONNECT")}, 
-		{0x2C, 0x00, (UINT_PTR)_T("COMMAND SEQUENCE ERROR")}, 
-		{0x2C, 0x03, (UINT_PTR)_T("CURRENT PROGRAM AREA IS NOT EMPTY")}, 
-		{0x2C, 0x04, (UINT_PTR)_T("CURRENT PROGRAM AREA IS EMPTY")}, 
-		{0x2C, 0x06, (UINT_PTR)_T("PERSISTENT PREVENT CONFLICT")}, 
-		{0x2C, 0x07, (UINT_PTR)_T("PREVIOUS BUSY STATUS")}, 
-		{0x2C, 0x08, (UINT_PTR)_T("PREVIOUS TASK SET FULL STATUS")}, 
-		{0x2C, 0x09, (UINT_PTR)_T("PREVIOUS RESERVATION CONFLICT STATUS")}, 
-		{SCSI_ADSENSE_INSUFFICIENT_TIME_FOR_OPERATION, 0x00, (UINT_PTR)_T("INSUFFICIENT TIME FOR OPERATION")}, 
-		{0x2F, 0x00, (UINT_PTR)_T("COMMANDS CLEARED BY ANOTHER INITIATOR")}, 
-		{0x2F, 0x02, (UINT_PTR)_T("COMMANDS CLEARED BY DEVICE SERVER")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x00, (UINT_PTR)_T("INCOMPATIBLE MEDIUM INSTALLED")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x01, (UINT_PTR)_T("CANNOT READ MEDIUM - UNKNOWN FORMAT")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x02, (UINT_PTR)_T("CANNOT READ MEDIUM - INCOMPATIBLE FORMAT")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x03, (UINT_PTR)_T("CLEANING CARTRIDGE INSTALLED")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x04, (UINT_PTR)_T("CANNOT WRITE MEDIUM - UNKNOWN FORMAT")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x05, (UINT_PTR)_T("CANNOT WRITE MEDIUM - INCOMPATIBLE FORMAT")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x06, (UINT_PTR)_T("CANNOT FORMAT MEDIUM - INCOMPATIBLE MEDIUM")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x07, (UINT_PTR)_T("CLEANING FAILURE")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x08, (UINT_PTR)_T("CANNOT WRITE - APPLICATION CODE MISMATCH")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x09, (UINT_PTR)_T("CURRENT SESSION NOT FIXATED FOR APPEND")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x0A, (UINT_PTR)_T("CLEANING REQUEST REJECTED")}, 
-		{SCSI_ADSENSE_INVALID_MEDIA, 0x10, (UINT_PTR)_T("MEDIUM NOT FORMATTED")}, 
-		{0x31, 0x00, (UINT_PTR)_T("MEDIUM FORMAT CORRUPTED")}, 
-		{0x31, 0x01, (UINT_PTR)_T("FORMAT COMMAND FAILED")}, 
-		{0x31, 0x02, (UINT_PTR)_T("ZONED FORMATTING FAILED DUE TO SPARE LINKING")}, 
-		{0x34, 0x00, (UINT_PTR)_T("ENCLOSURE FAILURE")}, 
-		{0x35, 0x00, (UINT_PTR)_T("ENCLOSURE SERVICES FAILURE")}, 
-		{0x35, 0x01, (UINT_PTR)_T("UNSUPPORTED ENCLOSURE FUNCTION")}, 
-		{0x35, 0x02, (UINT_PTR)_T("ENCLOSURE SERVICES UNAVAILABLE")}, 
-		{0x35, 0x03, (UINT_PTR)_T("ENCLOSURE SERVICES TRANSFER FAILURE")}, 
-		{0x35, 0x04, (UINT_PTR)_T("ENCLOSURE SERVICES TRANSFER REFUSED")}, 
-		{0x35, 0x05, (UINT_PTR)_T("ENCLOSURE SERVICES CHECKSUM ERROR")}, 
-		{0x37, 0x00, (UINT_PTR)_T("ROUNDED PARAMETER")}, 
-		{0x39, 0x00, (UINT_PTR)_T("SAVING PARAMETERS NOT SUPPORTED")}, 
-		{SCSI_ADSENSE_NO_MEDIA_IN_DEVICE, 0x00, (UINT_PTR)_T("MEDIUM NOT PRESENT")}, 
-		{SCSI_ADSENSE_NO_MEDIA_IN_DEVICE, 0x01, (UINT_PTR)_T("MEDIUM NOT PRESENT - TRAY CLOSED")}, 
-		{SCSI_ADSENSE_NO_MEDIA_IN_DEVICE, 0x02, (UINT_PTR)_T("MEDIUM NOT PRESENT - TRAY OPEN")}, 
-		{SCSI_ADSENSE_NO_MEDIA_IN_DEVICE, 0x03, (UINT_PTR)_T("MEDIUM NOT PRESENT - LOADABLE")}, 
-		{SCSI_ADSENSE_NO_MEDIA_IN_DEVICE, 0x04, (UINT_PTR)_T("MEDIUM NOT PRESENT - MEDIUM AUXILIARY MEMORY ACCESSIBLE")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, SCSI_SENSEQ_DESTINATION_FULL, (UINT_PTR)_T("MEDIUM DESTINATION ELEMENT FULL")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, SCSI_SENSEQ_SOURCE_EMPTY, (UINT_PTR)_T("MEDIUM SOURCE ELEMENT EMPTY")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, 0x0F, (UINT_PTR)_T("END OF MEDIUM REACHED")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, 0x11, (UINT_PTR)_T("MEDIUM MAGAZINE NOT ACCESSIBLE")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, 0x12, (UINT_PTR)_T("MEDIUM MAGAZINE REMOVED")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, 0x13, (UINT_PTR)_T("MEDIUM MAGAZINE INSERTED")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, 0x14, (UINT_PTR)_T("MEDIUM MAGAZINE LOCKED")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, 0x15, (UINT_PTR)_T("MEDIUM MAGAZINE UNLOCKED")}, 
-		{SCSI_ADSENSE_POSITION_ERROR, 0x16, (UINT_PTR)_T("MECHANICAL POSITIONING OR CHANGER ERROR")}, 
-		{0x3D, 0x00, (UINT_PTR)_T("INVALID BITS IN IDENTIFY MESSAGE")}, 
-		{0x3E, 0x00, (UINT_PTR)_T("LOGICAL UNIT HAS NOT SELF-CONFIGURED YET")}, 
-		{0x3E, 0x01, (UINT_PTR)_T("LOGICAL UNIT FAILURE")}, 
-		{0x3E, 0x02, (UINT_PTR)_T("TIMEOUT ON LOGICAL UNIT")}, 
-		{0x3E, 0x03, (UINT_PTR)_T("LOGICAL UNIT FAILED SELF-TEST")}, 
-		{0x3E, 0x04, (UINT_PTR)_T("LOGICAL UNIT UNABLE TO UPDATE SELF-TEST LOG")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_TARGET_OPERATING_CONDITIONS_CHANGED, (UINT_PTR)_T("TARGET OPERATING CONDITIONS HAVE CHANGED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_MICROCODE_CHANGED, (UINT_PTR)_T("MICROCODE HAS BEEN CHANGED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_OPERATING_DEFINITION_CHANGED, (UINT_PTR)_T("CHANGED OPERATING DEFINITION")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_INQUIRY_DATA_CHANGED, (UINT_PTR)_T("INQUIRY DATA HAS CHANGED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_COMPONENT_DEVICE_ATTACHED, (UINT_PTR)_T("COMPONENT DEVICE ATTACHED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_DEVICE_IDENTIFIER_CHANGED, (UINT_PTR)_T("DEVICE IDENTIFIER CHANGED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_REDUNDANCY_GROUP_MODIFIED, (UINT_PTR)_T("REDUNDANCY GROUP CREATED OR MODIFIED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_REDUNDANCY_GROUP_DELETED, (UINT_PTR)_T("REDUNDANCY GROUP DELETED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_SPARE_MODIFIED, (UINT_PTR)_T("SPARE CREATED OR MODIFIED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_SPARE_DELETED, (UINT_PTR)_T("SPARE DELETED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_VOLUME_SET_MODIFIED, (UINT_PTR)_T("VOLUME SET CREATED OR MODIFIED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_VOLUME_SET_DELETED, (UINT_PTR)_T("VOLUME SET DELETED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_VOLUME_SET_DEASSIGNED, (UINT_PTR)_T("VOLUME SET DEASSIGNED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_VOLUME_SET_REASSIGNED, (UINT_PTR)_T("VOLUME SET REASSIGNED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_REPORTED_LUNS_DATA_CHANGED, (UINT_PTR)_T("REPORTED LUNS DATA HAS CHANGED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_ECHO_BUFFER_OVERWRITTEN, (UINT_PTR)_T("ECHO lpBuf OVERWRITTEN")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_MEDIUM_LOADABLE, (UINT_PTR)_T("MEDIUM LOADABLE")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, SCSI_SENSEQ_MEDIUM_AUXILIARY_MEMORY_ACCESSIBLE, (UINT_PTR)_T("MEDIUM AUXILIARY MEMORY ACCESSIBLE")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, 0x12, (UINT_PTR)_T("iSCSI IP ADDRESS ADDED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, 0x13, (UINT_PTR)_T("iSCSI IP ADDRESS REMOVED")}, 
-		{SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED, 0x14, (UINT_PTR)_T("iSCSI IP ADDRESS CHANGED")}, 
-		{0x43, 0x00, (UINT_PTR)_T("MESSAGE ERROR")}, 
-		{0x44, 0x00, (UINT_PTR)_T("INTERNAL TARGET FAILURE")}, 
-		{0x45, 0x00, (UINT_PTR)_T("SELECT OR RESELECT FAILURE")}, 
-		{0x46, 0x00, (UINT_PTR)_T("UNSUCCESSFUL SOFT RESET")}, 
-		{0x47, 0x00, (UINT_PTR)_T("SCSI PARITY ERROR")}, 
-		{0x47, 0x01, (UINT_PTR)_T("DATA PHASE CRC ERROR DETECTED")}, 
-		{0x47, 0x02, (UINT_PTR)_T("SCSI PARITY ERROR DETECTED DURING ST DATA PHASE")}, 
-		{0x47, 0x03, (UINT_PTR)_T("INFORMATION UNIT iuCRC ERROR DETECTED")}, 
-		{0x47, 0x04, (UINT_PTR)_T("ASYNCHRONOUS INFORMATION PROTECTION ERROR DETECTED")}, 
-		{0x47, 0x05, (UINT_PTR)_T("PROTOCOL SERVICE CRC ERROR")}, 
-		{0x47, 0x7F, (UINT_PTR)_T("SOME COMMANDS CLEARED BY ISCSI PROTOCOL EVENT")}, 
-		{0x48, 0x00, (UINT_PTR)_T("INITIATOR DETECTED ERROR MESSAGE RECEIVED")}, 
-		{0x49, 0x00, (UINT_PTR)_T("INVALID MESSAGE ERROR")}, 
-		{0x4A, 0x00, (UINT_PTR)_T("COMMAND PHASE ERROR")}, 
-		{0x4B, 0x00, (UINT_PTR)_T("DATA PHASE ERROR")}, 
-		{0x4B, 0x01, (UINT_PTR)_T("INVALID TARGET PORT TRANSFER TAG RECEIVED")}, 
-		{0x4B, 0x02, (UINT_PTR)_T("TOO MUCH WRITE DATA")}, 
-		{0x4B, 0x03, (UINT_PTR)_T("ACK/NAK TIMEOUT")}, 
-		{0x4B, 0x04, (UINT_PTR)_T("NAK RECEIVED")}, 
-		{0x4B, 0x05, (UINT_PTR)_T("DATA OFFSET ERROR")}, 
-		{0x4B, 0x06, (UINT_PTR)_T("INITIATOR RESPONSE TIMEOUT")}, 
-		{0x4B, 0x07, (UINT_PTR)_T("CONNECTION LOST")}, 
-		{0x4C, 0x00, (UINT_PTR)_T("LOGICAL UNIT FAILED SELF-CONFIGURATION")}, 
-		{0x4E, 0x00, (UINT_PTR)_T("OVERLAPPED COMMANDS ATTEMPTED")}, 
-		{0x51, 0x00, (UINT_PTR)_T("ERASE FAILURE")}, 
-		{0x51, 0x01, (UINT_PTR)_T("ERASE FAILURE - INCOMPLETE ERASE OPERATION DETECTED")}, 
-		{0x53, 0x00, (UINT_PTR)_T("MEDIA LOAD OR EJECT FAILED")}, 
-		{0x53, 0x02, (UINT_PTR)_T("MEDIUM REMOVAL PREVENTED")}, 
-		{0x55, 0x02, (UINT_PTR)_T("INSUFFICIENT RESERVATION RESOURCES")}, 
-		{0x55, 0x03, (UINT_PTR)_T("INSUFFICIENT RESOURCES")}, 
-		{0x55, 0x04, (UINT_PTR)_T("INSUFFICIENT REGISTRATION RESOURCES")}, 
-		{0x55, 0x05, (UINT_PTR)_T("INSUFFICIENT ACCESS CONTROL RESOURCES")}, 
-		{0x55, 0x06, (UINT_PTR)_T("AUXILIARY MEMORY OUT OF SPACE")}, 
-		{0x55, 0x0B, (UINT_PTR)_T("INSUFFICIENT POWER FOR OPERATION")}, 
-		{0x57, 0x00, (UINT_PTR)_T("UNABLE TO RECOVER TABLE-OF-CONTENTS")}, 
-		{SCSI_ADSENSE_OPERATOR_REQUEST, SCSI_SENSEQ_STATE_CHANGE_INPUT, (UINT_PTR)_T("OPERATOR REQUEST OR STATE CHANGE INPUT")}, 
-		{SCSI_ADSENSE_OPERATOR_REQUEST, SCSI_SENSEQ_MEDIUM_REMOVAL, (UINT_PTR)_T("OPERATOR MEDIUM REMOVAL REQUEST")}, 
-		{SCSI_ADSENSE_OPERATOR_REQUEST, SCSI_SENSEQ_WRITE_PROTECT_ENABLE, (UINT_PTR)_T("OPERATOR SELECTED WRITE PROTECT")}, 
-		{SCSI_ADSENSE_OPERATOR_REQUEST, SCSI_SENSEQ_WRITE_PROTECT_DISABLE, (UINT_PTR)_T("OPERATOR SELECTED WRITE PERMIT")}, 
-		{0x5b, 0x00, (UINT_PTR)_T("LOG EXCEPTION")}, 
-		{0x5b, 0x01, (UINT_PTR)_T("THRESHOLD CONDITION MET")}, 
-		{0x5b, 0x02, (UINT_PTR)_T("LOG COUNTER AT MAXIMUM")}, 
-		{0x5b, 0x03, (UINT_PTR)_T("LOG LIST CODES EXHAUSTED")}, 
-		{SCSI_ADSENSE_FAILURE_PREDICTION_THRESHOLD_EXCEEDED, 0x00, (UINT_PTR)_T("FAILURE PREDICTION THRESHOLD EXCEEDED")}, 
-		{SCSI_ADSENSE_FAILURE_PREDICTION_THRESHOLD_EXCEEDED, 0x01, (UINT_PTR)_T("MEDIA FAILURE PREDICTION THRESHOLD EXCEEDED")}, 
-		{SCSI_ADSENSE_FAILURE_PREDICTION_THRESHOLD_EXCEEDED, 0x02, (UINT_PTR)_T("LOGICAL UNIT FAILURE PREDICTION THRESHOLD EXCEEDED")}, 
-		{SCSI_ADSENSE_FAILURE_PREDICTION_THRESHOLD_EXCEEDED, 0x03, (UINT_PTR)_T("SPARE AREA EXHAUSTION PREDICTION THRESHOLD EXCEEDED")}, 
-		{SCSI_ADSENSE_FAILURE_PREDICTION_THRESHOLD_EXCEEDED, 0xFF, (UINT_PTR)_T("FAILURE PREDICTION THRESHOLD EXCEEDED (FALSE)")}, 
-		{0x5E, 0x00, (UINT_PTR)_T("LOW POWER CONDITION ON")}, 
-		{0x5E, 0x01, (UINT_PTR)_T("IDLE CONDITION ACTIVATED BY TIMER")}, 
-		{0x5E, 0x02, (UINT_PTR)_T("STANDBY CONDITION ACTIVATED BY TIMER")}, 
-		{0x5E, 0x03, (UINT_PTR)_T("IDLE CONDITION ACTIVATED BY COMMAND")}, 
-		{0x5E, 0x04, (UINT_PTR)_T("STANDBY CONDITION ACTIVATED BY COMMAND")}, 
-		{0x5E, 0x05, (UINT_PTR)_T("IDLE_B CONDITION ACTIVATED BY TIMER")}, 
-		{0x5E, 0x06, (UINT_PTR)_T("IDLE_B CONDITION ACTIVATED BY COMMAND")}, 
-		{0x5E, 0x07, (UINT_PTR)_T("IDLE_C CONDITION ACTIVATED BY TIMER")}, 
-		{0x5E, 0x08, (UINT_PTR)_T("IDLE_C CONDITION ACTIVATED BY COMMAND")}, 
-		{0x5E, 0x09, (UINT_PTR)_T("STANDBY_Y CONDITION ACTIVATED BY TIMER")}, 
-		{0x5E, 0x0A, (UINT_PTR)_T("STANDBY_Y CONDITION ACTIVATED BY COMMAND")}, 
-		{0x63, 0x00, (UINT_PTR)_T("END OF USER AREA ENCOUNTERED ON THIS TRACK")}, 
-		{0x63, 0x01, (UINT_PTR)_T("PACKET DOES NOT FIT IN AVAILABLE SPACE")}, 
-		{SCSI_ADSENSE_ILLEGAL_MODE_FOR_THIS_TRACK, 0x00, (UINT_PTR)_T("ILLEGAL MODE FOR THIS TRACK")}, 
-		{SCSI_ADSENSE_ILLEGAL_MODE_FOR_THIS_TRACK, 0x01, (UINT_PTR)_T("INVALID PACKET SIZE")}, 
-		{0x65, 0x00, (UINT_PTR)_T("VOLTAGE FAULT")}, 
-		{0x67, 0x0A, (UINT_PTR)_T("SET TARGET PORT GROUPS COMMAND FAILED")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, SCSI_SENSEQ_AUTHENTICATION_FAILURE, (UINT_PTR)_T("COPY PROTECTION KEY EXCHANGE FAILURE - AUTHENTICATION FAILURE")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, SCSI_SENSEQ_KEY_NOT_PRESENT, (UINT_PTR)_T("COPY PROTECTION KEY EXCHANGE FAILURE - KEY NOT PRESENT")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, SCSI_SENSEQ_KEY_NOT_ESTABLISHED, (UINT_PTR)_T("COPY PROTECTION KEY EXCHANGE FAILURE - KEY NOT ESTABLISHED")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, SCSI_SENSEQ_READ_OF_SCRAMBLED_SECTOR_WITHOUT_AUTHENTICATION, (UINT_PTR)_T("READ OF SCRAMBLED SECTOR WITHOUT AUTHENTICATION")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, SCSI_SENSEQ_MEDIA_CODE_MISMATCHED_TO_LOGICAL_UNIT, (UINT_PTR)_T("MEDIA REGION CODE IS MISMATCHED TO LOGICAL UNIT REGION")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, SCSI_SENSEQ_LOGICAL_UNIT_RESET_COUNT_ERROR, (UINT_PTR)_T("DRIVE REGION MUST BE PERMANENT/REGION RESET COUNT ERROR")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, 0x06, (UINT_PTR)_T("INSUFFICIENT BLOCK COUNT FOR BINDING NONCE RECORDING")}, 
-		{SCSI_ADSENSE_COPY_PROTECTION_FAILURE, 0x07, (UINT_PTR)_T("CONFLICT IN BINDING NONCE RECORDING")}, 
-		{0x72, 0x00, (UINT_PTR)_T("SESSION FIXATION ERROR")}, 
-		{0x72, 0x01, (UINT_PTR)_T("SESSION FIXATION ERROR WRITING LEAD-IN")}, 
-		{0x72, 0x02, (UINT_PTR)_T("SESSION FIXATION ERROR WRITING LEAD-OUT")}, 
-		{0x72, 0x03, (UINT_PTR)_T("SESSION FIXATION ERROR - INCOMPLETE TRACK IN SESSION")}, 
-		{0x72, 0x04, (UINT_PTR)_T("EMPTY OR PARTIALLY WRITTEN RESERVED TRACK")}, 
-		{0x72, 0x05, (UINT_PTR)_T("NO MORE TRACK RESERVATIONS ALLOWED")}, 
-		{0x72, 0x06, (UINT_PTR)_T("RMZ EXTENSION IS NOT ALLOWED")}, 
-		{0x72, 0x07, (UINT_PTR)_T("NO MORE TEST ZONE EXTENSIONS ARE ALLOWED")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, 0x00, (UINT_PTR)_T("VOLTAGE FAULT")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, SCSI_SENSEQ_POWER_CALIBRATION_AREA_ALMOST_FULL, (UINT_PTR)_T("CD CONTROL ERROR")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, SCSI_SENSEQ_POWER_CALIBRATION_AREA_FULL, (UINT_PTR)_T("POWER CALIBRATION AREA ALMOST FULL")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, SCSI_SENSEQ_POWER_CALIBRATION_AREA_ERROR, (UINT_PTR)_T("POWER CALIBRATION AREA IS FULL")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, SCSI_SENSEQ_PMA_RMA_UPDATE_FAILURE, (UINT_PTR)_T("POWER CALIBRATION AREA ERROR")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, SCSI_SENSEQ_PMA_RMA_IS_FULL, (UINT_PTR)_T("PROGRAM MEMORY AREA UPDATE FAILURE")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, SCSI_SENSEQ_PMA_RMA_ALMOST_FULL, (UINT_PTR)_T("RMA/PMA IS ALMOST FULL")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, 0x10, (UINT_PTR)_T("CURRENT POWER CALIBRATION AREA ALMOST FULL")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, 0x11, (UINT_PTR)_T("CURRENT POWER CALIBRATION AREA IS FULL")}, 
-		{SCSI_ADSENSE_POWER_CALIBRATION_ERROR, 0x17, (UINT_PTR)_T("RDZ IS FULL")}, 
-		{0x74, 0x08, (UINT_PTR)_T("DIGITAL SIGNATURE VALIDATION FAILURE")}, 
-		{0x74, 0x0C, (UINT_PTR)_T("UNABLE TO DECRYPT PARAMETER LIST")}, 
-		{0x74, 0x10, (UINT_PTR)_T("SA CREATION PARAMETER VALUE INVALID")}, 
-		{0x74, 0x11, (UINT_PTR)_T("SA CREATION PARAMETER VALUE REJECTED")}, 
-		{0x74, 0x12, (UINT_PTR)_T("INVALID SA USAGE")}, 
-		{0x74, 0x30, (UINT_PTR)_T("SA CREATION PARAMETER NOT SUPPORTED")}, 
-		{0x74, 0x40, (UINT_PTR)_T("AUTHENTICATION FAILED")}, 
-		{0x74, 0x71, (UINT_PTR)_T("LOGICAL UNIT ACCESS NOT AUTHORIZED")} 
-	};
-	OutputErrorString(
-		_T("Sense data, Key:Asc:Ascq:%02x:%02x:%02x"), byKey, byAsc, byAscq);
-
-	for (INT i = 0; i < sizeof(aSenseKey) / sizeof(INT) / 2; i++) {
-		if (byKey == aSenseKey[i][0]) {
-			OutputErrorString(_T("(%s."), (LPCTSTR)aSenseKey[i][1]);
-			break;
+	switch (byAsc) {
+	case SCSI_ADSENSE_NO_SENSE:
+		OutputIoctlAdditionalSenseCodeQualifier0x00(byAscq);
+		break;
+	case 0x01:
+		OutputIoctlAdditionalSenseCodeQualifier0x01(byAscq);
+		break;
+	case SCSI_ADSENSE_NO_SEEK_COMPLETE:
+		OutputIoctlAdditionalSenseCodeQualifier0x02(byAscq);
+		break;
+	case 0x03:
+		OutputIoctlAdditionalSenseCodeQualifier0x03(byAscq);
+		break;
+	case SCSI_ADSENSE_LUN_NOT_READY:
+		OutputIoctlAdditionalSenseCodeQualifier0x04(byAscq);
+		break;
+	case 0x05:
+		OutputIoctlAdditionalSenseCodeQualifier0x05(byAscq);
+		break;
+	case 0x06:
+		OutputIoctlAdditionalSenseCodeQualifier0x06(byAscq);
+		break;
+	case 0x07:
+		OutputIoctlAdditionalSenseCodeQualifier0x07(byAscq);
+		break;
+	case SCSI_ADSENSE_LUN_COMMUNICATION:
+		OutputIoctlAdditionalSenseCodeQualifier0x08(byAscq);
+		break;
+	case 0x09:
+		OutputIoctlAdditionalSenseCodeQualifier0x09(byAscq);
+		break;
+	case 0x0a:
+		OutputIoctlAdditionalSenseCodeQualifier0x0a(byAscq);
+		break;
+	case 0x0b:
+		OutputIoctlAdditionalSenseCodeQualifier0x0b(byAscq);
+		break;
+	case SCSI_ADSENSE_WRITE_ERROR:
+		OutputIoctlAdditionalSenseCodeQualifier0x0c(byAscq);
+		break;
+	case 0x0d:
+		OutputIoctlAdditionalSenseCodeQualifier0x0d(byAscq);
+		break;
+	case 0x0e:
+		OutputIoctlAdditionalSenseCodeQualifier0x0e(byAscq);
+		break;
+	case 0x10:
+		OutputIoctlAdditionalSenseCodeQualifier0x10(byAscq);
+		break;
+	case 0x11:
+		OutputIoctlAdditionalSenseCodeQualifier0x11(byAscq);
+		break;
+	case 0x12:
+		OutputIoctlAdditionalSenseCodeQualifier0x12(byAscq);
+		break;
+	case 0x13:
+		OutputIoctlAdditionalSenseCodeQualifier0x13(byAscq);
+		break;
+	case SCSI_ADSENSE_TRACK_ERROR:
+		OutputIoctlAdditionalSenseCodeQualifier0x14(byAscq);
+		break;
+	case SCSI_ADSENSE_SEEK_ERROR:
+		OutputIoctlAdditionalSenseCodeQualifier0x15(byAscq);
+		break;
+	case 0x16:
+		OutputIoctlAdditionalSenseCodeQualifier0x16(byAscq);
+		break;
+	case SCSI_ADSENSE_REC_DATA_NOECC:
+		OutputIoctlAdditionalSenseCodeQualifier0x17(byAscq);
+		break;
+	case SCSI_ADSENSE_REC_DATA_ECC:
+		OutputIoctlAdditionalSenseCodeQualifier0x18(byAscq);
+		break;
+	case 0x19:
+		OutputIoctlAdditionalSenseCodeQualifier0x19(byAscq);
+		break;
+	case SCSI_ADSENSE_PARAMETER_LIST_LENGTH:
+		OutputIoctlAdditionalSenseCodeQualifier0x1a(byAscq);
+		break;
+	case 0x1b:
+		OutputIoctlAdditionalSenseCodeQualifier0x1b(byAscq);
+		break;
+	case 0x1c:
+		OutputIoctlAdditionalSenseCodeQualifier0x1c(byAscq);
+		break;
+	case 0x1d:
+		OutputIoctlAdditionalSenseCodeQualifier0x1d(byAscq);
+		break;
+	case 0x1e:
+		OutputIoctlAdditionalSenseCodeQualifier0x1e(byAscq);
+		break;
+	case 0x1f:
+		OutputIoctlAdditionalSenseCodeQualifier0x1f(byAscq);
+		break;
+	case SCSI_ADSENSE_ILLEGAL_COMMAND:
+		OutputIoctlAdditionalSenseCodeQualifier0x20(byAscq);
+		break;
+	case SCSI_ADSENSE_ILLEGAL_BLOCK:
+		OutputIoctlAdditionalSenseCodeQualifier0x21(byAscq);
+		break;
+	case 0x22:
+		OutputIoctlAdditionalSenseCodeQualifier0x22(byAscq);
+		break;
+	case 0x23:
+		OutputIoctlAdditionalSenseCodeQualifier0x23(byAscq);
+		break;
+	case SCSI_ADSENSE_INVALID_CDB:
+		OutputIoctlAdditionalSenseCodeQualifier0x24(byAscq);
+		break;
+	case SCSI_ADSENSE_INVALID_LUN:
+		OutputIoctlAdditionalSenseCodeQualifier0x25(byAscq);
+		break;
+	case SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST:
+		OutputIoctlAdditionalSenseCodeQualifier0x26(byAscq);
+		break;
+	case SCSI_ADSENSE_WRITE_PROTECT:
+		OutputIoctlAdditionalSenseCodeQualifier0x27(byAscq);
+		break;
+	case SCSI_ADSENSE_MEDIUM_CHANGED:
+		OutputIoctlAdditionalSenseCodeQualifier0x28(byAscq);
+		break;
+	case SCSI_ADSENSE_BUS_RESET:
+		OutputIoctlAdditionalSenseCodeQualifier0x29(byAscq);
+		break;
+	case SCSI_ADSENSE_PARAMETERS_CHANGED:
+		OutputIoctlAdditionalSenseCodeQualifier0x2a(byAscq);
+		break;
+	case 0x2b:
+		OutputIoctlAdditionalSenseCodeQualifier0x2b(byAscq);
+		break;
+	case 0x2c:
+		OutputIoctlAdditionalSenseCodeQualifier0x2c(byAscq);
+		break;
+	case SCSI_ADSENSE_INSUFFICIENT_TIME_FOR_OPERATION:
+		OutputIoctlAdditionalSenseCodeQualifier0x2e(byAscq);
+		break;
+	case 0x2f:
+		OutputIoctlAdditionalSenseCodeQualifier0x2f(byAscq);
+		break;
+	case SCSI_ADSENSE_INVALID_MEDIA:
+		OutputIoctlAdditionalSenseCodeQualifier0x30(byAscq);
+		break;
+	case 0x31:
+		OutputIoctlAdditionalSenseCodeQualifier0x31(byAscq);
+		break;
+	case 0x32:
+		OutputIoctlAdditionalSenseCodeQualifier0x32(byAscq);
+		break;
+	case 0x34:
+		OutputIoctlAdditionalSenseCodeQualifier0x34(byAscq);
+		break;
+	case 0x35:
+		OutputIoctlAdditionalSenseCodeQualifier0x35(byAscq);
+		break;
+	case 0x37:
+		OutputIoctlAdditionalSenseCodeQualifier0x37(byAscq);
+		break;
+	case 0x38:
+		OutputIoctlAdditionalSenseCodeQualifier0x38(byAscq);
+		break;
+	case 0x39:
+		OutputIoctlAdditionalSenseCodeQualifier0x39(byAscq);
+		break;
+	case SCSI_ADSENSE_NO_MEDIA_IN_DEVICE:
+		OutputIoctlAdditionalSenseCodeQualifier0x3a(byAscq);
+		break;
+	case SCSI_ADSENSE_POSITION_ERROR:
+		OutputIoctlAdditionalSenseCodeQualifier0x3b(byAscq);
+		break;
+	case 0x3d:
+		OutputIoctlAdditionalSenseCodeQualifier0x3d(byAscq);
+		break;
+	case 0x3e:
+		OutputIoctlAdditionalSenseCodeQualifier0x3e(byAscq);
+		break;
+	case SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED:
+		OutputIoctlAdditionalSenseCodeQualifier0x3f(byAscq);
+		break;
+	case 0x40:
+		OutputIoctlAdditionalSenseCodeQualifier0x40(byAscq);
+		break;
+	case 0x41:
+		OutputIoctlAdditionalSenseCodeQualifier0x41(byAscq);
+		break;
+	case 0x42:
+		OutputIoctlAdditionalSenseCodeQualifier0x42(byAscq);
+		break;
+	case 0x43:
+		OutputIoctlAdditionalSenseCodeQualifier0x43(byAscq);
+		break;
+	case 0x44:
+		OutputIoctlAdditionalSenseCodeQualifier0x44(byAscq);
+		break;
+	case 0x45:
+		OutputIoctlAdditionalSenseCodeQualifier0x45(byAscq);
+		break;
+	case 0x46:
+		OutputIoctlAdditionalSenseCodeQualifier0x46(byAscq);
+		break;
+	case 0x47:
+		OutputIoctlAdditionalSenseCodeQualifier0x47(byAscq);
+		break;
+	case 0x48:
+		OutputIoctlAdditionalSenseCodeQualifier0x48(byAscq);
+		break;
+	case 0x49:
+		OutputIoctlAdditionalSenseCodeQualifier0x49(byAscq);
+		break;
+	case 0x4a:
+		OutputIoctlAdditionalSenseCodeQualifier0x4a(byAscq);
+		break;
+	case 0x4b:
+		OutputIoctlAdditionalSenseCodeQualifier0x4b(byAscq);
+		break;
+	case 0x4c:
+		OutputIoctlAdditionalSenseCodeQualifier0x4c(byAscq);
+		break;
+	case 0x4e:
+		OutputIoctlAdditionalSenseCodeQualifier0x4e(byAscq);
+		break;
+	case 0x51:
+		OutputIoctlAdditionalSenseCodeQualifier0x51(byAscq);
+		break;
+	case 0x53:
+		OutputIoctlAdditionalSenseCodeQualifier0x53(byAscq);
+		break;
+	case 0x55:
+		OutputIoctlAdditionalSenseCodeQualifier0x55(byAscq);
+		break;
+	case 0x57:
+		OutputIoctlAdditionalSenseCodeQualifier0x57(byAscq);
+		break;
+	case 0x58:
+		OutputIoctlAdditionalSenseCodeQualifier0x58(byAscq);
+		break;
+	case 0x59:
+		OutputIoctlAdditionalSenseCodeQualifier0x59(byAscq);
+		break;
+	case SCSI_ADSENSE_OPERATOR_REQUEST:
+		OutputIoctlAdditionalSenseCodeQualifier0x5a(byAscq);
+		break;
+	case 0x5b:
+		OutputIoctlAdditionalSenseCodeQualifier0x5b(byAscq);
+		break;
+	case 0x5c:
+		OutputIoctlAdditionalSenseCodeQualifier0x5c(byAscq);
+		break;
+	case SCSI_ADSENSE_FAILURE_PREDICTION_THRESHOLD_EXCEEDED:
+		OutputIoctlAdditionalSenseCodeQualifier0x5d(byAscq);
+		break;
+	case 0x5e:
+		OutputIoctlAdditionalSenseCodeQualifier0x5e(byAscq);
+		break;
+	case 0x63:
+		OutputIoctlAdditionalSenseCodeQualifier0x63(byAscq);
+		break;
+	case SCSI_ADSENSE_ILLEGAL_MODE_FOR_THIS_TRACK:
+		OutputIoctlAdditionalSenseCodeQualifier0x64(byAscq);
+		break;
+	case 0x65:
+		OutputIoctlAdditionalSenseCodeQualifier0x65(byAscq);
+		break;
+	case 0x67:
+		OutputIoctlAdditionalSenseCodeQualifier0x67(byAscq);
+		break;
+	case 0x68:
+		OutputIoctlAdditionalSenseCodeQualifier0x68(byAscq);
+		break;
+	case SCSI_ADSENSE_COPY_PROTECTION_FAILURE:
+		OutputIoctlAdditionalSenseCodeQualifier0x6f(byAscq);
+		break;
+	case 0x72:
+		OutputIoctlAdditionalSenseCodeQualifier0x72(byAscq);
+		break;
+	case SCSI_ADSENSE_POWER_CALIBRATION_ERROR:
+		OutputIoctlAdditionalSenseCodeQualifier0x73(byAscq);
+		break;
+	case 0x74:
+		OutputIoctlAdditionalSenseCodeQualifier0x74(byAscq);
+		break;
+	default:
+		if (byAsc >= SCSI_ADSENSE_VENDOR_UNIQUE || byAscq >= 0x80) {
+			OutputErrorString(_T(" VENDER UNIQUE ERROR)"));
 		}
-	}
-	BOOL bRet = FALSE;
-	for (INT i = 0; i < sizeof(aSenseAscAscq) / sizeof(INT) / 3 - 1; i++) {
-		if (byAsc == aSenseAscAscq[i][0]) {
-			do {
-				if (byAscq == aSenseAscAscq[i][1]) {
-					OutputErrorString(_T(" %s)"), (LPCTSTR)aSenseAscAscq[i][2]);
-					bRet = TRUE;
-					break;
-				}
-				else {
-					i++;
-				}
-			} while (aSenseAscAscq[i][1] < aSenseAscAscq[i + 1][1]);
+		else {
+			OutputErrorString(_T("OTHER"));
 		}
-		if (bRet) {
-			break;
-		}
-	}
-
-	if (byAsc >= SCSI_ADSENSE_VENDOR_UNIQUE || byAscq >= 0x80) {
-		OutputErrorString(_T(" VENDER UNIQUE ERROR)"));
+		break;
 	}
 	OutputErrorString(_T("\n"));
 }
 
-VOID OutputIoctlInfoScsiStatus(
-	PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb,
-	LPBYTE byScsiStatus,
-	LPCTSTR pszFuncName,
-	LONG lLineNum
+VOID OutputIoctlSenseKey(
+	BYTE byKey
 	)
 {
-	UINT_PTR aScsiStatus[][2] = {
-		{SCSISTAT_GOOD, (UINT_PTR)_T("GOOD")}, 
-		{SCSISTAT_CHECK_CONDITION, (UINT_PTR)_T("CHECK_CONDITION")}, 
-		{SCSISTAT_CONDITION_MET, (UINT_PTR)_T("CONDITION_MET")}, 
-		{SCSISTAT_BUSY, (UINT_PTR)_T("BUSY")}, 
-		{SCSISTAT_INTERMEDIATE, (UINT_PTR)_T("INTERMEDIATE")}, 
-		{SCSISTAT_INTERMEDIATE_COND_MET, (UINT_PTR)_T("INTERMEDIATE_COND_MET")}, 
-		{SCSISTAT_RESERVATION_CONFLICT, (UINT_PTR)_T("RESERVATION_CONFLICT")}, 
-		{SCSISTAT_COMMAND_TERMINATED, (UINT_PTR)_T("COMMAND_TERMINATED")}, 
-		{SCSISTAT_QUEUE_FULL, (UINT_PTR)_T("QUEUE_FULL")}
-	};
-	if (swb->ScsiPassThroughDirect.ScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		BYTE key = (BYTE)(swb->SenseInfoBuffer[2] & 0x0F);
-		BYTE ASC = swb->SenseInfoBuffer[12];
-		BYTE ASCQ = swb->SenseInfoBuffer[13];
-		if (key != SCSI_SENSE_NO_SENSE || ASC != SCSI_ADSENSE_NO_SENSE || ASCQ != 0x00) {
-			for (UINT i = 0; i < sizeof(aScsiStatus) / sizeof(UINT) / 2; i++) {
-				if (swb->ScsiPassThroughDirect.ScsiStatus == aScsiStatus[i][0]) {
-					OutputErrorString(
-						_T("\n[F:%s][L:%d] SCSI bus status codes:%02x-%s\n"), 
-						pszFuncName, lLineNum, (UINT)aScsiStatus[i][0], (LPCTSTR)aScsiStatus[i][1]);
-					OutputIoctlInfoSense(key, ASC, ASCQ);
-					break;
-				}
-			}
-		}
-		else {
-			// for PLEXTOR PX-320A
-			*byScsiStatus = SCSISTAT_GOOD;
-		}
+	switch (byKey) {
+	case SCSI_SENSE_NO_SENSE:
+		OutputErrorString(_T("NO_SENSE"));
+		break;
+	case SCSI_SENSE_RECOVERED_ERROR:
+		OutputErrorString(_T("RECOVERED_ERROR"));
+		break;
+	case SCSI_SENSE_NOT_READY:
+		OutputErrorString(_T("NOT_READY"));
+		break;
+	case SCSI_SENSE_MEDIUM_ERROR:
+		OutputErrorString(_T("MEDIUM_ERROR"));
+		break;
+	case SCSI_SENSE_HARDWARE_ERROR:
+		OutputErrorString(_T("HARDWARE_ERROR"));
+		break;
+	case SCSI_SENSE_ILLEGAL_REQUEST:
+		OutputErrorString(_T("ILLEGAL_REQUEST"));
+		break;
+	case SCSI_SENSE_UNIT_ATTENTION:
+		OutputErrorString(_T("UNIT_ATTENTION"));
+		break;
+	case SCSI_SENSE_DATA_PROTECT:
+		OutputErrorString(_T("DATA_PROTECT"));
+		break;
+	case SCSI_SENSE_BLANK_CHECK:
+		OutputErrorString(_T("BLANK_CHECK"));
+		break;
+	case SCSI_SENSE_UNIQUE:
+		OutputErrorString(_T("UNIQUE"));
+		break;
+	case SCSI_SENSE_COPY_ABORTED:
+		OutputErrorString(_T("COPY_ABORTED"));
+		break;
+	case SCSI_SENSE_ABORTED_COMMAND:
+		OutputErrorString(_T("ABORTED_COMMAND"));
+		break;
+	case SCSI_SENSE_EQUAL:
+		OutputErrorString(_T("EQUAL"));
+		break;
+	case SCSI_SENSE_VOL_OVERFLOW:
+		OutputErrorString(_T("VOL_OVERFLOW"));
+		break;
+	case SCSI_SENSE_MISCOMPARE:
+		OutputErrorString(_T("MISCOMPARE"));
+		break;
+	case SCSI_SENSE_RESERVED:
+		OutputErrorString(_T("RESERVED"));
+		break;
+	default:
+		OutputErrorString(_T("UNKNOWN"));
+		break;
+	}
+	OutputErrorString(_T(" - "));
+}
+
+VOID OutputIoctlSenseData(
+	PSENSE_DATA pSenseData
+	)
+{
+	BYTE byKey = pSenseData->SenseKey;
+	BYTE byAsc = pSenseData->AdditionalSenseCode;
+	BYTE byAscq = pSenseData->AdditionalSenseCodeQualifier;
+
+	OutputErrorString(
+		_T("SenseData Key:Asc:Ascq %02x:%02x:%02x, "), byKey, byAsc, byAscq);
+	OutputIoctlSenseKey(byKey);
+	OutputIoctlAdditionalSenseCode(byAsc, byAscq);
+#ifdef _DEBUG
+	OutputErrorString(
+		_T("OtherSenseData\n")
+		_T("                  ErrorCode: %#x\n")
+		_T("                      Valid: %s\n")
+		_T("              SegmentNumber: %u\n")
+		_T("            IncorrectLength: %u\n")
+		_T("                 EndOfMedia: %s\n")
+		_T("                   FileMark: %s\n"),
+		pSenseData->ErrorCode,
+		BOOLEAN_TO_STRING_YES_NO(pSenseData->Valid),
+		pSenseData->SegmentNumber,
+		pSenseData->IncorrectLength,
+		BOOLEAN_TO_STRING_YES_NO(pSenseData->EndOfMedia),
+		BOOLEAN_TO_STRING_YES_NO(pSenseData->FileMark));
+	if (pSenseData->Valid) {
+		OutputErrorString(
+			_T("                Information: %u%u%u%u\n"),
+			pSenseData->Information[0],
+			pSenseData->Information[1],
+			pSenseData->Information[2],
+			pSenseData->Information[3]);
+	}
+	OutputErrorString(
+		_T("      AdditionalSenseLength: %u\n")
+		_T(" CommandSpecificInformation: %u%u%u%u\n")
+		_T("   FieldReplaceableUnitCode: %u\n")
+		_T("           SenseKeySpecific: %u%u%u\n"),
+		pSenseData->AdditionalSenseLength,
+		pSenseData->CommandSpecificInformation[0],
+		pSenseData->CommandSpecificInformation[1],
+		pSenseData->CommandSpecificInformation[2],
+		pSenseData->CommandSpecificInformation[3],
+		pSenseData->FieldReplaceableUnitCode,
+		pSenseData->SenseKeySpecific[0],
+		pSenseData->SenseKeySpecific[1],
+		pSenseData->SenseKeySpecific[2]);
+#endif
+}
+
+VOID OutputIoctlScsiStatus(
+	BYTE byScsiStatus
+	)
+{
+	OutputErrorString(
+		_T("\nScsiStatus: %02x-"), byScsiStatus);
+	switch (byScsiStatus) {
+	case SCSISTAT_GOOD:
+		OutputErrorString(_T("GOOD\n"));
+		break;
+	case SCSISTAT_CHECK_CONDITION:
+		OutputErrorString(_T("CHECK_CONDITION\n"));
+		break;
+	case SCSISTAT_CONDITION_MET:
+		OutputErrorString(_T("CONDITION_MET\n"));
+		break;
+	case SCSISTAT_BUSY:
+		OutputErrorString(_T("BUSY\n"));
+		break;
+	case SCSISTAT_INTERMEDIATE:
+		OutputErrorString(_T("INTERMEDIATE\n"));
+		break;
+	case SCSISTAT_INTERMEDIATE_COND_MET:
+		OutputErrorString(_T("INTERMEDIATE_COND_MET\n"));
+		break;
+	case SCSISTAT_RESERVATION_CONFLICT:
+		OutputErrorString(_T("RESERVATION_CONFLICT\n"));
+		break;
+	case SCSISTAT_COMMAND_TERMINATED:
+		OutputErrorString(_T("COMMAND_TERMINATED\n"));
+		break;
+	case SCSISTAT_QUEUE_FULL:
+		OutputErrorString(_T("QUEUE_FULL\n"));
+		break;
+	default:
+		OutputErrorString(_T("UNKNOWN\n"));
+		break;
 	}
 }
 
@@ -441,13 +3080,13 @@ VOID OutputIoctlScsiAddress(
 	PDEVICE_DATA pDevData
 	)
 {
-	OutputDriveLog(
-		_T("IoctlScsiGetAddress\n")
-		_T("\t    Length: %x\n")
-		_T("\tPortNumber: %x\n")
-		_T("\t    PathId: %x\n")
-		_T("\t  TargetId: %x\n")
-		_T("\t       Lun: %x\n"),
+	OutputDriveLogA(
+		"IoctlScsiGetAddress\n"
+		"\t    Length: %u\n"
+		"\tPortNumber: %u\n"
+		"\t    PathId: %u\n"
+		"\t  TargetId: %u\n"
+		"\t       Lun: %u\n",
 		pDevData->address.Length,
 		pDevData->address.PortNumber,
 		pDevData->address.PathId,
@@ -456,21 +3095,22 @@ VOID OutputIoctlScsiAddress(
 }
 
 VOID OutputIoctlStorageAdaptorDescriptor(
-	PSTORAGE_ADAPTER_DESCRIPTOR pAdapterDescriptor
+	PSTORAGE_ADAPTER_DESCRIPTOR pAdapterDescriptor,
+	PBOOL pBusTypeUSB
 	)
 {
-	OutputDriveLog(
-		_T("StorageAdapterDescriptor\n")
-		_T("\t              Version: %d\n")
-		_T("\t                 Size: %d\n")
-		_T("\tMaximumTransferLength: %d (bytes)\n")
-		_T("\t MaximumPhysicalPages: %d\n")
-		_T("\t        AlignmentMask: %d\n")
-		_T("\t       AdapterUsesPio: %s\n")
-		_T("\t     AdapterScansDown: %s\n")
-		_T("\t      CommandQueueing: %s\n")
-		_T("\t  AcceleratedTransfer: %s\n")
-		_T("\t              BusType: "),
+	OutputDriveLogA(
+		"StorageAdapterDescriptor\n"
+		"\t              Version: %u\n"
+		"\t                 Size: %u\n"
+		"\tMaximumTransferLength: %u (bytes)\n"
+		"\t MaximumPhysicalPages: %u\n"
+		"\t        AlignmentMask: %u\n"
+		"\t       AdapterUsesPio: %s\n"
+		"\t     AdapterScansDown: %s\n"
+		"\t      CommandQueueing: %s\n"
+		"\t  AcceleratedTransfer: %s\n"
+		"\t              BusType: ",
 		pAdapterDescriptor->Version,
 		pAdapterDescriptor->Size,
 		pAdapterDescriptor->MaximumTransferLength,
@@ -482,163 +3122,181 @@ VOID OutputIoctlStorageAdaptorDescriptor(
 		BOOLEAN_TO_STRING_TRUE_FALSE(pAdapterDescriptor->AcceleratedTransfer));
 	switch (pAdapterDescriptor->BusType) {
 	case STORAGE_BUS_TYPE::BusTypeUnknown:
-		OutputDriveLog(_T("BusTypeUnknown\n"));
+		OutputDriveLogA("BusTypeUnknown\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeScsi:
-		OutputDriveLog(_T("BusTypeScsi\n"));
+		OutputDriveLogA("BusTypeScsi\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeAtapi:
-		OutputDriveLog(_T("BusTypeAtapi\n"));
+		OutputDriveLogA("BusTypeAtapi\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeAta:
-		OutputDriveLog(_T("BusTypeAta\n"));
+		OutputDriveLogA("BusTypeAta\n");
 		break;
 	case STORAGE_BUS_TYPE::BusType1394:
-		OutputDriveLog(_T("BusType1394\n"));
+		OutputDriveLogA("BusType1394\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeSsa:
-		OutputDriveLog(_T("BusTypeSsa\n"));
+		OutputDriveLogA("BusTypeSsa\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeFibre:
-		OutputDriveLog(_T("BusTypeFibre\n"));
+		OutputDriveLogA("BusTypeFibre\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeUsb:
-		OutputDriveLog(_T("BusTypeUsb\n"));
+		OutputDriveLogA("BusTypeUsb\n");
+		*pBusTypeUSB = TRUE;
 		break;
 	case STORAGE_BUS_TYPE::BusTypeRAID:
-		OutputDriveLog(_T("BusTypeRAID\n"));
+		OutputDriveLogA("BusTypeRAID\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeiScsi:
-		OutputDriveLog(_T("BusTypeiScsi\n"));
+		OutputDriveLogA("BusTypeiScsi\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeSas:
-		OutputDriveLog(_T("BusTypeSas\n"));
+		OutputDriveLogA("BusTypeSas\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeSata:
-		OutputDriveLog(_T("BusTypeSata\n"));
+		OutputDriveLogA("BusTypeSata\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeSd:
-		OutputDriveLog(_T("BusTypeSd\n"));
+		OutputDriveLogA("BusTypeSd\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeMmc:
-		OutputDriveLog(_T("BusTypeMmc\n"));
+		OutputDriveLogA("BusTypeMmc\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeVirtual:
-		OutputDriveLog(_T("BusTypeVirtual\n"));
+		OutputDriveLogA("BusTypeVirtual\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeFileBackedVirtual:
-		OutputDriveLog(_T("BusTypeFileBackedVirtual\n"));
+		OutputDriveLogA("BusTypeFileBackedVirtual\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeMax:
-		OutputDriveLog(_T("BusTypeMax\n"));
+		OutputDriveLogA("BusTypeMax\n");
 		break;
 	case STORAGE_BUS_TYPE::BusTypeMaxReserved:
-		OutputDriveLog(_T("BusTypeMaxReserved\n"));
+		OutputDriveLogA("BusTypeMaxReserved\n");
 		break;
 	default:
-		OutputDriveLog(_T("BusType???\n"));
+		OutputDriveLogA("BusType???\n");
 		break;
 	}
-	OutputDriveLog(
-		_T("\t      BusMajorVersion: %d\n")
-		_T("\t      BusMinorVersion: %d\n"),
+	OutputDriveLogA(
+		"\t      BusMajorVersion: %u\n"
+		"\t      BusMinorVersion: %u\n",
 		pAdapterDescriptor->BusMajorVersion,
 		pAdapterDescriptor->BusMinorVersion);
 }
 
 VOID OutputIoctlFloppyInfo(
-	PDISK_GEOMETRY pGeom
+	PDISK_GEOMETRY pGeom,
+	DWORD dwGeomNum
 	)
 {
-	OutputDiscLog(_T("MediaType: "));
-	switch (pGeom[0].MediaType) {
-	case Unknown:
-		OutputDiscLog(_T("Format is unknown\n"));
-		break;
-	case F5_1Pt2_512:
-		OutputDiscLog(_T("5.25, 1.2MB, 512 bytes/sector\n"));
-		break;
-	case F3_1Pt44_512:
-		OutputDiscLog(_T("3.5, 1.44MB, 512 bytes/sector\n"));
-		break;
-	case F3_2Pt88_512:
-		OutputDiscLog(_T("3.5, 2.88MB, 512 bytes/sector\n"));
-		break;
-	case F3_20Pt8_512:
-		OutputDiscLog(_T("3.5, 20.8MB, 512 bytes/sector\n"));
-		break;
-	case F3_720_512:
-		OutputDiscLog(_T("3.5, 720KB, 512 bytes/sector\n"));
-		break;
-	case F5_360_512:
-		OutputDiscLog(_T("5.25, 360KB, 512 bytes/sector\n"));
-		break;
-	case F5_320_512:
-		OutputDiscLog(_T("5.25, 320KB, 512 bytes/sector\n"));
-		break;
-	case F5_320_1024:
-		OutputDiscLog(_T("5.25, 320KB, 1024 bytes/sector\n"));
-		break;
-	case F5_180_512:
-		OutputDiscLog(_T("5.25, 180KB, 512 bytes/sector\n"));
-		break;
-	case F5_160_512:
-		OutputDiscLog(_T("5.25, 160KB, 512 bytes/sector\n"));
-		break;
-	case RemovableMedia:
-		OutputDiscLog(_T("Removable media other than floppy\n"));
-		break;
-	case FixedMedia:
-		OutputDiscLog(_T("Fixed hard disk media\n"));
-		break;
-	case F3_120M_512:
-		OutputDiscLog(_T("3.5, 120M Floppy\n"));
-		break;
-	case F3_640_512:
-		OutputDiscLog(_T("3.5, 640KB, 512 bytes/sector\n"));
-		break;
-	case F5_640_512:
-		OutputDiscLog(_T("5.25, 640KB, 512 bytes/sector\n"));
-		break;
-	case F5_720_512:
-		OutputDiscLog(_T("5.25, 720KB, 512 bytes/sector\n"));
-		break;
-	case F3_1Pt2_512:
-		OutputDiscLog(_T("3.5, 1.2Mb, 512 bytes/sector\n"));
-		break;
-	case F3_1Pt23_1024:
-		OutputDiscLog(_T("3.5, 1.23Mb, 1024 bytes/sector\n"));
-		break;
-	case F5_1Pt23_1024:
-		OutputDiscLog(_T("5.25, 1.23MB, 1024 bytes/sector\n"));
-		break;
-	case F3_128Mb_512:
-		OutputDiscLog(_T("3.5 MO, 128Mb, 512 bytes/sector\n"));
-		break;
-	case F3_230Mb_512:
-		OutputDiscLog(_T("3.5 MO, 230Mb, 512 bytes/sector\n"));
-		break;
-	case F8_256_128:
-		OutputDiscLog(_T("8, 256KB, 128 bytes/sector\n"));
-		break;
-	case F3_200Mb_512:
-		OutputDiscLog(_T("3.5, 200M Floppy (HiFD)\n"));
-		break;
-	case F3_240M_512:
-		OutputDiscLog(_T("3.5, 240Mb Floppy (HiFD)\n"));
-		break;
-	case F3_32M_512:
-		OutputDiscLog(_T("3.5, 32Mb Floppy\n"));
-		break;
-	default:
-		OutputDiscLog(_T("Unknown\n"));
-		break;
+	if (dwGeomNum > 1) {
+		OutputDiscLogA("SupportedMediaType\n");
 	}
-	OutputDiscLog(
-		_T("\t        Cylinders: %d\n")
-		_T("\tTracksPerCylinder: %d\n")
-		_T("\t  SectorsPerTrack: %d\n"),
-		pGeom[0].Cylinders.LowPart,
-		pGeom[0].TracksPerCylinder,
-		pGeom[0].SectorsPerTrack);
+	else if (dwGeomNum == 1) {
+		OutputDiscLogA("CurrentMediaType\n");
+	}
+	for (DWORD i = 0; i < dwGeomNum; i++) {
+		OutputDiscLogA("\t        MediaType: ");
+		switch (pGeom[i].MediaType) {
+		case Unknown:
+			OutputDiscLogA("Format is unknown\n");
+			break;
+		case F5_1Pt2_512:
+			OutputDiscLogA("5.25, 1.2MB, 512 bytes/sector\n");
+			break;
+		case F3_1Pt44_512:
+			OutputDiscLogA("3.5, 1.44MB, 512 bytes/sector\n");
+			break;
+		case F3_2Pt88_512:
+			OutputDiscLogA("3.5, 2.88MB, 512 bytes/sector\n");
+			break;
+		case F3_20Pt8_512:
+			OutputDiscLogA("3.5, 20.8MB, 512 bytes/sector\n");
+			break;
+		case F3_720_512:
+			OutputDiscLogA("3.5, 720KB, 512 bytes/sector\n");
+			break;
+		case F5_360_512:
+			OutputDiscLogA("5.25, 360KB, 512 bytes/sector\n");
+			break;
+		case F5_320_512:
+			OutputDiscLogA("5.25, 320KB, 512 bytes/sector\n");
+			break;
+		case F5_320_1024:
+			OutputDiscLogA("5.25, 320KB, 1024 bytes/sector\n");
+			break;
+		case F5_180_512:
+			OutputDiscLogA("5.25, 180KB, 512 bytes/sector\n");
+			break;
+		case F5_160_512:
+			OutputDiscLogA("5.25, 160KB, 512 bytes/sector\n");
+			break;
+		case RemovableMedia:
+			OutputDiscLogA("Removable media other than floppy\n");
+			break;
+		case FixedMedia:
+			OutputDiscLogA("Fixed hard disk media\n");
+			break;
+		case F3_120M_512:
+			OutputDiscLogA("3.5, 120M Floppy\n");
+			break;
+		case F3_640_512:
+			OutputDiscLogA("3.5, 640KB, 512 bytes/sector\n");
+			break;
+		case F5_640_512:
+			OutputDiscLogA("5.25, 640KB, 512 bytes/sector\n");
+			break;
+		case F5_720_512:
+			OutputDiscLogA("5.25, 720KB, 512 bytes/sector\n");
+			break;
+		case F3_1Pt2_512:
+			OutputDiscLogA("3.5, 1.2Mb, 512 bytes/sector\n");
+			break;
+		case F3_1Pt23_1024:
+			OutputDiscLogA("3.5, 1.23Mb, 1024 bytes/sector\n");
+			break;
+		case F5_1Pt23_1024:
+			OutputDiscLogA("5.25, 1.23MB, 1024 bytes/sector\n");
+			break;
+		case F3_128Mb_512:
+			OutputDiscLogA("3.5 MO, 128Mb, 512 bytes/sector\n");
+			break;
+		case F3_230Mb_512:
+			OutputDiscLogA("3.5 MO, 230Mb, 512 bytes/sector\n");
+			break;
+		case F8_256_128:
+			OutputDiscLogA("8, 256KB, 128 bytes/sector\n");
+			break;
+		case F3_200Mb_512:
+			OutputDiscLogA("3.5, 200M Floppy (HiFD)\n");
+			break;
+		case F3_240M_512:
+			OutputDiscLogA("3.5, 240Mb Floppy (HiFD)\n");
+			break;
+		case F3_32M_512:
+			OutputDiscLogA("3.5, 32Mb Floppy\n");
+			break;
+		default:
+			OutputDiscLogA("Unknown\n");
+			break;
+		}
+
+		DWORD dwDiskSize = pGeom[i].Cylinders.LowPart * pGeom[i].TracksPerCylinder *
+			pGeom[i].SectorsPerTrack * pGeom[i].BytesPerSector;
+		OutputDiscLogA(
+			"\t        Cylinders: %u\n"
+			"\tTracksPerCylinder: %u\n"
+			"\t  SectorsPerTrack: %u\n"
+			"\t   BytesPerSector: %u (Bytes)\n"
+			"\t--------------------------\n"
+			"\t         DiskSize: %u (Bytes)\n\n",
+			pGeom[i].Cylinders.LowPart,
+			pGeom[i].TracksPerCylinder,
+			pGeom[i].SectorsPerTrack,
+			pGeom[i].BytesPerSector,
+			dwDiskSize);
+	}
 }
