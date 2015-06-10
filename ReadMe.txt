@@ -158,3 +158,6 @@ create .gdi file
 
 [other]
 create unicode version
+
+**2012-12-28
+support CDG(CD Graphics)

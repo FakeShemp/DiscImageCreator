@@ -25,12 +25,10 @@
 */
 INT AlignSubcode(
 	CONST PUCHAR pBuf, 
-	PUCHAR Subcode,
-	PUCHAR SubcodeRtoW
+	PUCHAR Subcode
 	)
 {
 	ZeroMemory(Subcode, CD_RAW_READ_SUBCODE_SIZE);
-	UNREFERENCED_PARAMETER(SubcodeRtoW);
 
 	INT p = 0, q = 1, r = 2, s = 3, t = 4, u = 5, v = 6, w = 7;
 	INT mask = 0x80;
@@ -147,6 +145,6 @@ void LittleToBig(
 	)
 {
 	for(INT a = 0; a < cnt; a++) {
-		out[a] = (_TCHAR)WORDSWAP(in[a]);
+		REVERSE_BYTES_SHORT(&out[a], &in[a]);
 	}
 }

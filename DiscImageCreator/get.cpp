@@ -16,8 +16,7 @@ BOOL GetDriveOffset(
 		exit(-1);
 	}
 
-	CHAR szProduct[16+1];
-	ZeroMemory(szProduct, sizeof(szProduct));
+	CHAR szProduct[16+1] = {0};
 	for(INT src = 0, dst = 0; dst < sizeof(szProduct) - 1; dst++) {
 		if(pszProductId[dst] == ' ' && (pszProductId[dst+1] == ' ' || 
 			pszProductId[dst+1] == '\0')) {
@@ -26,8 +25,7 @@ BOOL GetDriveOffset(
 		szProduct[src++] = pszProductId[dst];
 	}
 
-	PCHAR trimId[5];
-	ZeroMemory(trimId, sizeof(trimId));
+	PCHAR trimId[5] = {0};
 	PCHAR id = NULL;
 	trimId[0] = strtok(szProduct, " ");
 	// get model pszString (ex. PX-755A)
@@ -44,10 +42,8 @@ BOOL GetDriveOffset(
 		}
 	}
 	if(id != NULL) {
-		PCHAR tp[10];
-		CHAR buf[1024];
-		ZeroMemory(tp, sizeof(tp));
-		ZeroMemory(buf, sizeof(buf));
+		PCHAR tp[10] = {0};
+		CHAR buf[1024] = {0};
 
 		while((fgets(buf, sizeof(buf), fpDrive)) != NULL) {
 			tp[0] = strtok(buf, " 	"); // space & tab

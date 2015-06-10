@@ -31,8 +31,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 		return TRUE;
 	}
 
-	TCHAR szBuf[7];
-	ZeroMemory(szBuf, sizeof(szBuf));
+	TCHAR szBuf[7] = {0};
 	_sntprintf(szBuf, 7, _T("\\\\.\\%c:"), argv[2][0]);
 	HANDLE hDevice = CreateFile(szBuf, GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
@@ -52,29 +51,23 @@ int exec(_TCHAR* argv[], ExecType execType)
 	if(!bRet) {
 		return FALSE;
 	}
-	CHAR pszVendorId[8+1];
-	CHAR pszProductId[16+1];
-	ZeroMemory(pszVendorId, sizeof(pszVendorId));
-	ZeroMemory(pszProductId, sizeof(pszProductId));
+	CHAR pszVendorId[8+1] = {0};
+	CHAR pszProductId[16+1] = {0};
 	FILE* fpLog = NULL;
 	BOOL bDC = FALSE;
 	if(execType == ra && !_tcscmp(argv[5], _T("44990")) && !_tcscmp(argv[6], _T("549150"))) {
 		bDC = TRUE;
 	}
 #ifndef _DEBUG
-	_TCHAR szLogtxt[12];
-	ZeroMemory(szLogtxt, sizeof(szLogtxt));
+	_TCHAR szLogtxt[12] = {0};
 	if(bDC) {
 		_tcscpy(szLogtxt, _T("_dc.log.txt"));
 	}
 	else {
 		_tcscpy(szLogtxt, _T(".log.txt"));
 	}
-#ifdef UNICODE
-	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T("w, ccs=UTF-8"), 0, 0);
-#else
-	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T("w"), 0, 0);
-#endif
+	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T(WFLAG), 0, 0);
+
 	if(!fpLog) {
 		OutputErrorString(_T("Failed to open file %s\n"), szLogtxt);
 		return FALSE;
@@ -86,10 +79,11 @@ int exec(_TCHAR* argv[], ExecType execType)
 	}
 	pszVendorId[8] = '\0';
 	pszProductId[16] = '\0';
-	Init();
+
 	USHORT usFeatureProfileType = ProfileInvalid;
 	BOOL bCanCDText = FALSE;
 	BOOL bC2ErrorData = FALSE;
+
 	SetCDSpeed(hDevice, _ttoi(argv[3]), fpLog);
 	bRet = ReadConfiguration(hDevice, &usFeatureProfileType, &bCanCDText, &bC2ErrorData, fpLog);
 	if(!bRet) {
@@ -100,13 +94,8 @@ int exec(_TCHAR* argv[], ExecType execType)
 		usFeatureProfileType == ProfileCdRewritable ||
 		(usFeatureProfileType == ProfileInvalid && (execType == ra))) {
 		INT nLength = 0;
-		TCHAR out[_MAX_PATH];
-		ZeroMemory(out, sizeof(out));
-#ifdef UNICODE
-		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T("w, ccs=UTF-8"), 0, 0);
-#else
-		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T("w"), 0, 0);
-#endif
+		TCHAR out[_MAX_PATH] = {0};
+		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
 		if(!fpCcd) {
 			OutputErrorString(_T("Failed to open file .ccd\n"));
 			return FALSE;
@@ -125,8 +114,9 @@ int exec(_TCHAR* argv[], ExecType execType)
 		}
 
 		INT nCombinedOffset = 0;
+		BOOL bAudioOnly = TRUE;
 		bRet = ReadCDForSearchingOffset(hDevice, pszVendorId, 
-			pszProductId, &nCombinedOffset, fpLog);
+			pszProductId, &nCombinedOffset, &bAudioOnly, fpLog);
 
 		if(execType == rd) {
 			bRet = ReadCDPartial(hDevice, argv[4], pszVendorId,
@@ -138,7 +128,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 		}
 		else if(bRet == TRUE && execType == rall) {
 			bRet = ReadCDAll(hDevice, argv[4], pszVendorId, 
-				nCombinedOffset, nLength, bC2ErrorData, fpLog, fpCcd);
+				nCombinedOffset, nLength, bC2ErrorData, bAudioOnly, fpLog, fpCcd);
 			fclose(fpCcd);
 		}
 	}
@@ -298,8 +288,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	else {
 		time_t now;
 		struct tm* ts;
-		_TCHAR buf[128];
-		ZeroMemory(buf, sizeof(buf));
+		_TCHAR buf[128] = {0};
+
 		now = time(NULL);
 		ts = localtime(&now);
 		_tcsftime(buf, sizeof(buf), _T("%Y-%m-%d(%a) %H:%M:%S"), ts);

@@ -5,18 +5,24 @@
 
 CDROM_TOC toc = {0};
 // store start & end LBA
-INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2];
-INT aSessionNum[MAXIMUM_NUMBER_TRACKS];
+INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2] = {0};
+INT aSessionNum[MAXIMUM_NUMBER_TRACKS] = {0};
 INT nFirstDataLBA = 0;
 INT nLastLBAof1stSession = -1;
 INT nStartLBAof2ndSession = -1;
 INT nAdjustSectorNum = 0;
 
+#define PARAGRAPH_BOUNDARY_NUM 0x0F
+
 inline PVOID ConvParagraphBoundary(
 	PVOID pv
 	)
 {
-	return ((PVOID)(((ULONG_PTR)pv + 0x10) & 0xFFFFFFF0));
+#ifdef WIN64
+	return ((PVOID)(((ULONG_PTR)pv + PARAGRAPH_BOUNDARY_NUM) & 0xFFFFFFFFFFFFFFF0));
+#else
+	return ((PVOID)(((DWORD)pv + PARAGRAPH_BOUNDARY_NUM) & 0xFFFFFFF0));
+#endif
 }
 
 BOOL ExecCommand(
@@ -30,8 +36,8 @@ BOOL ExecCommand(
 	INT nLineNum
 	)
 {
-	SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb;
-	ZeroMemory(&swb, sizeof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER));
+	SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb = {0};
+
 	swb.ScsiPassThroughDirect.Length = sizeof(SCSI_PASS_THROUGH_DIRECT);
 	swb.ScsiPassThroughDirect.CdbLength = byCdbCmdLength;
 	swb.ScsiPassThroughDirect.SenseInfoLength = SPTWB_SENSE_LENGTH;
@@ -44,6 +50,8 @@ BOOL ExecCommand(
 	memcpy(swb.ScsiPassThroughDirect.Cdb, pbyCdbCmd, byCdbCmdLength);
 	ULONG ulLength = sizeof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER);
 
+	SetLastError(NO_ERROR);
+
 	ULONG ulReturned = 0;
 	BOOL bRet = DeviceIoControl(hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT, &swb, 
 		ulLength, &swb, ulLength, &ulReturned, NULL);
@@ -55,17 +63,15 @@ BOOL ExecCommand(
 		OutputErrorString(
 			_T("\nDeviceIoControl with SCSI_PASS_THROUGH_DIRECT command failed [F:%s][L:%d]\n"), 
 			pszFuncname, nLineNum);
+		LPVOID lpMsgBuf;
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
+
+		OutputErrorString(_T("%d, %s\n"), GetLastError(), lpMsgBuf);
+		LocalFree(lpMsgBuf);
 	}
 	return bRet;
-}
-
-void Init(
-	void
-	)
-{
-	ZeroMemory(aTocLBA, sizeof(aTocLBA));
-	ZeroMemory(aSessionNum, sizeof(aSessionNum));
-	InitForOutput();
 }
 
 BOOL ReadCDAll(
@@ -75,6 +81,7 @@ BOOL ReadCDAll(
 	INT nWriteOffset,
 	INT nLength,
 	BOOL bC2ErrorData,
+	BOOL bAudioOnly,
 	FILE* fpLog,
 	FILE* fpCcd
 	)
@@ -108,18 +115,10 @@ BOOL ReadCDAll(
 		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
 			throw _T("Failed to open .sub\n");
 		}
-#ifdef UNICODE
-		if(NULL == (fpCue = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cue"), _T("w, ccs=UTF-8"), 0, 0))) {
-#else
-		if(NULL == (fpCue = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cue"), _T("w"), 0, 0))) {
-#endif
+		if(NULL == (fpCue = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cue"), _T(WFLAG), 0, 0))) {
 			throw _T("Failed to open .cue\n");
 		}
-#ifdef UNICODE
-		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub.txt"), _T("w, ccs=UTF-8"), 0, 0))) {
-#else
-		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub.txt"), _T("w"), 0, 0))) {
-#endif
+		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub.txt"), _T(WFLAG), 0, 0))) {
 			throw _T("Failed to open .sub.txt\n");
 		}
 
@@ -135,11 +134,8 @@ BOOL ReadCDAll(
 			throw _T("Failed to open scramble.bin\n");
 		}
 		size_t dwTrackAllocSize = (size_t)toc.LastTrack + 1;
-#ifdef WIN64
-		size_t dwTrackPointerAllocSize = dwTrackAllocSize * sizeof(INT64);
-#else
-		size_t dwTrackPointerAllocSize = dwTrackAllocSize * sizeof(INT);
-#endif
+		size_t dwTrackPointerAllocSize = dwTrackAllocSize * sizeof(_INT);
+
 		if(NULL == (aLBAStart = (INT**)malloc(dwTrackPointerAllocSize))) {
 			throw _T("Failed to alloc memory aLBAStart\n");
 		}
@@ -155,13 +151,9 @@ BOOL ReadCDAll(
 		if(NULL == (aISRC = (BOOL*)malloc(dwTrackPointerAllocSize))) {
 			throw _T("Failed to alloc memory aISRC\n");
 		}
-#ifdef WIN64
-		size_t dwIndexAllocSize = (size_t)MAXIMUM_NUMBER_INDEXES * sizeof(INT64);
-		size_t dwRangeAllocSize = (size_t)2 * sizeof(INT64);
-#else
-		size_t dwIndexAllocSize = (size_t)MAXIMUM_NUMBER_INDEXES * sizeof(INT);
-		size_t dwRangeAllocSize = (size_t)2 * sizeof(INT);
-#endif
+		size_t dwIndexAllocSize = (size_t)MAXIMUM_NUMBER_INDEXES * sizeof(_INT);
+		size_t dwRangeAllocSize = (size_t)2 * sizeof(_INT);
+
 		for(INT h = 0; h < toc.LastTrack + 1; h++) {
 			if(NULL == (aLBAStart[h] = (INT*)malloc(dwIndexAllocSize))) {
 				throw _T("Failed to alloc memory aLBAStart[h]\n");
@@ -176,16 +168,16 @@ BOOL ReadCDAll(
 		ZeroMemory(aMode, dwTrackAllocSize);
 		ZeroMemory(aISRC, dwTrackPointerAllocSize);
 
-		if(NULL == (aBuf = (PUCHAR)malloc(ulBufLen + 0x10))) {
+		if(NULL == (aBuf = (PUCHAR)malloc(ulBufLen + PARAGRAPH_BOUNDARY_NUM))) {
 			throw _T("Failed to alloc memory aBuf[h]\n");
 		}
-		ZeroMemory(aBuf, ulBufLen + 0x10);
+		ZeroMemory(aBuf, ulBufLen + PARAGRAPH_BOUNDARY_NUM);
 		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
-		UCHAR aCmd[CDB12GENERIC_LENGTH];
-		ZeroMemory(aCmd, sizeof(aCmd));
+		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
 
 		UCHAR byTransferLen = 1;
 		aCmd[0] = SCSIOP_READ_CD;
+		aCmd[1] = READ_CD_FLAG::All;
 		aCmd[8] = byTransferLen;
 		aCmd[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
 			READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
@@ -195,9 +187,12 @@ BOOL ReadCDAll(
 		aCmd[10] = READ_CD_FLAG::PtoW;
 
 		UCHAR byScsiStatus = 0;
+		BOOL bCDG = FALSE;
+		FILE* fpCdg = NULL;
+
 		for(INT n = 0; ; n++) {
+			// check VolumeDescriptor
 			if((toc.TrackData[0].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-				aCmd[1] = READ_CD_FLAG::All;
 				aCmd[5] = LOBYTE(LOWORD(n));
 				if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 					ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
@@ -227,13 +222,28 @@ BOOL ReadCDAll(
 				}
 			}
 			else {
+				// check CDG
+				n = 75;
+				aCmd[5] = LOBYTE(LOWORD(n));
+				if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+					ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
+					|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+					throw _T("");
+				}
+				INT nCDG = 0;
+				for(INT i = 0; i < 4; i++) {
+					nCDG += *(pBuf + CD_RAW_SECTOR_SIZE + i * 24);
+				}
+				if(nCDG > 0) {
+					bCDG = TRUE;
+					if(NULL == (fpCdg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("wb"), 0, 0))) {
+						throw _T("Failed to open .cdg\n");
+					}
+				}
 				break;
 			}
 		}
-		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE];
-		ZeroMemory(Subcode, sizeof(Subcode));
-		UCHAR SubcodeRtoW[CD_RAW_READ_SUBCODE_SIZE];
-		ZeroMemory(SubcodeRtoW, sizeof(SubcodeRtoW));
+
 		if(NULL == (aEndCtl = (PUCHAR)malloc(dwTrackAllocSize))) {
 			throw _T("Failed to alloc memory aEndCtl\n");
 		}
@@ -250,6 +260,8 @@ BOOL ReadCDAll(
 		else {
 			aCmd[1] = READ_CD_FLAG::CDDA;
 		}
+
+		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
 		for(INT p = 0; p < toc.LastTrack; p++) {
 			aCmd[2] = HIBYTE(HIWORD(aTocLBA[p][0]));
 			aCmd[3] = LOBYTE(HIWORD(aTocLBA[p][0]));
@@ -260,7 +272,7 @@ BOOL ReadCDAll(
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw _T("");
 			}
-			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode, SubcodeRtoW);
+			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
 			aEndCtl[p] = (UCHAR)((Subcode[12] >> 4) & 0x0F);
 		}
 
@@ -294,12 +306,11 @@ BOOL ReadCDAll(
 		prevSubQ.byTrackNum = toc.FirstTrack;
 		prevSubQ.byIndex = nOffsetStart < 0 ? (UCHAR)0 : (UCHAR)1;
 		prevSubQ.byMode = DATA_BLOCK_MODE0;
+
 		BOOL bCatalog = FALSE;
 		UCHAR byCurrentTrackNum = toc.FirstTrack;
-		_TCHAR szCatalog[META_CATALOG_SIZE+1];
-		_TCHAR szISRC[META_ISRC_SIZE+1];
-		ZeroMemory(szCatalog, META_CATALOG_SIZE + 1);
-		ZeroMemory(szISRC, META_ISRC_SIZE + 1);
+		_TCHAR szCatalog[META_CATALOG_SIZE+1] = {0};
+		_TCHAR szISRC[META_ISRC_SIZE+1] = {0};
 		OutputLogString(fpLog, 
 			_T("\n--------------------------------error log begin--------------------------------\n"));
 
@@ -346,7 +357,7 @@ BOOL ReadCDAll(
 				prevSubQ.nAbsoluteTime++;
 				continue;
 			}
-			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode, SubcodeRtoW);
+			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
 			SUB_Q_DATA subQ = {0};
 			subQ.byCtl = (UCHAR)((Subcode[12] >> 4) & 0x0F);
 			subQ.byAdr = (UCHAR)(Subcode[12] & 0x0F);
@@ -506,6 +517,9 @@ BOOL ReadCDAll(
 				fwrite(Subcode, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 				OutputSubcode(nLBA, byCurrentTrackNum, 
 					Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
+				if(fpCdg != NULL) {
+					fwrite(pBuf + CD_RAW_SECTOR_SIZE, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpCdg);
+				}
 #ifdef _DEBUG
 //				fflush(fpParse);
 #endif
@@ -641,6 +655,7 @@ BOOL ReadCDAll(
 			OutputString(_T("\rCreating img(LBA) %6d/%6d"), nLBA - nOffsetEnd, nLength - 1);
 		}
 		OutputString(_T("\n"));
+		FcloseAndNull(fpCdg);
 		FcloseAndNull(fpImg);
 		FcloseAndNull(fpSub);
 		if(strncmp(pszVendorId, "PLEXTOR", 7)) {
@@ -667,10 +682,10 @@ BOOL ReadCDAll(
 		}
 
 		// 5th:Descramble img
-		UCHAR aScrambledBuf[CD_RAW_SECTOR_SIZE];
+		UCHAR aScrambledBuf[CD_RAW_SECTOR_SIZE] = {0};
 		fread(aScrambledBuf, sizeof(UCHAR), sizeof(aScrambledBuf), fpTbl);
 		FcloseAndNull(fpTbl);
-		UCHAR aSrcBuf[CD_RAW_SECTOR_SIZE];
+		UCHAR aSrcBuf[CD_RAW_SECTOR_SIZE] = {0};
 
 		if(NULL == (fpImg2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".img"), _T("rb+"), 0, 0))) {
 			throw _T("Failed to open file .img\n");
@@ -707,19 +722,37 @@ BOOL ReadCDAll(
 				OutputString(_T("\n"));
 			}
 		}
+		FILE* fpBin2 = NULL;
+		if(bCDG && bAudioOnly) {
+			OutputString(_T("Merging img+cdg->bin\n"));
+			if(NULL == (fpCdg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("rb"), 0, 0))) {
+				throw _T("Failed to open file .bin\n");
+			}
+			if(NULL == (fpBin2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("wb"), 0, 0))) {
+				throw _T("Failed to open file .bin\n");
+			}
+			LONG fsizeImg2 = (LONG)GetFilesize(fpImg2, 0);
+			UCHAR buf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE] = {0};
+
+			for(int i = 0; i < fsizeImg2 / CD_RAW_SECTOR_SIZE; i++) {
+				fread(buf, sizeof(UCHAR), CD_RAW_SECTOR_SIZE, fpImg2);
+				fread(buf + CD_RAW_SECTOR_SIZE, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpCdg);
+				fwrite(buf, sizeof(UCHAR), CD_RAW_SECTOR_WITH_SUBCODE_SIZE, fpBin2);
+			}
+			FcloseAndNull(fpBin2);
+			if(NULL == (fpBin2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("rb"), 0, 0))) {
+				throw _T("Failed to open file .bin\n");
+			}
+		}
 		// 6th:Creating bin, cue, ccd
-		TCHAR pszFileNameWithoutPath[_MAX_FNAME];
+		TCHAR pszFileNameWithoutPath[_MAX_FNAME] = {0};
 		for(INT i = toc.FirstTrack; i <= toc.LastTrack; i++) {
 			if(NULL == (fpBin = CreateOrOpenFileW(pszOutFile, NULL, 
 				pszFileNameWithoutPath, NULL, _T(".bin"), _T("wb"), i, toc.LastTrack))) {
 				throw _T("Failed to open .bin\n");
 			}
 			OutputString(_T("\rCreating bin, cue, ccd(Track) %2d/%2d"), i, toc.LastTrack);
-//			CHAR fname[_MAX_FNAME*sizeof(TCHAR)];
-//			ZeroMemory(fname, sizeof(fname));
-//			WideCharToMultiByte(CP_ACP, 0, pszFileNameWithoutPath,
-//				-1, fname, sizeof(fname), NULL, NULL);
-			WriteCueFile(bCatalog, pszFileNameWithoutPath, 
+			WriteCueFile(bCatalog, bCDG, pszFileNameWithoutPath, 
 				i, aMode[i-1], aISRC[i-1], aCtl[i-1], fpCue);
 			bCatalog = FALSE;
 			WriteCcdFileForTrack(i, aMode[i-1], aISRC[i-1], fpCcd);
@@ -758,12 +791,15 @@ BOOL ReadCDAll(
 			size_t uiBufsize = 0;
 			INT nLBA = aLBAStart[i][0] == -1 ? aLBAStart[i][1] : aLBAStart[i][0];
 			INT nPrevLba = aLBAStart[i-1][0] == -1 ? aLBAStart[i-1][1] : aLBAStart[i-1][0];
+			INT nWriteSectorSize = 
+				(bCDG && bAudioOnly) ? CD_RAW_SECTOR_WITH_SUBCODE_SIZE : CD_RAW_SECTOR_SIZE;
+
 			if(toc.LastTrack == toc.FirstTrack) {
-				uiBufsize = (size_t)nLength * CD_RAW_SECTOR_SIZE;
+				uiBufsize = (size_t)nLength * nWriteSectorSize;
 				nPrevLba = 0;
 			}
 			else if(i == toc.FirstTrack) {
-				uiBufsize = (size_t)nLBA * CD_RAW_SECTOR_SIZE;
+				uiBufsize = (size_t)nLBA * nWriteSectorSize;
 				nPrevLba = 0;
 			}
 			else if(i == toc.LastTrack) {
@@ -773,19 +809,24 @@ BOOL ReadCDAll(
 					nPrevLba -= nLeadinoutSize;
 					nTmpLength -= nLeadinoutSize;
 				}
-				uiBufsize = (size_t)(nTmpLength - nPrevLba) * CD_RAW_SECTOR_SIZE;
+				uiBufsize = (size_t)(nTmpLength - nPrevLba) * nWriteSectorSize;
 			}
 			else {
 				if(i == toc.LastTrack - 1 && aSessionNum[i] > 1) {
 					nLBA -= 11400 * (aSessionNum[i] - 1);
 				}
-				uiBufsize = (size_t)(nLBA - nPrevLba) * CD_RAW_SECTOR_SIZE;
+				uiBufsize = (size_t)(nLBA - nPrevLba) * nWriteSectorSize;
 			}
-			fseek(fpImg2, nPrevLba * CD_RAW_SECTOR_SIZE, SEEK_SET);
+			fseek(fpImg2, nPrevLba * nWriteSectorSize, SEEK_SET);
 			if(NULL == (pBuf2 = (PUCHAR)malloc(uiBufsize))) {
 				throw _T("Failed to alloc memory pBuf2\n");
 			}
-			fread(pBuf2, sizeof(UCHAR), uiBufsize, fpImg2);
+			if(bCDG && bAudioOnly) {
+				fread(pBuf2, sizeof(UCHAR), uiBufsize, fpBin2);
+			}
+			else {
+				fread(pBuf2, sizeof(UCHAR), uiBufsize, fpImg2);
+			}
 			fwrite(pBuf2, sizeof(UCHAR), uiBufsize, fpBin);
 			FreeAndNull(pBuf2);
 			FcloseAndNull(fpBin);
@@ -826,18 +867,18 @@ BOOL ReadCDForSearchingOffset(
 	HANDLE hDevice,
 	LPCSTR pszVendorId,
 	LPCSTR pszProductId,
-	PINT nCombinedOffset, 
+	PINT nCombinedOffset,
+	PBOOL bAudioOnly,
 	FILE* fpLog
 	)
 {
-	BOOL bAudioOnly = TRUE;
 	if((toc.TrackData[0].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-		bAudioOnly = FALSE;
+		*bAudioOnly = FALSE;
 	}
 	else {
 		for(INT i = toc.FirstTrack + 1; i <= toc.LastTrack; i++) {
 			if(toc.TrackData[0].Control != toc.TrackData[i-1].Control) {
-				bAudioOnly = FALSE;
+				*bAudioOnly = FALSE;
 				break;
 			}
 		}
@@ -854,7 +895,7 @@ BOOL ReadCDForSearchingOffset(
 		b = getchar();
 		nDriveSampleOffset = atoi(a) * 4;
 	}
-	if(bAudioOnly) {
+	if(*bAudioOnly) {
 		*nCombinedOffset = nDriveSampleOffset * 4;
 		OutputLogString(fpLog, _T("Offset"));
 		if(bGetDrive) {
@@ -867,12 +908,9 @@ BOOL ReadCDForSearchingOffset(
 	}
 	else {
 		UCHAR byScsiStatus = 0;
-		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE*2+0x10];
-		UCHAR aCmd[CDB12GENERIC_LENGTH];
-
-		ZeroMemory(aBuf, sizeof(aBuf));
+		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
+		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE*2+PARAGRAPH_BOUNDARY_NUM] = {0};
 		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
-		ZeroMemory(aCmd, sizeof(aCmd));
 
 		INT nDriveOffset = nDriveSampleOffset * 4;
 		UCHAR byTransferLen = 2;
@@ -888,8 +926,7 @@ BOOL ReadCDForSearchingOffset(
 			aCmd[1] = READ_CD_FLAG::CDDA;
 			aCmd[8] = byTransferLen;
 			aCmd[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
-				READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | 
-				READ_CD_FLAG::Edc;
+				READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
 			aCmd[10] = READ_CD_FLAG::PtoW;
 		}
 		aCmd[2] = HIBYTE(HIWORD(nFirstDataLBA));
@@ -902,12 +939,11 @@ BOOL ReadCDForSearchingOffset(
 		}
 		if(byScsiStatus == 0) {
 			OutputMain2352(pBuf, nFirstDataLBA, fpLog);
-			UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE];
-			UCHAR SubcodeRtoW[CD_RAW_READ_SUBCODE_SIZE];
+			UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
 
-			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode, SubcodeRtoW);
+			AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
 			OutputSub96(Subcode, nFirstDataLBA, fpLog);
-			UCHAR aBuf2[CD_RAW_SECTOR_SIZE*2];
+			UCHAR aBuf2[CD_RAW_SECTOR_SIZE*2] = {0};
 			memcpy(aBuf2, pBuf, CD_RAW_SECTOR_SIZE);
 			memcpy(aBuf2 + CD_RAW_SECTOR_SIZE, pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, CD_RAW_SECTOR_SIZE);
 			bRet = GetWriteOffset(aBuf2, nFirstDataLBA, nCombinedOffset);
@@ -971,10 +1007,10 @@ BOOL ReadCDPartial(
 	BOOL bDC
 	)
 {
-	_TCHAR szBin[8];
-	_TCHAR szSub[8];
-	_TCHAR szSubtxt[12];
-	ZeroMemory(szBin, sizeof(szBin));
+	_TCHAR szBin[8] = {0};
+	_TCHAR szSub[8] = {0};
+	_TCHAR szSubtxt[12] = {0};
+
 	if(bDC) {
 		_tcscpy(szSub, _T("_dc.sub"));
 		_tcscpy(szSubtxt, _T("_dc.sub.txt"));
@@ -995,22 +1031,15 @@ BOOL ReadCDPartial(
 		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSub, _T("wb"), 0, 0))) {
 			throw _T("Failed to open .sub\n");
 		}
-#ifdef UNICODE
-		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSubtxt, _T("w, ccs=UTF-8"), 0, 0))) {
-#else
-		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSubtxt, _T("w"), 0, 0))) {
-#endif
+		if(NULL == (fpParse = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSubtxt, _T(WFLAG), 0, 0))) {
 			throw _T("Failed to open .sub.txt\n");
 		}
 		UCHAR byScsiStatus = 0;
-		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+0x10];
-		UCHAR aCmd[CDB12GENERIC_LENGTH];
-		ZeroMemory(aBuf, sizeof(aBuf));
+		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
+		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+PARAGRAPH_BOUNDARY_NUM] = {0};
 		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
-		ZeroMemory(aCmd, sizeof(aCmd));
 
-		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE];
-		UCHAR SubcodeRtoW[CD_RAW_READ_SUBCODE_SIZE];
+		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
 		UCHAR byTransferLen = 1;
 		if(!strncmp(pszVendorId, "PLEXTOR", 7)) {
 			// PX-504A don't support...
@@ -1033,8 +1062,7 @@ BOOL ReadCDPartial(
 			aCmd[4] = HIBYTE(LOWORD(nLBA));
 			aCmd[5] = LOBYTE(LOWORD(nLBA));
 			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
-				CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, 
-				_T(__FUNCTION__), __LINE__)) {
+				CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
 				throw _T("");
 			}
 			if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
@@ -1045,7 +1073,7 @@ BOOL ReadCDPartial(
 			}
 			else {
 				fwrite(pBuf, sizeof(UCHAR), CD_RAW_SECTOR_SIZE, fp);
-				AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode, SubcodeRtoW);
+				AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
 				fwrite(Subcode, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 				OutputSubcode(nLBA, BcdToDec(Subcode[13]) - 1, 
 					Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
@@ -1073,19 +1101,17 @@ BOOL ReadConfiguration(
 	)
 {
 	UCHAR byScsiStatus = 0;
+	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
+	GET_CONFIGURATION_HEADER pHeader = {0};
 	size_t uiSize = sizeof(GET_CONFIGURATION_HEADER);
-	UCHAR aCmd[CDB10GENERIC_LENGTH];
-	UCHAR pHeader[sizeof(GET_CONFIGURATION_HEADER)+0x10];
 
-	ZeroMemory(pHeader, uiSize);
-	ZeroMemory(aCmd, sizeof(aCmd));
 	aCmd[0] = SCSIOP_GET_CONFIGURATION;
 	aCmd[1] = SCSI_GET_CONFIGURATION_REQUEST_TYPE_CURRENT;
 	aCmd[3] = FeatureProfileList;
 	aCmd[7] = HIBYTE(uiSize);
 	aCmd[8] = LOBYTE(uiSize);
 	OutputLogString(fpLog, _T("Configuration\n"));
-	BOOL bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pHeader, 
+	BOOL bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &pHeader, 
 		(ULONG)uiSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		*pusCurrentMedia = ProfileCdrom;
@@ -1094,28 +1120,29 @@ BOOL ReadConfiguration(
 	}
 	else {
 		OutputLogString(fpLog, _T("\tCurrentMedia:"));
-		*pusCurrentMedia = MAKEWORD(pHeader[7], pHeader[6]);
+		*pusCurrentMedia = MAKEWORD(pHeader.CurrentProfile[1], pHeader.CurrentProfile[0]);
 		OutputFeatureProfileType(fpLog, *pusCurrentMedia);
 		OutputLogString(fpLog, _T("\n"));
 		// 4 is DataLength size of GET_CONFIGURATION_HEADER
-		LONG lAllLen = MAKELONG(MAKEWORD(pHeader[3], pHeader[2]), 
-			MAKEWORD(pHeader[1], pHeader[0])) + 4;
+		ULONG ulAllLen = MAKELONG(MAKEWORD(pHeader.DataLength[3], pHeader.DataLength[2]), 
+			MAKEWORD(pHeader.DataLength[1], pHeader.DataLength[0])) + sizeof(pHeader.DataLength);
 
-		PUCHAR pConf = (PUCHAR)malloc((size_t)lAllLen);
-		if(!pConf) {
+		PUCHAR pPConf = (PUCHAR)malloc((size_t)ulAllLen + PARAGRAPH_BOUNDARY_NUM);
+		if(!pPConf) {
 			OutputErrorString(_T("Can't alloc memory [F:%s][L:%d]\n"), _T(__FUNCTION__), __LINE__);
 			return FALSE;
 		}
-		aCmd[7] = HIBYTE(lAllLen);
-		aCmd[8] = LOBYTE(lAllLen);
+		PUCHAR pConf = (PUCHAR)ConvParagraphBoundary(pPConf);
+		aCmd[7] = HIBYTE(ulAllLen);
+		aCmd[8] = LOBYTE(ulAllLen);
 		bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pConf, 
-			(size_t)lAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__);
+			ulAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 		if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false. because undefined mmc1..
 			OutputLogString(fpLog, _T("\tUndefined this drive\n"));
 		}
 		else {
-			OutputFeatureNumber(pConf, lAllLen, uiSize, bCanCDText, bC2ErrorData, fpLog);
+			OutputFeatureNumber(pConf, ulAllLen, uiSize, bCanCDText, bC2ErrorData, fpLog);
 		}
 		FreeAndNull(pConf);
 	}
@@ -1130,21 +1157,17 @@ BOOL ReadDeviceInfo(
 	)
 {
 	UCHAR byScsiStatus = 0;
-	UCHAR byInquirySize = sizeof(INQUIRYDATA);
-	UCHAR aInquiryBuf[sizeof(INQUIRYDATA)+0x10];
-	UCHAR aCmd[CDB6GENERIC_LENGTH];
-	ZeroMemory(aInquiryBuf, sizeof(aInquiryBuf));
-	ZeroMemory(aCmd, sizeof(aCmd));
-	CHAR* pInquiry = (CHAR*)ConvParagraphBoundary(aInquiryBuf);
+	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
+	INQUIRYDATA inquiryData = {0};
 
 	aCmd[0] = SCSIOP_INQUIRY;
-	aCmd[4] = byInquirySize;
-	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, pInquiry, 
-		byInquirySize, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
+	aCmd[4] = sizeof(INQUIRYDATA);
+	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, &inquiryData, 
+		sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-	OutputInquiryData(pInquiry, pszVendorId, pszProductId, fpLog);
+	OutputInquiryData(&inquiryData, pszVendorId, pszProductId, fpLog);
 	return TRUE;
 }
 
@@ -1163,16 +1186,17 @@ BOOL ReadDVD(
 	}
 	UCHAR byScsiStatus = 0;
 	UCHAR byTransferLen = 32;
-	PUCHAR aBuf = NULL;
+	PUCHAR pBuf = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (aBuf = (PUCHAR)malloc(CD_RAW_READ * (size_t)byTransferLen + 0x10))) {
+		PUCHAR pPBuf = (PUCHAR)malloc(CD_RAW_READ * (size_t)byTransferLen + PARAGRAPH_BOUNDARY_NUM);
+		if(pPBuf == NULL) {
 			throw _T("Can't alloc memory aBuf\n");
 		}
-		UCHAR aCmd[CDB12GENERIC_LENGTH];
-		ZeroMemory(aBuf, CD_RAW_READ * (size_t)byTransferLen + 0x10);
-		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
-		ZeroMemory(aCmd, sizeof(aCmd));
+		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
+		ZeroMemory(pPBuf, CD_RAW_READ * (size_t)byTransferLen + PARAGRAPH_BOUNDARY_NUM);
+		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(pPBuf);
+
 		aCmd[0] = SCSIOP_READ12;
 		aCmd[5] = 0;
 		aCmd[9] = byTransferLen;
@@ -1185,22 +1209,6 @@ BOOL ReadDVD(
 			aCmd[10] = 0;
 		}
 
-		UCHAR aBuf2[sizeof(DVD_DESCRIPTOR_HEADER)+sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR)+0x10];
-		UCHAR aCmd2[CDB10GENERIC_LENGTH];
-		PUCHAR pBuf2 = NULL;
-		size_t uiSize = 0;
-		if(pszOption && !_tcscmp(pszOption, _T("cmi"))) {
-			ZeroMemory(aBuf2, sizeof(aBuf2));
-			pBuf2 = (PUCHAR)ConvParagraphBoundary(aBuf2);
-			ZeroMemory(aCmd2, sizeof(aCmd2));
-			uiSize = sizeof(DVD_DESCRIPTOR_HEADER) + 
-				sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR);
-			aCmd2[0] = SCSIOP_READ_DVD_STRUCTURE;
-			aCmd2[7] = DvdMaxDescriptor;
-			aCmd2[8] = HIBYTE(LOWORD(uiSize));
-			aCmd2[9] = LOBYTE(LOWORD(uiSize));
-			OutputLogString(fpLog, _T("\tCopyrightManagementInformation\n"));
-		}
 		aCmd[5] = LOBYTE(0);
 		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
@@ -1231,6 +1239,20 @@ BOOL ReadDVD(
 		OutputVolumeDescriptorSequence(0, pBuf, fpLog);
 		fflush(fpLog);
 
+		UCHAR aBuf2[sizeof(DVD_DESCRIPTOR_HEADER)+sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR)+PARAGRAPH_BOUNDARY_NUM] = {0};
+		UCHAR aCmd2[CDB10GENERIC_LENGTH] = {0};
+		PUCHAR pBuf2 = NULL;
+		size_t uiSize = 0;
+		if(pszOption && !_tcscmp(pszOption, _T("cmi"))) {
+			pBuf2 = (PUCHAR)ConvParagraphBoundary(aBuf2);
+			uiSize = sizeof(DVD_DESCRIPTOR_HEADER) + 
+				sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR);
+			aCmd2[0] = SCSIOP_READ_DVD_STRUCTURE;
+			aCmd2[7] = DvdMaxDescriptor;
+			aCmd2[8] = HIBYTE(LOWORD(uiSize));
+			aCmd2[9] = LOBYTE(LOWORD(uiSize));
+			OutputLogString(fpLog, _T("\tCopyrightManagementInformation\n"));
+		}
 		for(INT nLBA = 0; nLBA < nDVDSectorSize; nLBA += byTransferLen) {
 			if(nDVDSectorSize - nLBA < byTransferLen) {
 				byTransferLen = (UCHAR)(nDVDSectorSize - nLBA);
@@ -1245,8 +1267,8 @@ BOOL ReadDVD(
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw _T("");
 			}
-
 			fwrite(pBuf, sizeof(UCHAR), (size_t)CD_RAW_READ * byTransferLen, fp);
+
 			if(pszOption && !_tcscmp(pszOption, _T("cmi"))) {
 				for(INT i = 0; i < byTransferLen; i++) {
 					aCmd2[2] = HIBYTE(HIWORD(nLBA + i));
@@ -1273,7 +1295,7 @@ BOOL ReadDVD(
 		OutputErrorString(str);
 		bRet = FALSE;
 	}
-	FreeAndNull(aBuf);
+	FreeAndNull(pBuf);
 	FcloseAndNull(fp);
 #ifdef _DEBUG
 	UNREFERENCED_PARAMETER(fpLog);
@@ -1407,12 +1429,10 @@ BOOL ReadDVDStructure(
 	)
 {
 	UCHAR byScsiStatus = 0;
+	UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
 	size_t uiMaxDVDStructureSize = sizeof(DVD_STRUCTURE_LIST_ENTRY) * 0xFF;
 	UCHAR pDiscStructure[sizeof(DVD_STRUCTURE_LIST_ENTRY)*0xFF+0x10];
-	UCHAR aCmd[CDB12GENERIC_LENGTH];
 
-	ZeroMemory(pDiscStructure, uiMaxDVDStructureSize);
-	ZeroMemory(aCmd, sizeof(aCmd));
 	aCmd[0] = SCSIOP_READ_DVD_STRUCTURE;
 	aCmd[7] = 0xFF;
 	aCmd[8] = HIBYTE(uiMaxDVDStructureSize);
@@ -1505,8 +1525,7 @@ BOOL ReadTestUnitReady(
 	)
 {
 	UCHAR byScsiStatus = 0;
-	UCHAR aCmd[CDB6GENERIC_LENGTH];
-	ZeroMemory(aCmd, sizeof(aCmd));
+	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
 	aCmd[0] = SCSIOP_TEST_UNIT_READY;
 
 	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, NULL, 
@@ -1524,8 +1543,7 @@ BOOL ReadTOC(
 	)
 {
 	UCHAR byScsiStatus = 0;
-	UCHAR aCmd[CDB10GENERIC_LENGTH];
-	ZeroMemory(aCmd, sizeof(aCmd));
+	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
 	aCmd[0] = SCSIOP_READ_TOC;
 	aCmd[7] = HIBYTE(CDROM_TOC_SIZE);
 	aCmd[8] = LOBYTE(CDROM_TOC_SIZE);
@@ -1538,7 +1556,7 @@ BOOL ReadTOC(
 	}
 
 	OutputLogString(fpLog, _T("TOC on SCSIOP_READ_TOC\n"));
-	_TCHAR strType[6];
+	_TCHAR strType[6] = {0};
 	BOOL bFirstData = TRUE;
 	for(INT i = toc.FirstTrack; i <= toc.LastTrack; i++) {
 		for(INT j = 0, k = 24; j < 4; j++, k -= 8) {
@@ -1579,16 +1597,15 @@ BOOL ReadTOCFull(
 	FILE* fpCcd
 	)
 {
-	UCHAR aCmd[CDB10GENERIC_LENGTH];
-	ZeroMemory(aCmd, sizeof(aCmd));
+	UCHAR byScsiStatus = 0;
+	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
+	CDROM_TOC_FULL_TOC_DATA fullToc = {0};
+	size_t uiFullTocDataSize = sizeof(CDROM_TOC_FULL_TOC_DATA);
 	aCmd[0] = SCSIOP_READ_TOC;
 	aCmd[2] = CDROM_READ_TOC_EX_FORMAT_FULL_TOC;
-	size_t uiFullTocDataSize = sizeof(CDROM_TOC_FULL_TOC_DATA);
 	aCmd[7] = HIBYTE(uiFullTocDataSize);
 	aCmd[8] = LOBYTE(uiFullTocDataSize);
 
-	UCHAR byScsiStatus = 0;
-	CDROM_TOC_FULL_TOC_DATA fullToc = {0};
 	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &fullToc,
 		(ULONG)uiFullTocDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
@@ -1599,6 +1616,7 @@ BOOL ReadTOCFull(
 	size_t uiFulltocsize = 
 		MAKEWORD(fullToc.Length[1], fullToc.Length[0]) - sizeof(fullToc.Length);
 	size_t uiTocEntries = uiFulltocsize / sizeof(CDROM_TOC_FULL_TOC_DATA_BLOCK);
+
 	WriteCcdFileForDisc(uiTocEntries, fullToc.LastCompleteSession, fpCcd);
 	if(bCanCDText) {
 		ReadTOCText(hDevice, fpLog, fpCcd);
@@ -1610,11 +1628,13 @@ BOOL ReadTOCFull(
 		OutputErrorString(_T("On this drive, can't get CDROM_TOC_FULL_TOC_DATA of this disc\n"));
 		return TRUE;
 	}
-	PBYTE pFullToc = (PBYTE)malloc(uiFullTocDataMaxSize + 0x10);
-	if(!pFullToc) {
+	OutputLogString(fpLog, _T("CDROM_TOC_FULL_TOC_DATA:Length %d\n"), uiFulltocsize);
+	PUCHAR pBuf = (PUCHAR)malloc(uiFullTocDataMaxSize + PARAGRAPH_BOUNDARY_NUM);
+	if(!pBuf) {
 		OutputString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
+	PUCHAR pFullToc = (PUCHAR)ConvParagraphBoundary(pBuf);
 	aCmd[7] = HIBYTE(uiFullTocDataMaxSize);
 	aCmd[8] = LOBYTE(uiFullTocDataMaxSize);
 	BOOL bRet = TRUE;
@@ -1630,11 +1650,9 @@ BOOL ReadTOCFull(
 		INT aLBA[] = {0, nFirstDataLBA};
 		for(size_t b = 0; b < uiTocEntries; b++) {
 			if(pTocData[b].Point < 100 && uiIdx < pTocData[b].SessionNumber) {
-				UCHAR aBuf2[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+0x10];
-				UCHAR aCmd2[CDB12GENERIC_LENGTH];
-				ZeroMemory(aBuf2, sizeof(aBuf2));
+				UCHAR aBuf2[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+PARAGRAPH_BOUNDARY_NUM] = {0};
+				UCHAR aCmd2[CDB12GENERIC_LENGTH] = {0};
 				PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf2);
-				ZeroMemory(aCmd2, sizeof(aCmd2));
 
 				if(!strncmp(pszVendorId, "PLEXTOR", 7)) {
 					// PX-504A don't support...
@@ -1657,6 +1675,7 @@ BOOL ReadTOCFull(
 					aCmd2[3] = LOBYTE(HIWORD(nLBA));
 					aCmd2[4] = HIBYTE(LOWORD(nLBA));
 					aCmd2[5] = LOBYTE(LOWORD(nLBA));
+
 					if(!ExecCommand(hDevice, aCmd2, CDB12GENERIC_LENGTH, pBuf,
 						CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 						|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
@@ -1666,14 +1685,15 @@ BOOL ReadTOCFull(
 					if(nLBA ==  aLBA[uiIdx]) {
 						ucMode = GetMode(pBuf);
 					}
-					UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE];
-					UCHAR SubcodeRtoW[CD_RAW_READ_SUBCODE_SIZE];
-					AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode, SubcodeRtoW);
+					UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
+					AlignSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+
 					UCHAR byAdr = (UCHAR)(Subcode[12] & 0x0F);
 					if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
 						BOOL bMCN = IsValidMCN(Subcode);
-						_TCHAR szCatalog[META_CATALOG_SIZE+1];
+						_TCHAR szCatalog[META_CATALOG_SIZE+1] = {0};
 						SetMCNToString(Subcode, szCatalog, bMCN);
+
 						WriteCcdFileForDiscCatalog(fpCcd);
 						break;
 					}
@@ -1703,15 +1723,15 @@ BOOL ReadTOCText(
 	FILE* fpCcd
 	)
 {
-	UCHAR aCmd[CDB10GENERIC_LENGTH];
-	ZeroMemory(aCmd, sizeof(aCmd));
+	UCHAR byScsiStatus = 0;
+	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
+	CDROM_TOC_CD_TEXT_DATA tocText = {0};
+	size_t uiCDTextDataSize = sizeof(CDROM_TOC_CD_TEXT_DATA);
+
 	aCmd[0] = SCSIOP_READ_TOC;
 	aCmd[2] = CDROM_READ_TOC_EX_FORMAT_CDTEXT;
-	size_t uiCDTextDataSize = sizeof(CDROM_TOC_CD_TEXT_DATA);
 	aCmd[7] = HIBYTE(uiCDTextDataSize);
 	aCmd[8] = LOBYTE(uiCDTextDataSize);
-	UCHAR byScsiStatus = 0;
-	CDROM_TOC_CD_TEXT_DATA tocText = {0};
 	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &tocText,
 		(ULONG)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
@@ -1723,6 +1743,7 @@ BOOL ReadTOCText(
 	size_t uiTocTextsize = 
 		MAKEWORD(tocText.Length[1], tocText.Length[0]) - sizeof(tocText.Length);
 	size_t uiTocTextEntries = uiTocTextsize / sizeof(CDROM_TOC_CD_TEXT_DATA_BLOCK);
+
 	WriteCcdFileForDiscCDTextLength(uiTocTextsize, fpCcd);
 	if(!uiTocTextEntries) {
 		OutputLogString(fpLog, _T("\tNothing\n"));
@@ -1730,11 +1751,12 @@ BOOL ReadTOCText(
 		return TRUE;
 	}
 	size_t uiCDTextDataMaxSize = uiTocTextsize + uiCDTextDataSize;
-	PBYTE pTocText = (PBYTE)malloc(uiCDTextDataMaxSize + 0x10);
-	if(!pTocText) {
+	PUCHAR pPTocText = (PUCHAR)malloc(uiCDTextDataMaxSize + PARAGRAPH_BOUNDARY_NUM);
+	if(!pPTocText) {
 		OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
+	PUCHAR pTocText = (PUCHAR)ConvParagraphBoundary(pPTocText);
 	aCmd[7] = HIBYTE(uiCDTextDataMaxSize);
 	aCmd[8] = LOBYTE(uiCDTextDataMaxSize);
 	BOOL bRet = TRUE;
@@ -1969,7 +1991,7 @@ BOOL SetCDSpeed(
 	)
 {
 	UCHAR byScsiStatus = 0;
-	UCHAR aCDCmd[CDB12GENERIC_LENGTH];
+	UCHAR aCDCmd[CDB12GENERIC_LENGTH] = {0};
 	CDROM_SET_SPEED setspeed;
 	USHORT wCDSpeedList[] = {
 		CD_RAW_SECTOR_SIZE * 75 * 1 / 1000,		// 176.400 Kbytes/sec
@@ -2052,7 +2074,6 @@ BOOL SetCDSpeed(
 	else if(nCDSpeedNum > DRIVE_MAX_SPEED) {
 		nCDSpeedNum = DRIVE_MAX_SPEED;
 	}
-	ZeroMemory(aCDCmd, sizeof(aCDCmd));
 	aCDCmd[0] = SCSIOP_SET_CD_SPEED;
 	aCDCmd[2] = HIBYTE(wCDSpeedList[nCDSpeedNum]);
 	aCDCmd[3] = LOBYTE(wCDSpeedList[nCDSpeedNum]);
@@ -2082,8 +2103,7 @@ BOOL StartStop(
 	)
 {
 	UCHAR byScsiStatus = 0;
-	UCHAR aCmd[CDB6GENERIC_LENGTH];
-	ZeroMemory(aCmd, sizeof(aCmd));
+	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
 	aCmd[0] = SCSIOP_START_STOP_UNIT;
 	aCmd[4] = UCHAR(LoadEject << 1 | Start);
 

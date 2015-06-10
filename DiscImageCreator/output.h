@@ -73,10 +73,6 @@ FILE* CreateOrOpenFileA(
 	INT nMaxTrackNum
 	);
 
-void InitForOutput(
-	void
-	);
-
 FILE* OpenProgrammabledFile(
 	LPCTSTR pszFilename,
 	LPCTSTR pszMode
@@ -95,7 +91,7 @@ void OutputMain2352(
 	);
 
 void OutputInquiryData(
-	CONST PCHAR pInquiry,
+	PINQUIRYDATA pInquiry,
 	LPSTR pszVendorId,
 	LPSTR pszProductId,
 	FILE* fpLog
@@ -112,7 +108,7 @@ void OutputDVDStructureFormat(
 
 void OutputFeatureNumber(
 	CONST PUCHAR pConf,
-	LONG lAllLen,
+	ULONG ulAllLen,
 	size_t uiSize,
 	PBOOL bCanCDText,
 	PBOOL bC2ErrorData,
@@ -151,7 +147,7 @@ void OutputSubcode(
 	INT nLBA,
 	INT nTrackNum,
 	CONST PUCHAR Subcode,
-	CONST PUCHAR SubcodeRtoW,
+	CONST PUCHAR SubcodeOrg,
 	FILE* fpParse
 	);
 
@@ -185,6 +181,12 @@ bool OutputTagFormat(
 	);
 
 void OutputPrimaryVolumeDescriptorForISO9660(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputPrimaryVolumeDescriptorForJoliet(
 	INT idx,
 	CONST PUCHAR buf,
 	FILE* fpLog
@@ -356,6 +358,7 @@ void WriteCcdFileForTrackIndex(
 
 void WriteCueFile(
 	BOOL bCatalog,
+	BOOL bCDG,
 	LPCTSTR pszFilename,
 	INT nTrackNum,
 	UCHAR byModeNum, 

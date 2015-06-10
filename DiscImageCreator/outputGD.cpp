@@ -33,8 +33,7 @@ BOOL DescrambleDataSector(
 			throw _T("Failed to open scramble.bin\n");
 		}
 		ULONG ulFilesize = GetFilesize(fpScr, 0);
-		UCHAR bufScr[CD_RAW_SECTOR_SIZE];
-		ZeroMemory(bufScr, sizeof(bufScr));
+		UCHAR bufScr[CD_RAW_SECTOR_SIZE] = {0};
 		INT nOffset = 0;
 		BOOL bRet2 = FALSE;
 		for(ULONG i = 0; i < CD_RAW_SECTOR_SIZE; i++) {
@@ -64,7 +63,7 @@ BOOL DescrambleDataSector(
 			nCombinedOffset, nCombinedOffset / 4);
 		FcloseAndNull(fptxt);
 
-		UCHAR bufTbl[CD_RAW_SECTOR_SIZE];
+		UCHAR bufTbl[CD_RAW_SECTOR_SIZE] = {0};
 		fread(bufTbl, sizeof(UCHAR), CD_RAW_SECTOR_SIZE, fpTbl);
 		FcloseAndNull(fpTbl);
 
@@ -75,8 +74,7 @@ BOOL DescrambleDataSector(
 		}
 		fseek(fpScr, lSeekSize, SEEK_SET);
 
-		UCHAR bufDescr[CD_RAW_SECTOR_SIZE];
-		ZeroMemory(bufDescr, sizeof(bufDescr));
+		UCHAR bufDescr[CD_RAW_SECTOR_SIZE] = {0};
 		ULONG filesize = GetFilesize(fpScr, lSeekSize);
 		ULONG ulDecFilesize = filesize - lSeekSize;
 		ULONG ulRoop = ulDecFilesize / CD_RAW_SECTOR_SIZE;
@@ -113,7 +111,7 @@ BOOL SplitDescrambledFile(
 	LPCTSTR pszInFilename
 	)
 {
-	_TCHAR pszFileNameWithoutPathAndExt[_MAX_PATH];
+	_TCHAR pszFileNameWithoutPathAndExt[_MAX_PATH] = {0};
 	ZeroMemory(pszFileNameWithoutPathAndExt, sizeof(pszFileNameWithoutPathAndExt));
 	FILE* fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, pszFileNameWithoutPathAndExt, _T(".dec"), _T("rb"), 0, 0);
 	if(!fpDescr) {
@@ -130,26 +128,14 @@ BOOL SplitDescrambledFile(
 	PUCHAR pBuf = NULL;
 	BOOL bRet = TRUE;
 	try {
-#ifdef UNICODE
-		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a, ccs=UTF-8"), 0, 0))) {
-#else
-		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T("a"), 0, 0))) {
-#endif
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T(AFLAG), 0, 0))) {
 			throw _T("Failed to open .log.txt\n");
 		}
-#ifdef UNICODE
-		if(NULL == (fpGdi = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".gdi"), _T("w, ccs=UTF-8"), 0, 0))) {
-#else
-		if(NULL == (fpGdi = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".gdi"), _T("w"), 0, 0))) {
-#endif
+		if(NULL == (fpGdi = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".gdi"), _T(WFLAG), 0, 0))) {
 			throw _T("Failed to open .gdi\n");
 		}
 #if 0
-#ifdef UNICODE
-		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".ccd"), _T("w, ccs=UTF-8"), 0, 0))) {
-#else
-		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".ccd"), _T("w"), 0, 0))) {
-#endif
+		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0))) {
 			throw _T("Failed to open .ccd\n");
 		}
 #endif
@@ -160,7 +146,7 @@ BOOL SplitDescrambledFile(
 		}
 		fseek(fpDescr, 0x110, SEEK_SET);
 		// 0x110 - 0x31F is toc data
-		UCHAR byToc[512];
+		UCHAR byToc[512] = {0};
 		fread(byToc, sizeof(UCHAR), sizeof(byToc), fpDescr);
 		if(byToc[0] != 'T' || byToc[1] != 'O' || byToc[2] != 'C' || byToc[3] != '1') {
 			throw _T("Not GD-ROM data\n");

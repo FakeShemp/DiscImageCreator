@@ -4,8 +4,7 @@
 
 INT AlignSubcode(
 	CONST PUCHAR pBuf,
-	PUCHAR Subcode,
-	PUCHAR SubcodeRtoW
+	PUCHAR Subcode
 	);
 
 UCHAR BcdToDec(
@@ -24,9 +23,6 @@ void LBAtoMSF(
 	PUCHAR bySecond,
 	PUCHAR byMinute
 	);
-
-#define WORDSWAP(w) (LOBYTE(w) << 8 | HIBYTE(w))
-#define DWORDSWAP(dw) (LOBYTE(LOWORD(dw)) << 24 | HIBYTE(LOWORD(dw)) << 16 | LOBYTE(HIWORD(dw)) << 8 | HIBYTE(HIWORD(dw)))
 
 void LittleToBig(
 	_TCHAR* out,

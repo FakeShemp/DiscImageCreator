@@ -61,10 +61,6 @@ __declspec(align(1)) typedef struct _SUB_Q_DATA {
 } SUB_Q_DATA, *PSUB_Q_DATA;
 # pragma pack ()
 
-void Init(
-	void
-	);
-
 BOOL ReadCDAll(
 	HANDLE hDevice,
 	LPCTSTR pszOutFile,
@@ -72,6 +68,7 @@ BOOL ReadCDAll(
 	INT nWriteOffset,
 	INT nLength,
 	BOOL bC2ErrorData,
+	BOOL bAudioOnly,
 	FILE* fpLog,
 	FILE* fpCcd
 	);
@@ -81,6 +78,7 @@ BOOL ReadCDForSearchingOffset(
 	LPCSTR pszVendorId,
 	LPCSTR pszProductId,
 	PINT nCombinedOffset,
+	PBOOL bAudioOnly,
 	FILE* fpLog
 	);
 

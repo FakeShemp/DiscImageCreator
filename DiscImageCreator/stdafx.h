@@ -64,6 +64,20 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 
 
 // TODO: プログラムに必要な追加ヘッダーをここで参照してください。
+
+#ifdef WIN64
+	typedef INT64 _INT;
+#else
+	typedef INT _INT;
+#endif
+#ifdef UNICODE
+	#define WFLAG "w, ccs=UTF-8"
+	#define AFLAG "a, ccs=UTF-8"
+#else
+	#define WFLAG "w"
+	#define AFLAG "a"
+#endif
+
 #include "convert.h"
 #include "execMMC.h"
 #include "check.h"
