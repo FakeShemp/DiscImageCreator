@@ -2071,6 +2071,72 @@ void OutputSubcode(
 	fwrite(str, sizeof(UCHAR), strlen(str), fpParse);
 }
 
+void OutputTocFull(
+	CONST CDROM_TOC_FULL_TOC_DATA* fullToc,
+	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData,
+	size_t uiTocEntries,
+	INT* nLastLBAof1stSession,
+	INT* nStartLBAof2ndSession,
+	INT* aSessionNum,
+	FILE* fpCcd,
+	FILE* fpLog
+	)
+{
+		OutputLogStringA(fpLog, "FULL TOC on SCSIOP_READ_TOC\n");
+		OutputLogStringA(fpLog, "\tFirstCompleteSession %d\n", 
+			fullToc->FirstCompleteSession);
+		OutputLogStringA(fpLog, "\tLastCompleteSession %d\n", 
+			fullToc->LastCompleteSession);
+
+		for(size_t a = 0; a < uiTocEntries; a++) {
+			WriteCcdFileForEntry(a, pTocData, fpCcd);
+			switch(pTocData[a].Point) {
+			case 0xA0:
+				OutputLogStringA(fpLog, "\tSession %d, FirstTrack %d\n", 
+					pTocData[a].SessionNumber, pTocData[a].Msf[0]);
+				break;
+			case 0xA1:
+				OutputLogStringA(fpLog, "\tSession %d, LastTrack %d\n", 
+					pTocData[a].SessionNumber, pTocData[a].Msf[0]);
+				break;
+			case 0xA2:
+				OutputLogStringA(fpLog, 
+					"\tSession %d, Leadout MSF %02d:%02d:%02d\n", 
+					pTocData[a].SessionNumber, pTocData[a].Msf[0], 
+					pTocData[a].Msf[1], pTocData[a].Msf[2]);
+				if(pTocData[a].SessionNumber == 1) {
+					*nLastLBAof1stSession = 
+						MSFtoLBA(pTocData[a].Msf[2], pTocData[a].Msf[1], pTocData[a].Msf[0]) - 150;
+				}
+				break;
+			case 0xB0:
+				OutputLogStringA(fpLog, 
+					"\tSession %d, NextSession MSF %02d:%02d:%02d, LastWritable MSF %02d:%02d:%02d\n", 
+					pTocData[a].SessionNumber, pTocData[a].MsfExtra[0], 
+					pTocData[a].MsfExtra[1], pTocData[a].MsfExtra[2], 
+					pTocData[a].Msf[0], pTocData[a].Msf[1], pTocData[a].Msf[2]);
+				break;
+			case 0xC0:
+				OutputLogStringA(fpLog, 
+					"\tSession %d, WriteLaserOutput %02d, FirstLeadin MSF %02d:%02d:%02d\n", 
+					pTocData[a].SessionNumber, pTocData[a].MsfExtra[0],	
+					pTocData[a].Msf[0], pTocData[a].Msf[1], pTocData[a].Msf[2]);
+				break;
+			default:
+				OutputLogStringA(fpLog, 
+					"\tSession %d, Track %2d, MSF %02d:%02d:%02d\n", 
+					pTocData[a].SessionNumber, pTocData[a].Point, pTocData[a].Msf[0], 
+					pTocData[a].Msf[1], pTocData[a].Msf[2]);
+				if(pTocData[a].SessionNumber == 2) {
+					*nStartLBAof2ndSession = MSFtoLBA(pTocData[a].Msf[2], 
+						pTocData[a].Msf[1], pTocData[a].Msf[0]) - 150;
+				}
+				aSessionNum[pTocData[a].Point-1] = pTocData[a].SessionNumber;
+				break;
+			}
+		}
+}
+
 // begin for CD
 void OutputVolumeDescriptor(
 	INT idx,

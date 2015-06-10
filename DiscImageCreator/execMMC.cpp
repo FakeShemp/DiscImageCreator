@@ -356,8 +356,19 @@ BOOL ReadCDAll(
 						OutputLogStringA(fpLog, "LBA %6d, MCN[%s]\n", nLBA, szCatalog);
 						subQ.byAdr = prevSubQ.byAdr;
 					}
-					// because don't exist tracknum, index...
-					subQ.byTrackNum = prevSubQ.byTrackNum;
+					//// Fix TrackNum, because don't exist.
+					// Cosmic Fantasy 2
+					// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
+					// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
+					// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
+					if((prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+					(subQ.byCtl & AUDIO_DATA_TRACK) == 0) {
+						subQ.byTrackNum = (UCHAR)(prevSubQ.byTrackNum + 1);
+					}
+					else {
+						subQ.byTrackNum = prevSubQ.byTrackNum;
+					}
+					//// Fix Index, because don't exist.
 					// Psychic Detective Series Vol. 5 - Nightmare (Japan)
 					// LBA[080999, 0x13C67], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-02, Index-00, RelativeTime-00:00:00, AbsoluteTime-18:01:74] RtoW:ZERO mode
 					// LBA[081000, 0x13C68], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[3010911111863        , AbsoluteTime-     :00] RtoW:ZERO mode
@@ -373,6 +384,14 @@ BOOL ReadCDAll(
 					else if(prevSubQ.byIndex > 1) {
 						subQ.byIndex = prevPrevSubQ.byIndex;
 						prevSubQ.byIndex = prevPrevSubQ.byIndex;
+					}
+					// Cosmic Fantasy 2
+					// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
+					// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
+					// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
+					else if((prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+					(subQ.byCtl & AUDIO_DATA_TRACK) == 0) {
+						subQ.byIndex = 0; // TODO
 					}
 					else {
 						subQ.byIndex = prevSubQ.byIndex;
@@ -559,26 +578,36 @@ BOOL ReadCDAll(
 			if(prevSubQ.byAdr != ADR_ENCODES_MEDIA_CATALOG && 
 				prevSubQ.byAdr != ADR_ENCODES_ISRC) {
 				prevPrevSubQ.byAdr = prevSubQ.byAdr;
-				prevPrevSubQ.byTrackNum = prevSubQ.byTrackNum;
-				prevPrevSubQ.byIndex = prevSubQ.byIndex;
+//				prevPrevSubQ.byTrackNum = prevSubQ.byTrackNum;
+//				prevPrevSubQ.byIndex = prevSubQ.byIndex;
 				prevPrevSubQ.nRelativeTime = prevSubQ.nRelativeTime;
 				prevPrevSubQ.byMode = prevSubQ.byMode;
 			}
+			else if((prevSubQ.byAdr == ADR_ENCODES_MEDIA_CATALOG || 
+				prevSubQ.byAdr == ADR_ENCODES_ISRC) && prevSubQ.byIndex == 0) {
+					subQ.nRelativeTime = prevSubQ.nRelativeTime + 1;
+			}
+
 			if(subQ.byAdr != ADR_ENCODES_MEDIA_CATALOG && 
 				subQ.byAdr != ADR_ENCODES_ISRC) {
 				prevSubQ.byAdr = subQ.byAdr;
-				prevSubQ.byTrackNum = subQ.byTrackNum;
-				prevSubQ.byIndex = subQ.byIndex;
+//				prevSubQ.byTrackNum = subQ.byTrackNum;
+//				prevSubQ.byIndex = subQ.byIndex;
 				prevSubQ.nRelativeTime = subQ.nRelativeTime;
 				prevSubQ.byMode = subQ.byMode;
 			}
 			else if(prevSubQ.byIndex == 0 && prevSubQ.nRelativeTime == 0) {
 				prevSubQ.byIndex = 1;
 			}
+
 			prevPrevSubQ.byCtl = prevSubQ.byCtl;
 			prevPrevSubQ.nAbsoluteTime = prevSubQ.nAbsoluteTime;
 			prevSubQ.byCtl = subQ.byCtl;
 			prevSubQ.nAbsoluteTime++;
+			prevPrevSubQ.byTrackNum = prevSubQ.byTrackNum;
+			prevPrevSubQ.byIndex = prevSubQ.byIndex;
+			prevSubQ.byTrackNum = subQ.byTrackNum;
+			prevSubQ.byIndex = subQ.byIndex;
 			printf("\rCreating img(LBA) %6d/%6d", nLBA - nOffsetEnd, nLength - 1);
 		}
 		printf("\n");
@@ -1494,6 +1523,8 @@ BOOL ReadTOC(
 
 BOOL ReadTOCFull(
 	HANDLE hDevice,
+	LPCSTR pszVendorId,
+	LPCSTR pszProductId,
 	BOOL bCanCDText,
 	FILE* fpLog,
 	FILE* fpCcd
@@ -1524,6 +1555,12 @@ BOOL ReadTOCFull(
 		ReadTOCText(hDevice, fpLog, fpCcd);
 	}
 	size_t uiFullTocDataMaxSize = uiFulltocsize + uiFullTocDataSize;
+	if(!strncmp(pszVendorId, "PLEXTOR", 7) &&
+		!strncmp(pszProductId, "DVDR   PX-712A", 14) &&
+		uiFullTocDataMaxSize > 1028) {
+		OutputErrorStringA("On this drive, can't get CDROM_TOC_FULL_TOC_DATA of this disc\n");
+		return TRUE;
+	}
 	PBYTE pFullToc = (PBYTE)malloc(uiFullTocDataMaxSize + 0x10);
 	if(!pFullToc) {
 		printf("Can't alloc memory [L:%d]\n", __LINE__);
@@ -1550,14 +1587,21 @@ BOOL ReadTOCFull(
 				PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf2);
 				ZeroMemory(aCmd2, sizeof(aCmd2));
 
-				aCmd2[0] = SCSIOP_READ_CD;
-				aCmd2[1] = READ_CD_FLAG::All;
-				aCmd2[8] = 0x01;	// Transfer Length
-				aCmd2[9] = READ_CD_FLAG::SyncData | 
-					READ_CD_FLAG::SubHeader | READ_CD_FLAG::UserData | 
-					READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
-				aCmd2[10] = READ_CD_FLAG::PtoW;
-
+				if(!strncmp(pszVendorId, "PLEXTOR", 7)) {
+					// PX-504A don't support...
+					// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
+					aCmd2[0] = 0xD8;
+					aCmd2[9] = 0x01;
+					aCmd2[10] = 0x02; // 0=none, 1=Q, 2=P-W, 3=P-W only
+				}
+				else {
+					aCmd2[0] = SCSIOP_READ_CD;
+					aCmd2[1] = READ_CD_FLAG::All;
+					aCmd2[8] = 0x01;
+					aCmd2[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
+						READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
+					aCmd2[10] = READ_CD_FLAG::PtoW;
+				}
 				UCHAR ucMode = 0;
 				for(INT nLBA =  aLBA[uiIdx]; nLBA < aLBA[uiIdx] + 100; nLBA++) {
 					aCmd2[2] = HIBYTE(HIWORD(nLBA));
@@ -1590,59 +1634,8 @@ BOOL ReadTOCFull(
 				uiIdx++;
 			}
 		}
-		OutputLogStringA(fpLog, "FULL TOC on SCSIOP_READ_TOC\n");
-		OutputLogStringA(fpLog, "\tFirstCompleteSession %d\n", 
-			fullToc.FirstCompleteSession);
-		OutputLogStringA(fpLog, "\tLastCompleteSession %d\n", 
-			fullToc.LastCompleteSession);
-
-		for(size_t a = 0; a < uiTocEntries; a++) {
-			WriteCcdFileForEntry(a, pTocData, fpCcd);
-			switch(pTocData[a].Point) {
-			case 0xA0:
-				OutputLogStringA(fpLog, "\tSession %d, FirstTrack %d\n", 
-					pTocData[a].SessionNumber, pTocData[a].Msf[0]);
-				break;
-			case 0xA1:
-				OutputLogStringA(fpLog, "\tSession %d, LastTrack %d\n", 
-					pTocData[a].SessionNumber, pTocData[a].Msf[0]);
-				break;
-			case 0xA2:
-				OutputLogStringA(fpLog, 
-					"\tSession %d, Leadout MSF %02d:%02d:%02d\n", 
-					pTocData[a].SessionNumber, pTocData[a].Msf[0], 
-					pTocData[a].Msf[1], pTocData[a].Msf[2]);
-				if(pTocData[a].SessionNumber == 1) {
-					nLastLBAof1stSession = 
-						MSFtoLBA(pTocData[a].Msf[2], pTocData[a].Msf[1], pTocData[a].Msf[0]) - 150;
-				}
-				break;
-			case 0xB0:
-				OutputLogStringA(fpLog, 
-					"\tSession %d, NextSession MSF %02d:%02d:%02d, LastWritable MSF %02d:%02d:%02d\n", 
-					pTocData[a].SessionNumber, pTocData[a].MsfExtra[0], 
-					pTocData[a].MsfExtra[1], pTocData[a].MsfExtra[2], 
-					pTocData[a].Msf[0], pTocData[a].Msf[1], pTocData[a].Msf[2]);
-				break;
-			case 0xC0:
-				OutputLogStringA(fpLog, 
-					"\tSession %d, WriteLaserOutput %02d, FirstLeadin MSF %02d:%02d:%02d\n", 
-					pTocData[a].SessionNumber, pTocData[a].MsfExtra[0],	
-					pTocData[a].Msf[0], pTocData[a].Msf[1], pTocData[a].Msf[2]);
-				break;
-			default:
-				OutputLogStringA(fpLog, 
-					"\tSession %d, Track %2d, MSF %02d:%02d:%02d\n", 
-					pTocData[a].SessionNumber, pTocData[a].Point, pTocData[a].Msf[0], 
-					pTocData[a].Msf[1], pTocData[a].Msf[2]);
-				if(pTocData[a].SessionNumber == 2) {
-					nStartLBAof2ndSession = MSFtoLBA(pTocData[a].Msf[2], 
-						pTocData[a].Msf[1], pTocData[a].Msf[0]) - 150;
-				}
-				aSessionNum[pTocData[a].Point-1] = pTocData[a].SessionNumber;
-				break;
-			}
-		}
+		OutputTocFull(&fullToc, pTocData, uiTocEntries,	&nLastLBAof1stSession,
+			&nStartLBAof2ndSession, aSessionNum, fpCcd, fpLog);
 	}
 	catch(PCHAR str) {
 		OutputErrorStringA(str);

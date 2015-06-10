@@ -46,6 +46,10 @@ int exec(_TCHAR* argv[], ExecType execType)
 	else if(execType == s) {
 		return StartStop(hDevice, STOP_UNIT_CODE, STOP_UNIT_CODE);
 	}
+	bRet = ReadTestUnitReady(hDevice);
+	if(!bRet) {
+		return FALSE;
+	}
 	CHAR pszVendorId[8+1];
 	CHAR pszProductId[16+1];
 	ZeroMemory(pszVendorId, sizeof(pszVendorId));
@@ -58,10 +62,6 @@ int exec(_TCHAR* argv[], ExecType execType)
 		return FALSE;
 	}
 #endif
-	bRet = ReadTestUnitReady(hDevice);
-	if(!bRet) {
-		return FALSE;
-	}
 	bRet = ReadDeviceInfo(hDevice, pszVendorId, pszProductId, fpLog);
 	if(!bRet) {
 		return FALSE;
@@ -93,7 +93,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 		if(!bRet) {
 			return FALSE;
 		}
-		bRet = ReadTOCFull(hDevice, bCanCDText, fpLog, fpCcd);
+		bRet = ReadTOCFull(hDevice, pszVendorId, pszProductId, bCanCDText, fpLog, fpCcd);
 		if(!bRet) {
 			return FALSE;
 		}

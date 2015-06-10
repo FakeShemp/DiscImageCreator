@@ -164,6 +164,17 @@ void OutputSubcode(
 	FILE* fpParse
 	);
 
+void OutputTocFull(
+	CONST CDROM_TOC_FULL_TOC_DATA* fullToc,
+	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData,
+	size_t uiTocEntries,
+	INT* nLastLBAof1stSession,
+	INT* nStartLBAof2ndSession,
+	INT* aSessionNum,
+	FILE* fpCcd,
+	FILE* fpLog
+	);
+
 void OutputVolumeDescriptor(
 	INT idx,
 	CONST PUCHAR buf,

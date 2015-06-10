@@ -143,6 +143,8 @@ BOOL ReadTOC(
 
 BOOL ReadTOCFull(
 	HANDLE hDevice,
+	LPCSTR pszVendorId,
+	LPCSTR pszProductId,
 	BOOL bCanCDText,
 	FILE* fpLog,
 	FILE* fpCcd
