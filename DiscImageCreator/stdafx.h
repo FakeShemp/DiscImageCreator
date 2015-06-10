@@ -24,6 +24,7 @@
 // SPTI(need Windows Driver Kit(wdk))
 #include <ntddcdrm.h> // inc\api
 #include <ntddcdvd.h> // inc\api
+#include <winioctl.h> // inc\api
 #include <ntddmmc.h> // inc\api
 #include <ntddscsi.h> // inc\api
 #define _NTSCSI_USER_MODE_
@@ -129,6 +130,7 @@ typedef struct _DISC_DATA {
 #include <crtdbg.h>
 #endif
 #include "convert.h"
+#include "execIoctl.h"
 #include "execMMC.h"
 #include "check.h"
 #include "get.h"

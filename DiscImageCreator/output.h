@@ -102,14 +102,23 @@ VOID OutputIoctlStorageAdaptorDescriptor(
 	FILE* fpLog
 	);
 
-VOID OutputMmcInquiryData(
-	PDEVICE_DATA pDevData,
-	PINQUIRYDATA pInquiry,
+VOID OutputIoctlFloppyInfo(
+	PDISK_GEOMETRY geom,
+	FILE* fpLog
+	);
+
+VOID OutputMmcBufferCapacity(
+	PUCHAR buf,
 	FILE* fpLog
 	);
 
 VOID OutputMmcDriveSpeed(
 	PCDROM_SET_SPEED pSetspeed,
+	FILE* fpLog
+	);
+
+VOID OutputMmcDiscInformation(
+	CONST PUCHAR pInfo,
 	FILE* fpLog
 	);
 
@@ -123,6 +132,17 @@ VOID OutputMmcFeatureNumber(
 
 VOID OutputMmcFeatureProfileType(
 	USHORT usFeatureProfileType,
+	FILE* fpLog
+	);
+
+VOID OutputMmcInquiryData(
+	PDEVICE_DATA pDevData,
+	PINQUIRYDATA pInquiry,
+	FILE* fpLog
+	);
+
+VOID OutputMmcToc(
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
@@ -188,9 +208,12 @@ VOID OutputMmcCdSubToLog(
 	);
 
 VOID OutputMmcDVDStructureFormat(
+	PDISC_DATA pDiscData,
+	INT nNum,
 	CONST PUCHAR pFormat, 
 	CONST PUCHAR pStructure,
 	CONST PUSHORT pStructureLength,
+	PUCHAR nLayerNum,
 	PINT nDVDSectorSize,
 	size_t i,
 	FILE* fpLog

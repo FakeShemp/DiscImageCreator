@@ -1233,22 +1233,19 @@ BOOL ReadBufferCapacity(
 	)
 {
 	UCHAR byScsiStatus = 0;
-	BOOL bRet = TRUE;
 	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
+	UCHAR buf[12] = {0};
+
 	aCmd[0] = SCSIOP_READ_BUFFER_CAPACITY;
 	aCmd[8] = 12;
-	UCHAR buf[12] = {0};
+
 	if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, buf,
 		12, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		bRet = FALSE;
+		return FALSE;
 	}
-	OutputLogString(fpLog, _T("Read Buffer Capacity\n"));
-	OutputLogString(fpLog, _T("\t  Length of the Buffer: %dKByte\n"), 
-		MAKELONG(MAKEWORD(buf[7], buf[6]), MAKEWORD(buf[5], buf[4]) / 1024));
-	OutputLogString(fpLog, _T("\tBlank Length of Buffer: %dKByte\n"),
-		MAKELONG(MAKEWORD(buf[11], buf[10]), MAKEWORD(buf[9], buf[8]) / 1024));
-	return bRet;
+	OutputMmcBufferCapacity(buf, fpLog);
+	return TRUE;
 }
 
 BOOL ReadConfiguration(
@@ -1267,6 +1264,7 @@ BOOL ReadConfiguration(
 	aCmd[3] = FeatureProfileList;
 	aCmd[7] = HIBYTE(uiSize);
 	aCmd[8] = LOBYTE(uiSize);
+
 	OutputLogString(fpLog, _T("Configuration\n"));
 	BOOL bRet = ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, &pHeader, 
 		(ULONG)uiSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
@@ -1311,31 +1309,52 @@ BOOL ReadConfiguration(
 	return bRet;
 }
 
-BOOL ReadDeviceInfo(
+BOOL ReadDiscInformation(
 	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	)
 {
 	UCHAR byScsiStatus = 0;
-	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
-	INQUIRYDATA inquiryData = {0};
+	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
+	USHORT usDiscInformationLength = 0;
 
-	aCmd[0] = SCSIOP_INQUIRY;
-	aCmd[4] = sizeof(INQUIRYDATA);
-	if(!ExecCommand(pDevData, aCmd, CDB6GENERIC_LENGTH, &inquiryData, 
-		sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
-		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		return FALSE;
+	aCmd[0] = SCSIOP_READ_DISC_INFORMATION;
+	aCmd[8] = sizeof(usDiscInformationLength);
+
+	BOOL bRet = ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, &usDiscInformationLength,
+		sizeof(usDiscInformationLength), &byScsiStatus, _T(__FUNCTION__), __LINE__);
+	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		OutputErrorString(_T("error\n"));
 	}
-	OutputMmcInquiryData(pDevData, &inquiryData, fpLog);
-	return TRUE;
+	else {
+		USHORT ulAllLen = usDiscInformationLength + sizeof(usDiscInformationLength);
+		PUCHAR pPInfo = (PUCHAR)calloc((size_t)ulAllLen + pDevData->AlignmentMask, sizeof(UCHAR));
+		if(!pPInfo) {
+			OutputErrorString(_T("Can't alloc memory [F:%s][L:%d]\n"), _T(__FUNCTION__), __LINE__);
+			bRet = FALSE;
+		}
+		else {
+			PUCHAR pInfo = (PUCHAR)ConvParagraphBoundary(pPInfo, pDevData);
+			aCmd[7] = HIBYTE(ulAllLen);
+			aCmd[8] = HIBYTE(ulAllLen);
+			bRet = ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, pInfo,
+				ulAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__);
+			if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+				OutputErrorString(_T("error\n"));
+			}
+			else {
+				OutputMmcDiscInformation(pInfo, fpLog);
+			}
+		}
+	}
+	return bRet;
 }
 
 BOOL ReadDVD(
 	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
 	LPCTSTR pszOption,
-	INT nDVDSectorSize,
 	FILE* fpLog
 	)
 {
@@ -1418,9 +1437,9 @@ BOOL ReadDVD(
 			aCmd2[9] = LOBYTE(LOWORD(uiSize));
 			OutputLogString(fpLog, _T("\tCopyrightManagementInformation\n"));
 		}
-		for(INT nLBA = 0; nLBA < nDVDSectorSize; nLBA += byTransferLen) {
-			if(nDVDSectorSize - nLBA < byTransferLen) {
-				byTransferLen = (UCHAR)(nDVDSectorSize - nLBA);
+		for(INT nLBA = 0; nLBA < pDiscData->nLength; nLBA += byTransferLen) {
+			if(pDiscData->nLength - nLBA < byTransferLen) {
+				byTransferLen = (UCHAR)(pDiscData->nLength - nLBA);
 				aCmd[9] = byTransferLen;
 			}
 			aCmd[2] = HIBYTE(HIWORD(nLBA));
@@ -1451,8 +1470,8 @@ BOOL ReadDVD(
 					OutputMmcDVDCopyrightManagementInformation(pBuf2, nLBA, i, fpLog);
 				}
 			}
-			OutputString(_T("\rCreating iso(LBA) %7d/%7d"), 
-				nLBA + byTransferLen - 1, nDVDSectorSize - 1);
+			OutputString(_T("\rCreating iso(LBA) %8u/%8u"), 
+				nLBA + byTransferLen - 1, pDiscData->nLength - 1);
 		}
 		OutputString(_T("\n"));
 	}
@@ -1468,9 +1487,9 @@ BOOL ReadDVD(
 
 BOOL ReadDVDRaw(
 	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	LPCSTR pszVendorId,
-	LPCTSTR pszOutFile,
-	INT nDVDSectorSize
+	LPCTSTR pszOutFile
 	)
 {
 	FILE* fp = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".raw"), _T("wb"), 0, 0);
@@ -1509,9 +1528,9 @@ BOOL ReadDVDRaw(
 			aCmd[11] = LOBYTE(LOWORD(DVD_RAW_READ * (size_t)byTransferLen));
 		}
 
-		for(INT nLBA = 0; nLBA < nDVDSectorSize; nLBA += byTransferLen) {
-			if(nDVDSectorSize - nLBA < byTransferLen) {
-				byTransferLen = (UCHAR)(nDVDSectorSize - nLBA);
+		for(INT nLBA = 0; nLBA < pDiscData->nLength; nLBA += byTransferLen) {
+			if(pDiscData->nLength - nLBA < byTransferLen) {
+				byTransferLen = (UCHAR)(pDiscData->nLength - nLBA);
 				if(pszVendorId && !strncmp(pszVendorId, "PLEXTER", 7)) {
 					aCmd[6] = LOBYTE(HIWORD(DVD_RAW_READ * (size_t)byTransferLen));
 					aCmd[7] = HIBYTE(LOWORD(DVD_RAW_READ * (size_t)byTransferLen));
@@ -1541,7 +1560,7 @@ BOOL ReadDVDRaw(
 
 			fwrite(pBuf, sizeof(UCHAR), (size_t)DVD_RAW_READ * byTransferLen, fp);
 			OutputString(_T("\rCreating raw(LBA) %7d/%7d"), 
-				nLBA + byTransferLen - 1, nDVDSectorSize - 1);
+				nLBA + byTransferLen - 1, pDiscData->nLength - 1);
 		}
 		OutputString(_T("\n"));
 	}
@@ -1581,6 +1600,7 @@ BOOL ReadDVDRaw(
 
 BOOL ReadDVDStructure(
 	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	PINT nDVDSectorSize,
 	FILE* fpLog
 	)
@@ -1622,43 +1642,64 @@ BOOL ReadDVDStructure(
 		}
 		OutputLogString(fpLog, _T("DVD Structure\n"));
 		for(INT i = 0, j = 0; i < nAllStructureSize; i+=4, j++) {
-#ifdef _DEBUG
 			if(i == 0) {
 				OutputLogString(fpLog, _T("\tDisc Structure List\n"));
 			}
 			OutputLogString(fpLog, 
-				_T("\t\tFormatCode: %02x, SDR: %s, RDS: %s, Structure Length: %d\n"), 
+				_T("\t\tFormatCode: %02x, SDR: %3s, RDS: %3s, Structure Length: %d\n"), 
 				pDiscStructure[4+i], 
 				BOOLEAN_TO_STRING_YES_NO(pDiscStructure[5+i] & 0x80), 
 				BOOLEAN_TO_STRING_YES_NO(pDiscStructure[5+i] & 0x40), 
 				(pDiscStructure[6+i] << 8) | pDiscStructure[7+i]);
-#endif
 			pFormat[j] = pDiscStructure[4+i];
 			pStructureLength[j] = 
 				MAKEWORD(pDiscStructure[7+i], pDiscStructure[6+i]);
 		}
 
+		UCHAR nLayerNum = 0;
 		for(size_t i = 0; i < uiFormatSize; i++) {
-			if(pStructureLength[i] == 0 || pFormat[i] == 0x05 || 
-				(0x08 <= pFormat[i] && pFormat[i] <= 0xC0)) {
+			if(pStructureLength[i] == 0 || pFormat[i] == 0x05 || pFormat[i] == 0xff) {
 				continue;
 			}
 			if(NULL == (pStructure = (PUCHAR)calloc(pStructureLength[i], sizeof(UCHAR)))) {
 				throw _T("Can't alloc memory pStructure\n");
 			}
+			aCmd[6] = 0;
 			aCmd[7] = pFormat[i];
 			aCmd[8] = HIBYTE(pStructureLength[i]);
 			aCmd[9] = LOBYTE(pStructureLength[i]);
 
 			if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, pStructure, 
 				pStructureLength[i], &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
-				throw _T("");
+				OutputErrorString(_T("Failure - Format %02x\n"), pFormat[i]);
 			}
-			if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-				OutputErrorString(_T("Failure - Format %d\n"), pFormat[i]);
-				continue;
+			else {
+				if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+					OutputErrorString(_T("Failure - Format %02x\n"), pFormat[i]);
+				}
+				else {
+					OutputMmcDVDStructureFormat(pDiscData, 0, pFormat,
+						pStructure, pStructureLength, &nLayerNum, nDVDSectorSize, i, fpLog);
+					if(nLayerNum == 1 &&
+						(pFormat[i] == 0 || pFormat[i] == 0x01 || pFormat[i] == 0x04 ||
+						pFormat[i] == 0x10 || pFormat[i] == 0x12 || pFormat[i] == 0x15)) {
+						aCmd[6] = nLayerNum;
+						if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, pStructure, 
+							pStructureLength[i], &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
+							OutputErrorString(_T("Failure - Format %02x\n"), pFormat[i]);
+						}
+						else {
+							if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+								OutputErrorString(_T("Failure - Format %02x\n"), pFormat[i]);
+							}
+							else {
+								OutputMmcDVDStructureFormat(pDiscData, 1, pFormat,
+									pStructure, pStructureLength, &nLayerNum, nDVDSectorSize, i, fpLog);
+							}
+						}
+					}
+				}
 			}
-			OutputMmcDVDStructureFormat(pFormat, pStructure, pStructureLength, nDVDSectorSize, i, fpLog);
 			FreeAndNull(pStructure);
 		}
 	}
@@ -1667,8 +1708,30 @@ BOOL ReadDVDStructure(
 		bRet = FALSE;
 	}
 	FreeAndNull(pFormat);
+	FreeAndNull(pStructure);
 	FreeAndNull(pStructureLength);
 	return bRet;
+}
+
+BOOL ReadInquiryData(
+	PDEVICE_DATA pDevData,
+	FILE* fpLog
+	)
+{
+	UCHAR byScsiStatus = 0;
+	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
+	INQUIRYDATA inquiryData = {0};
+
+	aCmd[0] = SCSIOP_INQUIRY;
+	aCmd[4] = sizeof(INQUIRYDATA);
+
+	if(!ExecCommand(pDevData, aCmd, CDB6GENERIC_LENGTH, &inquiryData, 
+		sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
+		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		return FALSE;
+	}
+	OutputMmcInquiryData(pDevData, &inquiryData, fpLog);
+	return TRUE;
 }
 
 BOOL ReadTestUnitReady(
@@ -1677,6 +1740,7 @@ BOOL ReadTestUnitReady(
 {
 	UCHAR byScsiStatus = 0;
 	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
+
 	aCmd[0] = SCSIOP_TEST_UNIT_READY;
 
 	if(!ExecCommand(pDevData, aCmd, CDB6GENERIC_LENGTH, NULL, 
@@ -1695,6 +1759,7 @@ BOOL ReadTOC(
 {
 	UCHAR byScsiStatus = 0;
 	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
+
 	aCmd[0] = SCSIOP_READ_TOC;
 	aCmd[6] = 1;
 	aCmd[7] = HIBYTE(CDROM_TOC_SIZE);
@@ -1706,39 +1771,7 @@ BOOL ReadTOC(
 		OutputErrorString(_T("Can't get toc\n"));
 		return FALSE;
 	}
-
-	OutputLogString(fpLog, _T("TOC on SCSIOP_READ_TOC\n"));
-	_TCHAR strType[7] = {0};
-	BOOL bFirstData = TRUE;
-	for(INT i = pDiscData->toc.FirstTrack; i <= pDiscData->toc.LastTrack; i++) {
-		for(INT j = 0, k = 24; j < 4; j++, k -= 8) {
-			pDiscData->aTocLBA[i-1][0] |= pDiscData->toc.TrackData[i-1].Address[j] << k;
-			pDiscData->aTocLBA[i-1][1] |= pDiscData->toc.TrackData[i].Address[j] << k;
-		}
-		pDiscData->aTocLBA[i-1][1] -= 1;
-		pDiscData->nLength += pDiscData->aTocLBA[i-1][1] - pDiscData->aTocLBA[i-1][0] + 1;
-
-		if((pDiscData->toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == 0) {
-			_tcscpy(strType, _T(" Audio"));
-		}
-		else if((pDiscData->toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-			if(bFirstData) {
-				pDiscData->nFirstDataLBA = pDiscData->aTocLBA[i-1][0];
-				bFirstData = FALSE;
-			}
-			_tcscpy(strType, _T("  Data"));
-		}
-		if(i == pDiscData->toc.FirstTrack && pDiscData->aTocLBA[i-1][0] > 0) {
-			pDiscData->nLength += pDiscData->aTocLBA[i-1][0];
-			OutputLogString(fpLog, _T("\tPregap Track   , LBA %6u-%6u, Length %6u\n"), 
-				0, pDiscData->aTocLBA[i-1][0] - 1, pDiscData->aTocLBA[i-1][0]);
-		}
-		OutputLogString(fpLog, _T("\t%s Track %2u, LBA %6u-%6u, Length %6u\n"), 
-			strType, i, pDiscData->aTocLBA[i-1][0], pDiscData->aTocLBA[i-1][1], 
-			pDiscData->aTocLBA[i-1][1] - pDiscData->aTocLBA[i-1][0] + 1);
-	}
-	OutputLogString(fpLog, 
-		_T("\t                                    Total  %6u\n"), pDiscData->nLength);
+	OutputMmcToc(pDiscData, fpLog);
 	return TRUE;
 }
 
@@ -1753,6 +1786,7 @@ BOOL ReadTOCFull(
 	UCHAR aCmd[CDB10GENERIC_LENGTH] = {0};
 	CDROM_TOC_FULL_TOC_DATA fullToc = {0};
 	size_t uiFullTocHeaderSize = sizeof(CDROM_TOC_FULL_TOC_DATA);
+
 	aCmd[0] = SCSIOP_READ_TOC;
 	aCmd[2] = CDROM_READ_TOC_EX_FORMAT_FULL_TOC;
 	aCmd[6] = 1;
@@ -1796,8 +1830,10 @@ BOOL ReadTOCFull(
 		return FALSE;
 	}
 	PUCHAR pFullToc = (PUCHAR)ConvParagraphBoundary(pPFullToc, pDevData);
+
 	aCmd[7] = HIBYTE(uiFullTocFixStructSize);
 	aCmd[8] = LOBYTE(uiFullTocFixStructSize);
+
 	BOOL bRet = TRUE;
 	try {
 		if(!ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, pFullToc, 
@@ -1894,6 +1930,7 @@ BOOL ReadTOCText(
 	aCmd[2] = CDROM_READ_TOC_EX_FORMAT_CDTEXT;
 	aCmd[7] = HIBYTE(uiCDTextDataSize);
 	aCmd[8] = LOBYTE(uiCDTextDataSize);
+
 	BOOL bRet = ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, &tocText,
 		(ULONG)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 	OutputLogString(fpLog, _T("CDTEXT on SCSIOP_READ_TOC\n"));
@@ -2056,12 +2093,14 @@ BOOL SetCDSpeed(
 		CD_RAW_SECTOR_SIZE * 75 * 72 / 1000, 	// 12700.800 Kbytes/sec
 		0xFFFF,									// MAX
 	};
+
 	if(nCDSpeedNum < 0) {
 		nCDSpeedNum = 0;
 	}
 	else if(nCDSpeedNum > DRIVE_MAX_SPEED) {
 		nCDSpeedNum = DRIVE_MAX_SPEED;
 	}
+
 	aCDCmd[0] = SCSIOP_SET_CD_SPEED;
 	aCDCmd[2] = HIBYTE(wCDSpeedList[nCDSpeedNum]);
 	aCDCmd[3] = LOBYTE(wCDSpeedList[nCDSpeedNum]);
@@ -2077,12 +2116,13 @@ BOOL SetCDSpeed(
 
 BOOL StartStop(
 	PDEVICE_DATA pDevData,
-   UCHAR Start,
-    UCHAR LoadEject
+	UCHAR Start,
+	UCHAR LoadEject
 	)
 {
 	UCHAR byScsiStatus = 0;
 	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
+
 	aCmd[0] = SCSIOP_START_STOP_UNIT;
 	aCmd[4] = UCHAR(LoadEject << 1 | Start);
 

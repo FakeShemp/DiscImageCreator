@@ -452,18 +452,18 @@ BOOL CheckAndFixSubchannel(
 					subQ->nRelativeTime = prevSubQ->nRelativeTime + 1;
 				}
 			}
-			// Madou Monogatari I - Honoo no Sotsuenji (Japan)
-			// LBA[183031, 0x2CAF7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-21, Index-01, RelativeTime-00:31:70, AbsoluteTime-40:42:31] RtoW:ZERO mode
-			// LBA[183032, 0x2CAF8], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :32] RtoW:ZERO mode
-			// LBA[183033, 0x2CAF9], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-22, Index-01, RelativeTime-00:00:01, AbsoluteTime-40:42:33] RtoW:ZERO mode
 			else if(nLBA == pDiscData->aTocLBA[prevSubQ->byTrackNum][0]) {
+				// Madou Monogatari I - Honoo no Sotsuenji (Japan)
+				// LBA[183031, 0x2CAF7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-21, Index-01, RelativeTime-00:31:70, AbsoluteTime-40:42:31] RtoW:ZERO mode
+				// LBA[183032, 0x2CAF8], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :32] RtoW:ZERO mode
+				// LBA[183033, 0x2CAF9], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-22, Index-01, RelativeTime-00:00:01, AbsoluteTime-40:42:33] RtoW:ZERO mode
 				subQ->nRelativeTime = 0;
 			}
-			// Cosmic Fantasy 3 - Bouken Shounen Rei (Japan)
-			// LBA[142873, 0x22E19], Data, Copy NG, TOC[TrackNum-37, Index-00, RelativeTime-00:00:00, AbsoluteTime-31:46:73] RtoW:ZERO mode
-			// LBA[142874, 0x22E1A], Data, Copy NG, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :74] RtoW:ZERO mode
-			// LBA[142875, 0x22E1B], Data, Copy NG, TOC[TrackNum-37, Index-01, RelativeTime-00:00:01, AbsoluteTime-31:47:00] RtoW:ZERO mode
 			else if(prevSubQ->byIndex == 0 && prevSubQ->nRelativeTime == 0) {
+				// Cosmic Fantasy 3 - Bouken Shounen Rei (Japan)
+				// LBA[142873, 0x22E19], Data, Copy NG, TOC[TrackNum-37, Index-00, RelativeTime-00:00:00, AbsoluteTime-31:46:73] RtoW:ZERO mode
+				// LBA[142874, 0x22E1A], Data, Copy NG, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :74] RtoW:ZERO mode
+				// LBA[142875, 0x22E1B], Data, Copy NG, TOC[TrackNum-37, Index-01, RelativeTime-00:00:01, AbsoluteTime-31:47:00] RtoW:ZERO mode
 				subQ->nRelativeTime = 0;
 			}
 			else if(prevSubQ->byIndex == 0) {

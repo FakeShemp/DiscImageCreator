@@ -598,6 +598,116 @@ VOID OutputIoctlStorageAdaptorDescriptor(
 		adapterDescriptor->BusMinorVersion);
 }
 
+VOID OutputIoctlFloppyInfo(
+	PDISK_GEOMETRY geom,
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog, _T("MediaType: "));
+	switch(geom[0].MediaType) {
+	case Unknown:
+		OutputLogString(fpLog, _T("Format is unknown\n"));
+		break;
+	case F5_1Pt2_512:
+		OutputLogString(fpLog, _T("5.25, 1.2MB, 512 bytes/sector\n"));
+		break;
+	case F3_1Pt44_512:
+		OutputLogString(fpLog, _T("3.5, 1.44MB, 512 bytes/sector\n"));
+		break;
+	case F3_2Pt88_512:
+		OutputLogString(fpLog, _T("3.5, 2.88MB, 512 bytes/sector\n"));
+		break;
+	case F3_20Pt8_512:
+		OutputLogString(fpLog, _T("3.5, 20.8MB, 512 bytes/sector\n"));
+		break;
+	case F3_720_512:
+		OutputLogString(fpLog, _T("3.5, 720KB, 512 bytes/sector\n"));
+		break;
+	case F5_360_512:
+		OutputLogString(fpLog, _T("5.25, 360KB, 512 bytes/sector\n"));
+		break;
+	case F5_320_512:
+		OutputLogString(fpLog, _T("5.25, 320KB, 512 bytes/sector\n"));
+		break;
+	case F5_320_1024:
+		OutputLogString(fpLog, _T("5.25, 320KB, 1024 bytes/sector\n"));
+		break;
+	case F5_180_512:
+		OutputLogString(fpLog, _T("5.25, 180KB, 512 bytes/sector\n"));
+		break;
+	case F5_160_512:
+		OutputLogString(fpLog, _T("5.25, 160KB, 512 bytes/sector\n"));
+		break;
+	case RemovableMedia:
+		OutputLogString(fpLog, _T("Removable media other than floppy\n"));
+		break;
+	case FixedMedia:
+		OutputLogString(fpLog, _T("Fixed hard disk media\n"));
+		break;
+	case F3_120M_512:
+		OutputLogString(fpLog, _T("3.5, 120M Floppy\n"));
+		break;
+	case F3_640_512:
+		OutputLogString(fpLog, _T("3.5, 640KB, 512 bytes/sector\n"));
+		break;
+	case F5_640_512:
+		OutputLogString(fpLog, _T("5.25, 640KB, 512 bytes/sector\n"));
+		break;
+	case F5_720_512:
+		OutputLogString(fpLog, _T("5.25, 720KB, 512 bytes/sector\n"));
+		break;
+	case F3_1Pt2_512:
+		OutputLogString(fpLog, _T("3.5, 1.2Mb, 512 bytes/sector\n"));
+		break;
+	case F3_1Pt23_1024:
+		OutputLogString(fpLog, _T("3.5, 1.23Mb, 1024 bytes/sector\n"));
+		break;
+	case F5_1Pt23_1024:
+		OutputLogString(fpLog, _T("5.25, 1.23MB, 1024 bytes/sector\n"));
+		break;
+	case F3_128Mb_512:
+		OutputLogString(fpLog, _T("3.5 MO, 128Mb, 512 bytes/sector\n"));
+		break;
+	case F3_230Mb_512:
+		OutputLogString(fpLog, _T("3.5 MO, 230Mb, 512 bytes/sector\n"));
+		break;
+	case F8_256_128:
+		OutputLogString(fpLog, _T("8, 256KB, 128 bytes/sector\n"));
+		break;
+	case F3_200Mb_512:
+		OutputLogString(fpLog, _T("3.5, 200M Floppy (HiFD)\n"));
+		break;
+	case F3_240M_512:
+		OutputLogString(fpLog, _T("3.5, 240Mb Floppy (HiFD)\n"));
+		break;
+	case F3_32M_512:
+		OutputLogString(fpLog, _T("3.5, 32Mb Floppy\n"));
+		break;
+	default:
+		OutputLogString(fpLog, _T("known\n"));
+		break;
+	}
+	OutputLogString(fpLog,
+		_T("\t        Cylinders: %d\n")
+		_T("\tTracksPerCylinder: %d\n")
+		_T("\t  SectorsPerTrack: %d\n"),
+		geom[0].Cylinders.LowPart,
+		geom[0].TracksPerCylinder,
+		geom[0].SectorsPerTrack);
+}
+
+VOID OutputMmcBufferCapacity(
+	PUCHAR buf,
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog, _T("Read Buffer Capacity\n"));
+	OutputLogString(fpLog, _T("\t  Length of the Buffer: %dKByte\n"), 
+		MAKELONG(MAKEWORD(buf[7], buf[6]), MAKEWORD(buf[5], buf[4]) / 1024));
+	OutputLogString(fpLog, _T("\tBlank Length of Buffer: %dKByte\n"),
+		MAKELONG(MAKEWORD(buf[11], buf[10]), MAKEWORD(buf[9], buf[8]) / 1024));
+}
+
 VOID OutputMmcInquiryData(
 	PDEVICE_DATA pDevData,
 	PINQUIRYDATA pInquiry,
@@ -605,7 +715,7 @@ VOID OutputMmcInquiryData(
 	)
 {
 	OutputLogString(fpLog,
-		_T("Device Info\n")
+		_T("Inquiry Data\n")
 		_T("\t          DeviceType: "));
 	switch(pInquiry->DeviceType) {
 	case READ_ONLY_DIRECT_ACCESS_DEVICE:
@@ -718,6 +828,103 @@ VOID OutputMmcDriveSpeed(
 		pSetspeed->ReadSpeed,
 		pSetspeed->WriteSpeed,
 		pSetspeed->RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation"));
+}
+
+VOID OutputMmcDiscInformation(
+	CONST PUCHAR pInfo,
+	FILE* fpLog
+	)
+{
+	LPCTSTR lpStateOfLastSession[] = {
+		_T("Empty Session"), _T("Incomplete Session"),
+		_T("Reserved / Damaged Session"), _T("Complete Session")
+	};
+	LPCTSTR lpDiscStatus[] = {
+		_T("Empty Disc"), _T("Incomplete Disc"),
+		_T("Finalized Disc"), _T("Others")
+	};
+	LPCTSTR lpBGFormatStatus[] = {
+		_T("The disc is neither CD-RW nor DVD+RW."), _T("A background format was started"),
+		_T("A background format is in progress"), _T("Background formatting has completed")
+	};
+	OutputLogString(fpLog,
+		_T("DiscInformation\n")
+		_T("\t                          Disc Status: %s\n")
+		_T("\t                State of Last Session: %s\n")
+		_T("\t                         Erasable Bit: %s\n")
+		_T("\t        Number of First Track on Disc: %d\n")
+		_T("\t                   Number of Sessions: %d\n")
+		_T("\t   First Track Number in Last Session: %d\n")
+		_T("\t    Last Track Number in Last Session: %d\n")
+		_T("\t             Background Format Status: %s\n")
+		_T("\t                            dirty bit: %s\n")
+		_T("\tvalidity of the Disc Application Code: %s\n")
+		_T("\t                Unrestricted Use Disc: %s\n")
+		_T("\t                  Disc Bar Code Valid: %s\n")
+		_T("\t                        Disc ID Valid: %s\n")
+		_T("\t                            Disc Type: "),
+		lpDiscStatus[pInfo[2]&0x03],
+		lpStateOfLastSession[pInfo[2]>>2&0x03],
+		BOOLEAN_TO_STRING_YES_NO(pInfo[2] & 0x10),
+		pInfo[3],
+		pInfo[4],
+		pInfo[5],
+		pInfo[6],
+		lpBGFormatStatus[pInfo[7] & 0x03],
+		BOOLEAN_TO_STRING_YES_NO(pInfo[7] & 0x04),
+		BOOLEAN_TO_STRING_YES_NO(pInfo[7] & 0x10),
+		BOOLEAN_TO_STRING_YES_NO(pInfo[7] & 0x20),
+		BOOLEAN_TO_STRING_YES_NO(pInfo[7] & 0x40),
+		BOOLEAN_TO_STRING_YES_NO(pInfo[7] & 0x80));
+	switch(pInfo[8]) {
+	case 0:
+		OutputLogString(fpLog, _T("CD-DA or CD-ROM Disc\n"));
+		break;
+	case 0x10:
+		OutputLogString(fpLog, _T("CD-I Disc\n"));
+		break;
+	case 0x20:
+		OutputLogString(fpLog, _T("CD-ROM XA Disc\n"));
+		break;
+	case 0xff:
+		OutputLogString(fpLog, _T("Undefined\n"));
+		break;
+	default:
+		OutputLogString(fpLog, _T("Reserved\n"));
+		break;
+	}
+	OutputLogString(fpLog,
+		_T("\t           Disc Identification Number: %d\n")
+		_T("\t   Last Session Lead-in Start Address: %x\n")
+		_T("\t Last Possible Lead-out Start Address: %x\n")
+		_T("\t                        Disc Bar Code: %x%x\n")
+		_T("\t                Disc Application Code: %d\n")
+		_T("\t                 Number of OPC Tables: %d\n")
+		_T("\t                            OPC Table: \n"),
+		MAKELONG(MAKEWORD(pInfo[12], pInfo[13]),
+			MAKEWORD(pInfo[14], pInfo[15])),
+		MAKELONG(MAKEWORD(pInfo[16], pInfo[17]),
+			MAKEWORD(pInfo[18], pInfo[19])),
+		MAKELONG(MAKEWORD(pInfo[20], pInfo[21]),
+			MAKEWORD(pInfo[22], pInfo[23])),
+		MAKELONG(MAKEWORD(pInfo[24], pInfo[25]),
+			MAKEWORD(pInfo[26], pInfo[27])),
+		MAKELONG(MAKEWORD(pInfo[28], pInfo[29]),
+			MAKEWORD(pInfo[30], pInfo[31])),
+		pInfo[32],
+		pInfo[33]);
+	for(INT i = 0; i < pInfo[33]; i++) {
+		OutputLogString(fpLog,
+			_T("\t\tSpeed: %d\n")
+			_T("\t\tOPC Values: %c%c%c%c%c%c\n"),
+			MAKEWORD(pInfo[34+i*pInfo[33]+1], pInfo[34]),
+			pInfo[34+i*pInfo[33]+2],
+			pInfo[34+i*pInfo[33]+3],
+			pInfo[34+i*pInfo[33]+4],
+			pInfo[34+i*pInfo[33]+5],
+			pInfo[34+i*pInfo[33]+6],
+			pInfo[34+i*pInfo[33]+7]);
+	}
 }
 
 VOID OutputMmcFeatureNumber(
@@ -1361,6 +1568,45 @@ VOID OutputMmcFeatureProfileType(
 			OutputLogString(fpLog, _T("Reserved [%x]"), usFeatureProfileType);
 			break;
 	}
+}
+
+VOID OutputMmcToc(
+	PDISC_DATA pDiscData,
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog, _T("TOC on SCSIOP_READ_TOC\n"));
+	_TCHAR strType[7] = {0};
+	BOOL bFirstData = TRUE;
+	for(INT i = pDiscData->toc.FirstTrack; i <= pDiscData->toc.LastTrack; i++) {
+		for(INT j = 0, k = 24; j < 4; j++, k -= 8) {
+			pDiscData->aTocLBA[i-1][0] |= pDiscData->toc.TrackData[i-1].Address[j] << k;
+			pDiscData->aTocLBA[i-1][1] |= pDiscData->toc.TrackData[i].Address[j] << k;
+		}
+		pDiscData->aTocLBA[i-1][1] -= 1;
+		pDiscData->nLength += pDiscData->aTocLBA[i-1][1] - pDiscData->aTocLBA[i-1][0] + 1;
+
+		if((pDiscData->toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == 0) {
+			_tcscpy(strType, _T(" Audio"));
+		}
+		else if((pDiscData->toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
+			if(bFirstData) {
+				pDiscData->nFirstDataLBA = pDiscData->aTocLBA[i-1][0];
+				bFirstData = FALSE;
+			}
+			_tcscpy(strType, _T("  Data"));
+		}
+		if(i == pDiscData->toc.FirstTrack && pDiscData->aTocLBA[i-1][0] > 0) {
+			pDiscData->nLength += pDiscData->aTocLBA[i-1][0];
+			OutputLogString(fpLog, _T("\tPregap Track   , LBA %8u-%8u, Length %8u\n"), 
+				0, pDiscData->aTocLBA[i-1][0] - 1, pDiscData->aTocLBA[i-1][0]);
+		}
+		OutputLogString(fpLog, _T("\t%s Track %2u, LBA %8u-%8u, Length %8u\n"), 
+			strType, i, pDiscData->aTocLBA[i-1][0], pDiscData->aTocLBA[i-1][1], 
+			pDiscData->aTocLBA[i-1][1] - pDiscData->aTocLBA[i-1][0] + 1);
+	}
+	OutputLogString(fpLog, 
+		_T("\t                                        Total  %8u\n"), pDiscData->nLength);
 }
 
 VOID OutputMmcTocFull(
@@ -2373,9 +2619,12 @@ VOID OutputMmcCdSubToLog(
 }
 
 VOID OutputMmcDVDStructureFormat(
-	CONST PUCHAR pFormat, 
+	PDISC_DATA pDiscData,
+	INT nNum,
+	CONST PUCHAR pFormat,
 	CONST PUCHAR pStructure,
 	CONST PUSHORT pStructureLength,
+	PUCHAR nLayerNum,
 	PINT nDVDSectorSize,
 	size_t i,
 	FILE* fpLog
@@ -2383,6 +2632,7 @@ VOID OutputMmcDVDStructureFormat(
 {
 	switch(pFormat[i]) {
 	case DvdPhysicalDescriptor:
+	case 0x10:
 	{
 		LPCTSTR lpBookType[] = {
 			_T("DVD-ROM"), _T("DVD-RAM"), _T("DVD-R"), _T("DVD-RW"),
@@ -2392,45 +2642,46 @@ VOID OutputMmcDVDStructureFormat(
 		};
 
 		LPCTSTR lpMaximumRate[] = {
-			_T("2.52Mbps"), _T("5.04Mbps"), _T("10.08Mbps"), _T("20.16Mbps"),
-			_T("30.24Mbps"), _T("Reserved"),	_T("Reserved"), _T("Reserved"),
+			_T("2.52 Mbps"), _T("5.04 Mbps"), _T("10.08 Mbps"), _T("20.16 Mbps"),
+			_T("30.24 Mbps"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
 			_T("Reserved"), _T("Reserved"),	_T("Reserved"), _T("Reserved"),
-			_T("Reserved"), _T("Reserved"), _T("Not Specified")
+			_T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Not Specified")
 		};
 
 		LPCTSTR lpLayerType[] = {
-			_T("Layer contains embossed data"), _T("Layer contains recordable data"), 
-			_T("Layer contains rewritable data"), _T("Reserved")
+			_T("Unknown"), _T("Layer contains embossed data"), _T("Layer contains recordable data"), _T("Unknown"),
+			_T("Layer contains rewritable data"), _T("Unknown"), _T("Unknown"), _T("Unknown"),
+			_T("Reserved"), _T("Unknown"), _T("Unknown"), _T("Unknown"),
+			_T("Unknown"), _T("Unknown"), _T("Unknown"), _T("Unknown")
 		};
 
 		LPCTSTR lpTrackDensity[] = {
-			_T("0.74ƒÊm/track"), _T("0.80ƒÊm/track"), _T("0.615ƒÊm/track"),
-			_T("0.40ƒÊm/track"), _T("0.34ƒÊm/track"), _T("Reserved"),
-			_T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
-			_T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
-			_T("Reserved"), _T("Reserved")
+			_T("0.74ƒÊm/track"), _T("0.80ƒÊm/track"), _T("0.615ƒÊm/track"),	_T("0.40ƒÊm/track"),
+			_T("0.34ƒÊm/track"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
+			_T("Reserved"), _T("Reserved"),	_T("Reserved"), _T("Reserved"),
+			_T("Reserved"), _T("Reserved"),	_T("Reserved"), _T("Reserved")
 		};
 
 		LPCTSTR lpLinearDensity[] = {
-			_T("0.267ƒÊm/bit"), _T("0.293ƒÊm/bit"), _T("0.409 to 0.435ƒÊm/bit"),
-			_T("Reserved"),	_T("0.280 to 0.291ƒÊm/bit"), _T("0.153ƒÊm/bit"),
-			_T("0.130 to 0.140ƒÊm/bit"), _T("Reserved"), _T("0.353ƒÊm/bit"),
-			_T("Reserved"), _T("Reserved"), _T("Reserved"),	_T("Reserved"),
-			_T("Reserved"), _T("Reserved")
+			_T("0.267ƒÊm/bit"), _T("0.293ƒÊm/bit"), _T("0.409 to 0.435ƒÊm/bit"), _T("Reserved"),
+			_T("0.280 to 0.291ƒÊm/bit"), _T("0.153ƒÊm/bit"), _T("0.130 to 0.140ƒÊm/bit"), _T("Reserved"),
+			_T("0.353ƒÊm/bit"),	_T("Reserved"), _T("Reserved"), _T("Reserved"),
+			_T("Reserved"),	_T("Reserved"), _T("Reserved"), _T("Reserved")
 		};
 
+		*nLayerNum = (UCHAR)(pStructure[6] >> 5 & 0x01);
 		LONG ulStartSectorNum = MAKELONG(MAKEWORD(pStructure[11], 
 			pStructure[10]), MAKEWORD(pStructure[9], pStructure[8]));
 
 		LONG ulEndSectorNum = MAKELONG(MAKEWORD(pStructure[15], 
 			pStructure[14]), MAKEWORD(pStructure[13], pStructure[12]));
 
-		*nDVDSectorSize = ulEndSectorNum - ulStartSectorNum + 1;
+		*nDVDSectorSize += ulEndSectorNum - ulStartSectorNum + 1;
 		INT ulEndSectorLayer0 = MAKELONG(MAKEWORD(pStructure[19], 
 			pStructure[18]), MAKEWORD(pStructure[17], pStructure[16]));
 
-		OutputLogString(fpLog, _T(
-			"\tPhysicalFormatInformation\n")
+		OutputLogString(fpLog, 
+			_T("\tPhysicalFormatInformation\n")
 			_T("\t\t       BookVersion: %d\n")
 			_T("\t\t          BookType: %s\n")
 			_T("\t\t       MinimumRate: %s\n")
@@ -2440,9 +2691,9 @@ VOID OutputMmcDVDStructureFormat(
 			_T("\t\t    NumberOfLayers: %s\n")
 			_T("\t\t      TrackDensity: %s\n")
 			_T("\t\t     LinearDensity: %s\n")
-			_T("\t\t   StartDataSector: %d(0x%x)\n")
-			_T("\t\t     EndDataSector: %d(0x%x)\n")
-			_T("\t\tEndLayerZeroSector: %x\n")
+			_T("\t\t   StartDataSector: %8d (0x%x)\n")
+			_T("\t\t     EndDataSector: %8d (0x%x)\n")
+			_T("\t\tEndLayerZeroSector: %8d (0x%x)\n")
 			_T("\t\t           BCAFlag: %s\n")
 			_T("\t\t     MediaSpecific: "),
 			pStructure[4] & 0x0F,
@@ -2456,18 +2707,32 @@ VOID OutputMmcDVDStructureFormat(
 			lpLinearDensity[pStructure[7]>>4&0x0F],
 			ulStartSectorNum, ulStartSectorNum,
 			ulEndSectorNum, ulEndSectorNum,
-			ulEndSectorLayer0,
+			ulEndSectorLayer0, ulEndSectorLayer0,
 			(pStructure[20] & 0x80) == 0 ? _T("None") : _T("Exist"));
 
 		for(ULONG k = 0; k < 2031; k++) {
 			OutputLogString(fpLog, _T("%02x"), pStructure[21+k]);
 		}
+
+		LONG nSector = 0;
+		if((pStructure[6] & 0x10)) {
+			if(nNum == 0) {
+				nSector = ulEndSectorLayer0 - ulStartSectorNum + 1;
+			}
+			else {
+				nSector = pDiscData->aTocLBA[0][1] - (ulEndSectorLayer0 - ulStartSectorNum);
+			}
+		}
+		else {
+			nSector = ulEndSectorNum - ulStartSectorNum + 1;
+		}
 		OutputLogString(fpLog, _T("\n"));
+		OutputLogString(fpLog, 
+			_T("\t\t         L%d Sector: %8d (0x%x)\n"), nNum, nSector, nSector);
 		break;
 	}
 	case DvdCopyrightDescriptor:
-		OutputLogString(fpLog, _T(
-			"\tCopyrightProtectionType: "));
+		OutputLogString(fpLog, _T("\tCopyrightProtectionType: "));
 		switch(pStructure[4]) {
 		case 0:
 			OutputLogString(fpLog, _T("No\n"));
@@ -2531,6 +2796,128 @@ VOID OutputMmcDVDStructureFormat(
 			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
 		}
 		OutputLogString(fpLog, _T("\n"));
+		break;
+	case 0x0c:
+		OutputLogString(fpLog,
+			_T("\tRMD in last border-out: "));
+		for(ULONG k = 0; 
+			k < pStructureLength[i] - sizeof(DVD_DESCRIPTOR_HEADER); k++) {
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
+		}
+		OutputLogString(fpLog, _T("\n"));
+		break;
+	case 0x0d:
+		OutputLogString(fpLog,
+			_T("\tDVD_RECORDING_MANAGEMENT_AREA_DATA\n")
+			_T("\t\tLastRecordedRMASectorNumber: %d\n")
+			_T("\t\t                   RMDBytes: "),
+			MAKELONG(MAKEWORD(pStructure[7], pStructure[6]), 
+				MAKEWORD(pStructure[5], pStructure[4])));
+		for(ULONG k = 0; 
+			k < pStructureLength[i] - sizeof(DVD_DESCRIPTOR_HEADER); k++) {
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
+		}
+		OutputLogString(fpLog, _T("\n"));
+		break;
+	case 0x0e:
+		OutputLogString(fpLog,
+			_T("\tDVD_PRERECORDED_INFORMATION\n")
+			_T("\t\tFieldID_1: %d\n")
+			_T("\t\tDiscApplicationCode: %d\n")
+			_T("\t\tDiscPhysicalCode: %d\n")
+			_T("\t\tLastAddressOfDataRecordableArea: %d\n")
+			_T("\t\tExtensionCode: %d\n")
+			_T("\t\tPartVers1on: %d\n")
+			_T("\t\tFieldID_2: %d\n")
+			_T("\t\tOpcSuggestedCode: %d\n")
+			_T("\t\tWavelengthCode: %d\n")
+			_T("\t\tWriteStrategyCode: %d\n")
+			_T("\t\tFieldID_3: %d\n")
+			_T("\t\tManufacturerId_3: %c%c%c%c%c%c\n")
+			_T("\t\tFieldID_4: %d\n")
+			_T("\t\tManufacturerId_4: %c%c%c%c%c%c\n")
+			_T("\t\tFieldID_5: %d\n")
+			_T("\t\tManufacturerId_5: %c%c%c%c%c%c\n"),
+			pStructure[4],
+			pStructure[5],
+			pStructure[6],
+			MAKELONG(MAKEWORD(0, pStructure[9]), 
+				MAKEWORD(pStructure[8], pStructure[7])),
+			pStructure[10] & 0xf,
+			pStructure[10] >> 4 & 0xf,
+			pStructure[12],
+			pStructure[13],
+			pStructure[14],
+			MAKELONG(MAKEWORD(pStructure[18], pStructure[17]), 
+				MAKEWORD(pStructure[16], pStructure[15])),
+			pStructure[20],
+			pStructure[21], pStructure[22], pStructure[23], pStructure[24], pStructure[25], pStructure[26],
+			pStructure[28],
+			pStructure[29], pStructure[30], pStructure[31], pStructure[32], pStructure[33], pStructure[34],
+			pStructure[36],
+			pStructure[37], pStructure[38], pStructure[39], pStructure[40], pStructure[41], pStructure[42]);
+		break;
+	case 0x0f:
+		OutputLogString(fpLog,
+			_T("\tDVD_UNIQUE_DISC_IDENTIFIER\n")
+			_T("\t\tRandomNumber: %d\n")
+			_T("\t\t     YMD HMS: %04d-%02d-%02d %02d:%02d:%02d\n"),
+			MAKEWORD(pStructure[7], pStructure[6]),
+			MAKELONG(MAKEWORD(pStructure[11], pStructure[10]), 
+				MAKEWORD(pStructure[9], pStructure[8])),
+			MAKEWORD(pStructure[13], pStructure[12]),
+			MAKEWORD(pStructure[15], pStructure[14]),
+			MAKEWORD(pStructure[17], pStructure[16]),
+			MAKEWORD(pStructure[19], pStructure[18]),
+			MAKEWORD(pStructure[21], pStructure[20]));
+		break;
+	case 0x11:
+		OutputLogString(fpLog,
+			_T("\tADIP information: "));
+		for(ULONG k = 0; 
+			k < pStructureLength[i] - sizeof(DVD_DESCRIPTOR_HEADER); k++) {
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
+		}
+		OutputLogString(fpLog, _T("\n"));
+		break;
+	case 0x30:
+		OutputLogString(fpLog,
+			_T("\tDVD_DISC_CONTROL_BLOCK_WRITE_INHIBIT\n")
+			_T("\t\tDVD_DISC_CONTROL_BLOCK_HEADER\n")
+			_T("\t\t\tContentDescriptor: %d\n")
+			_T("\t\t\t           AsByte: %d\n")
+			_T("\t\t\t         VendorId: "),
+			MAKELONG(MAKEWORD(pStructure[7], pStructure[6]), 
+				MAKEWORD(pStructure[5], pStructure[4])),
+			MAKELONG(MAKEWORD(pStructure[11], pStructure[10]), 
+				MAKEWORD(pStructure[9], pStructure[8])));
+		for(ULONG k = 0; k < 32; k++) {
+			OutputLogString(fpLog, _T("%c"), pStructure[12+k]);
+		}
+		OutputLogString(fpLog, _T("\n"));
+		OutputLogString(fpLog,
+			_T("\t\t\t      UpdateCount: %d\n")
+			_T("\t\t\t           AsByte: %d\n")
+			_T("\t\t\t   UpdatePassword: "),
+			MAKELONG(MAKEWORD(pStructure[47], pStructure[46]), 
+				MAKEWORD(pStructure[45], pStructure[44])),
+			MAKELONG(MAKEWORD(pStructure[51], pStructure[50]), 
+				MAKEWORD(pStructure[49], pStructure[48])));
+		for(ULONG k = 0; k < 32; k++) {
+			OutputLogString(fpLog, _T("%c"), pStructure[52+k]);
+		}
+		break;
+	case 0xc0:
+		OutputLogString(fpLog,
+			_T("\tDVD_WRITE_PROTECTION_STATUS\n")
+			_T("\t\tSoftwareWriteProtectUntilPowerdown: %d\n")
+			_T("\t\t       MediaPersistentWriteProtect: %d\n")
+			_T("\t\t             CartridgeWriteProtect: %d\n")
+			_T("\t\t         MediaSpecificWriteProtect: %d\n"),
+			BOOLEAN_TO_STRING_YES_NO(pStructure[4] & 0x01),
+			BOOLEAN_TO_STRING_YES_NO(pStructure[4] & 0x02),
+			BOOLEAN_TO_STRING_YES_NO(pStructure[4] & 0x04),
+			BOOLEAN_TO_STRING_YES_NO(pStructure[4] & 0x08));
 		break;
 	default:
 		OutputLogString(fpLog, _T("\tUnknown: %02x\n"), pFormat[i]);
@@ -2604,9 +2991,9 @@ VOID OutputFsVolumeDescriptor(
 #endif
 	OutputLogString(fpLog,
 		_T("Volume Descriptor\n")
-		_T("\t                              Volume Descriptor Type: %d\n")
-		_T("\t                                 Standard Identifier: %.5s\n")
-		_T("\t                           Volume Descriptor Version: %d\n"),
+		_T("\t                       Volume Descriptor Type: %d\n")
+		_T("\t                          Standard Identifier: %.5s\n")
+		_T("\t                    Volume Descriptor Version: %d\n"),
 		buf[idx],
 		str,
 		buf[idx+6]);
@@ -2642,9 +3029,9 @@ VOID OutputFsBootRecord(
 	strncpy(str[1], (PCHAR)&buf[idx+39], sizeof(str[1]));
 #endif
 	OutputLogString(fpLog,
-		_T("\t                              Boot System Identifier: %s\n")
-		_T("\t                                     Boot Identifier: %s\n")
-		_T("\t                                     Boot System Use: "),
+		_T("\t                       Boot System Identifier: %s\n")
+		_T("\t                              Boot Identifier: %s\n")
+		_T("\t                              Boot System Use: "),
 		str[0],
 		str[1]);
 	for(INT i = 71; i <= 2047; i++) {
@@ -2726,12 +3113,12 @@ VOID OutputFsPrimaryVolumeDescriptorForTime(
 	strncpy(milisecond[3], (PCHAR)&buf[idx+878], sizeof(milisecond[3]));
 #endif
 	OutputLogString(fpLog,
-		_T("\t                       Volume Creation Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
-		_T("\t                   Volume Modification Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
-		_T("\t                     Volume Expiration Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
-		_T("\t                      Volume Effective Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
-		_T("\t                              File Structure Version: %d\n")
-		_T("\t                                     Application Use: "), 
+		_T("\t                Volume Creation Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t            Volume Modification Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t              Volume Expiration Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t               Volume Effective Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t                       File Structure Version: %d\n")
+		_T("\t                              Application Use: "), 
 		year[0], month[0], day[0], hour[0], time[0], second[0], milisecond[0], buf[idx+829],
 		year[1], month[1], day[1], hour[1], time[1], second[1], milisecond[1], buf[idx+846],
 		year[2], month[2], day[2], hour[2], time[2], second[2], milisecond[2], buf[idx+863],
@@ -2751,12 +3138,13 @@ VOID OutputFsPrimaryVolumeDescriptorFor1(
 	)
 {
 	OutputLogString(fpLog,
-		_T("\t                                   System Identifier: %.32s\n")
-		_T("\t                                   Volume Identifier: %.32s\n")
-		_T("\t                                   Volume Space Size: %d\n"),
+		_T("\t                            System Identifier: %.32s\n")
+		_T("\t                            Volume Identifier: %.32s\n")
+		_T("\t                            Volume Space Size: %d\n"),
 		str32[0],
 		str32[1],
-		buf[idx+80]);
+		MAKELONG(MAKEWORD(buf[idx+80], buf[idx+81]), 
+			MAKEWORD(buf[idx+82], buf[idx+83])));
 }
 
 VOID OutputFsPrimaryVolumeDescriptorFor2(
@@ -2768,14 +3156,12 @@ VOID OutputFsPrimaryVolumeDescriptorFor2(
 	)
 {
 	OutputLogString(fpLog, 
-		_T("\t                                     Volume Set Size: %d\n")
-		_T("\t                              Volume Sequence Number: %d\n")
-		_T("\t                                  Logical Block Size: %d\n")
-		_T("\t                                     Path Table Size: %d\n")
-		_T("\t         Location of Occurrence of Type L Path Table: %d\n")
-		_T("\tLocation of Optional Occurrence of Type L Path Table: %d\n")
-		_T("\t         Location of Occurrence of Type M Path Table: %d\n")
-		_T("\tLocation of Optional Occurrence of Type M Path Table: %d\n")
+		_T("\t                              Volume Set Size: %d\n")
+		_T("\t                       Volume Sequence Number: %d\n")
+		_T("\t                           Logical Block Size: %d\n")
+		_T("\t                              Path Table Size: %d\n")
+		_T("\t         Location of Occurrence of Path Table: %d\n")
+		_T("\tLocation of Optional Occurrence of Path Table: %d\n")
 		_T("\tDirectory Record\n")
 		_T("\t\t      Length of Directory Record: %d\n")
 		_T("\t\tExtended Attribute Record Length: %d\n")
@@ -2788,33 +3174,33 @@ VOID OutputFsPrimaryVolumeDescriptorFor2(
 		_T("\t\t          Volume Sequence Number: %d\n")
 		_T("\t\t       Length of File Identifier: %d\n")
 		_T("\t\t                 File Identifier: %d\n")
-		_T("\t                               Volume Set Identifier: %.128s\n")
-		_T("\t                                Publisher Identifier: %.128s\n")
-		_T("\t                            Data Preparer Identifier: %.128s\n")
-		_T("\t                              Application Identifier: %.128s\n")
-		_T("\t                           Copyright File Identifier: %.37s\n")
-		_T("\t                            Abstract File Identifier: %.37s\n")
-		_T("\t                       Bibliographic File Identifier: %.37s\n"), 
-		MAKEWORD(buf[idx+123], buf[idx+122]),
-		MAKEWORD(buf[idx+127], buf[idx+126]),
-		MAKEWORD(buf[idx+131], buf[idx+130]),
-		MAKELONG(MAKEWORD(buf[idx+139], buf[idx+138]), 
-			MAKEWORD(buf[idx+137], buf[idx+136])),
-		MAKEWORD(buf[idx+143], buf[idx+142]),
-		MAKEWORD(buf[idx+147], buf[idx+146]),
-		MAKEWORD(buf[idx+151], buf[idx+150]),
-		MAKEWORD(buf[idx+155], buf[idx+154]),
+		_T("\t                        Volume Set Identifier: %.128s\n")
+		_T("\t                         Publisher Identifier: %.128s\n")
+		_T("\t                     Data Preparer Identifier: %.128s\n")
+		_T("\t                       Application Identifier: %.128s\n")
+		_T("\t                    Copyright File Identifier: %.37s\n")
+		_T("\t                     Abstract File Identifier: %.37s\n")
+		_T("\t                Bibliographic File Identifier: %.37s\n"), 
+		MAKEWORD(buf[idx+120], buf[idx+121]),
+		MAKEWORD(buf[idx+124], buf[idx+125]),
+		MAKEWORD(buf[idx+128], buf[idx+129]),
+		MAKELONG(MAKEWORD(buf[idx+132], buf[idx+133]), 
+			MAKEWORD(buf[idx+134], buf[idx+135])),
+		MAKELONG(MAKEWORD(buf[idx+140], buf[idx+141]), 
+			MAKEWORD(buf[idx+142], buf[idx+143])),
+		MAKELONG(MAKEWORD(buf[idx+144], buf[idx+145]), 
+			MAKEWORD(buf[idx+146], buf[idx+147])),
 		buf[idx+156],
 		buf[idx+157],
-		MAKELONG(MAKEWORD(buf[idx+165], buf[idx+164]), 
-			MAKEWORD(buf[idx+163], buf[idx+162])),
-		MAKELONG(MAKEWORD(buf[idx+173], buf[idx+172]), 
-			MAKEWORD(buf[idx+171], buf[idx+170])),
+		MAKELONG(MAKEWORD(buf[idx+158], buf[idx+159]), 
+			MAKEWORD(buf[idx+160], buf[idx+161])),
+		MAKELONG(MAKEWORD(buf[idx+166], buf[idx+167]), 
+			MAKEWORD(buf[idx+168], buf[idx+169])),
 		buf[idx+174] + 1900, buf[idx+175], buf[idx+176], buf[idx+177], buf[idx+178], buf[idx+179], buf[idx+180],
 		buf[idx+181],
 		buf[idx+182],
 		buf[idx+183],
-		MAKEWORD(buf[idx+187], buf[idx+186]),
+		MAKEWORD(buf[idx+184], buf[idx+185]),
 		buf[idx+188],
 		buf[idx+189],
 		str128[0],
@@ -2864,7 +3250,7 @@ VOID OutputFsPrimaryVolumeDescriptorForISO9660(
 		strncpy(str32[2], (PCHAR)&buf[idx+88], 32);
 #endif
 		OutputLogString(fpLog, _T(
-			"\t                                    Escape Sequences: %.32s\n"), str32[2]);
+			"\t                             Escape Sequences: %.32s\n"), str32[2]);
 	}
 
 	OutputFsPrimaryVolumeDescriptorFor2(buf, str128, str37, idx, fpLog);
@@ -2931,7 +3317,7 @@ VOID OutputFsPrimaryVolumeDescriptorForJoliet(
 	_tcsncpy(str3, (_TCHAR*)&buf[idx+88], 32);
 #endif
 	OutputLogString(fpLog, _T(
-		"\t                                    Escape Sequences: %.32s\n"), str3);
+		"\t                             Escape Sequences: %.32s\n"), str3);
 	OutputFsPrimaryVolumeDescriptorFor2(buf, str128, str37, idx, fpLog);
 	OutputFsPrimaryVolumeDescriptorForTime(buf, idx, fpLog);
 }
@@ -2958,10 +3344,10 @@ VOID OutputFsVolumePartitionDescriptor(
 		_T("\t                 System Use: "),
 		str[0],
 		str[1], 
-		MAKELONG(MAKEWORD(buf[idx+79], buf[idx+78]), 
-			MAKEWORD(buf[idx+77], buf[idx+76])), 
-		MAKELONG(MAKEWORD(buf[idx+87], buf[idx+86]), 
-			MAKEWORD(buf[idx+85], buf[idx+84])));
+		MAKELONG(MAKEWORD(buf[idx+76], buf[idx+77]), 
+			MAKEWORD(buf[idx+78], buf[idx+79])), 
+		MAKELONG(MAKEWORD(buf[idx+84], buf[idx+85]), 
+			MAKEWORD(buf[idx+86], buf[idx+87])));
 	for(INT i = 88; i <= 2047; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
@@ -2984,9 +3370,9 @@ VOID OutputFsVolumeStructureDescriptorFormat(
 #endif
 	OutputLogString(fpLog,
 		_T("Volume Recognition Sequence\n")
-		_T("\t                                      Structure Type: %d\n")
-		_T("\t                                 Standard Identifier: %.5s\n")
-		_T("\t                                   Structure Version: %d\n"),
+		_T("\t                               Structure Type: %d\n")
+		_T("\t                          Standard Identifier: %.5s\n")
+		_T("\t                            Structure Version: %d\n"),
 		buf[idx],
 		str,
 		buf[idx+6]);
@@ -3041,7 +3427,7 @@ VOID OutputFsRecordingDateAndTime(
 	)
 {
 	OutputLogString(fpLog, _T(
-		"\tRecording Date and Time: %x %d-%d-%d %d: %d: %d.%d.%d.%d\n"),
+		"\tRecording Date and Time: %x %d-%02d-%02d %02d:%02d:%02d.%d.%d.%d\n"),
 		MAKEWORD(buf[idx], buf[idx+1]), MAKEWORD(buf[idx+2], buf[idx+3]),
 		buf[idx+4], buf[idx+5], buf[idx+6], buf[idx+7], buf[idx+8],
 		buf[idx+9], buf[idx+10], buf[idx+11]);
@@ -3085,24 +3471,24 @@ VOID OutputFsBootDescriptor(
 		buf[idx+40],
 		str23[1],
 		str8[1],
-		MAKELONG(MAKEWORD(buf[idx+75], buf[idx+74]), 
-			MAKEWORD(buf[idx+73], buf[idx+72])),
-		MAKELONG(MAKEWORD(buf[idx+79], buf[idx+78]), 
-			MAKEWORD(buf[idx+77], buf[idx+76])),
-		MAKELONG(MAKEWORD(buf[idx+87], buf[idx+86]), 
-			MAKEWORD(buf[idx+85], buf[idx+84])),
-		MAKELONG(MAKEWORD(buf[idx+83], buf[idx+82]), 
-			MAKEWORD(buf[idx+81], buf[idx+80])),
-		MAKELONG(MAKEWORD(buf[idx+87], buf[idx+86]), 
-			MAKEWORD(buf[idx+85], buf[idx+84])),
-		MAKELONG(MAKEWORD(buf[idx+83], buf[idx+82]), 
-			MAKEWORD(buf[idx+81], buf[idx+80])));
+		MAKELONG(MAKEWORD(buf[idx+72], buf[idx+73]), 
+			MAKEWORD(buf[idx+74], buf[idx+75])),
+		MAKELONG(MAKEWORD(buf[idx+76], buf[idx+77]), 
+			MAKEWORD(buf[idx+78], buf[idx+79])),
+		MAKELONG(MAKEWORD(buf[idx+80], buf[idx+81]), 
+			MAKEWORD(buf[idx+82], buf[idx+83])),
+		MAKELONG(MAKEWORD(buf[idx+84], buf[idx+85]), 
+			MAKEWORD(buf[idx+86], buf[idx+87])),
+		MAKELONG(MAKEWORD(buf[idx+88], buf[idx+89]), 
+			MAKEWORD(buf[idx+90], buf[idx+91])),
+		MAKELONG(MAKEWORD(buf[idx+92], buf[idx+93]), 
+			MAKEWORD(buf[idx+94], buf[idx+95])));
 
 	OutputFsRecordingDateAndTime(buf, idx + 96, fpLog);
 	OutputLogString(fpLog,
 		_T("\t               Flags: %d\n")
 		_T("\t            Boot Use: "),
-		MAKEWORD(buf[idx+109], buf[idx+108]));
+		MAKEWORD(buf[idx+108], buf[idx+109]));
 	for(INT i = 142; i <= 2047; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
@@ -3202,8 +3588,8 @@ VOID OutputFsPrimaryVolumeDescriptorForUDF(
 		MAKEWORD(buf[idx+58], buf[idx+59]), 
 		MAKEWORD(buf[idx+60], buf[idx+61]), 
 		MAKEWORD(buf[idx+62], buf[idx+63]), 
-		MAKELONG(MAKEWORD(buf[idx+65], buf[idx+64]), 
-			MAKEWORD(buf[idx+67], buf[idx+66])), 
+		MAKELONG(MAKEWORD(buf[idx+64], buf[idx+65]), 
+			MAKEWORD(buf[idx+66], buf[idx+67])), 
 		MAKELONG(MAKEWORD(buf[idx+68], buf[idx+69]), 
 			MAKEWORD(buf[idx+70], buf[idx+71])),
 		str128);

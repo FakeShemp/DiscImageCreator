@@ -82,10 +82,6 @@ BOOL ReadCDPartial(
 	BOOL bCheckReading
 	);
 
-BOOL ReadCDForDataTransferLengthTest(
-	PDEVICE_DATA pDevData
-	);
-
 BOOL ReadBufferCapacity(
 	PDEVICE_DATA pDevData,
 	FILE* fpLog
@@ -97,16 +93,16 @@ BOOL ReadConfiguration(
 	FILE* fpLog
 	);
 
-BOOL ReadDeviceInfo(
+BOOL ReadDiscInformation(
 	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	);
 
 BOOL ReadDVD(
 	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
 	LPCTSTR pszOption,
-	INT nDVDSectorSize,
 	FILE* fpLog
 	);
 
@@ -119,7 +115,13 @@ BOOL ReadDVDRaw(
 
 BOOL ReadDVDStructure(
 	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	PINT nDVDSectorSize,
+	FILE* fpLog
+	);
+
+BOOL ReadInquiryData(
+	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	);
 

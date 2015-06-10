@@ -227,3 +227,13 @@ fix logic
 **2013-03-07
 fixed ripping CD-TEXT disc.
 improved ripping MCN(EAN) including disc.
+
+**2013-03-09
+fixed ccd file (added FLAGS)
+improved ripping CD including INDEX 0 in Track 1 disc.
+
+**2013-03-27
+fixed ripping DVD DL
+fixed ISO9660 PVD log
+added DiscInformation(0x51) log
+added reading floppy (WIP)
