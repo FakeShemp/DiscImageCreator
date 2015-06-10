@@ -187,3 +187,7 @@ improved PC Engine CD dumping
 
 **2012-01-18
 fix checking subchannel(RelativeTime)
+
+**2012-01-19
+fix ReadTOCText function
+=> because mmc1 drive isn't defined.

@@ -1084,7 +1084,8 @@ BOOL ReadConfiguration(
 	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		pDiscData->pusCurrentMedia = ProfileCdrom;
 		// not false. because undefined mmc1..
-		OutputLogString(fpLog, _T("\tUndefined this drive\n"));
+		OutputLogString(fpLog, _T("\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n"));
+		bRet = TRUE;
 	}
 	else {
 		OutputLogString(fpLog, _T("\tCurrentMedia: "));
@@ -1108,13 +1109,14 @@ BOOL ReadConfiguration(
 		if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false. because undefined mmc1..
 			OutputLogString(fpLog, _T("\tUndefined this drive\n"));
+			bRet = TRUE;
 		}
 		else {
 			OutputFeatureNumber(pConf, ulAllLen, uiSize, pDiscData, fpLog);
 		}
 		FreeAndNull(pPConf);
 	}
-	return TRUE;
+	return bRet;
 }
 
 BOOL ReadDeviceInfo(
@@ -1692,248 +1694,249 @@ BOOL ReadTOCText(
 	aCmd[2] = CDROM_READ_TOC_EX_FORMAT_CDTEXT;
 	aCmd[7] = HIBYTE(uiCDTextDataSize);
 	aCmd[8] = LOBYTE(uiCDTextDataSize);
-	if(!ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, &tocText,
-		(ULONG)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
-		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		OutputErrorString(_T("Can't get CDROM_TOC_CD_TEXT_DATA\n"));
-		return FALSE;
+	BOOL bRet = ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, &tocText,
+		(ULONG)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
+	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+		// not false. because undefined mmc1..
+		OutputLogString(fpLog, _T("\tUndefined CDROM_READ_TOC_EX_FORMAT_CDTEXT on this drive\n"));
+		bRet = TRUE;
 	}
+	else {
+		OutputLogString(fpLog, _T("CDTEXT on SCSIOP_READ_TOC\n"));
+		size_t uiTocTextsize = 
+			MAKEWORD(tocText.Length[1], tocText.Length[0]) - sizeof(tocText.Length);
+		size_t uiTocTextEntries = uiTocTextsize / sizeof(CDROM_TOC_CD_TEXT_DATA_BLOCK);
 
-	OutputLogString(fpLog, _T("CDTEXT on SCSIOP_READ_TOC\n"));
-	size_t uiTocTextsize = 
-		MAKEWORD(tocText.Length[1], tocText.Length[0]) - sizeof(tocText.Length);
-	size_t uiTocTextEntries = uiTocTextsize / sizeof(CDROM_TOC_CD_TEXT_DATA_BLOCK);
-
-	WriteCcdFileForDiscCDTextLength(uiTocTextsize, fpCcd);
-	if(!uiTocTextEntries) {
-		OutputLogString(fpLog, _T("\tNothing\n"));
-		// almost CD is nothing text
-		return TRUE;
-	}
-	size_t uiCDTextDataMaxSize = uiTocTextsize + uiCDTextDataSize;
-	PUCHAR pPTocText = (PUCHAR)malloc(uiCDTextDataMaxSize + pDevData->adapterDescriptor->AlignmentMask);
-	if(!pPTocText) {
-		OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
-		return FALSE;
-	}
-	PUCHAR pTocText = (PUCHAR)ConvParagraphBoundary(pPTocText, pDevData);
-	aCmd[7] = HIBYTE(uiCDTextDataMaxSize);
-	aCmd[8] = LOBYTE(uiCDTextDataMaxSize);
-	BOOL bRet = TRUE;
-	PCD_TEXT_INFO pInfo = NULL;
-	CHAR* pTmpText = NULL;
-	try {
-		if(!ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, pTocText, 
-			(ULONG)uiCDTextDataMaxSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
-			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-			throw _T("Can't get CDROM_TOC_CD_TEXT_DATA_BLOCK\n");
+		WriteCcdFileForDiscCDTextLength(uiTocTextsize, fpCcd);
+		if(!uiTocTextEntries) {
+			OutputLogString(fpLog, _T("\tNothing\n"));
+			// almost CD is nothing text
+			return TRUE;
 		}
-		WriteCcdFileForCDText(uiTocTextEntries, fpCcd);
-		if(NULL == (pInfo = (PCD_TEXT_INFO)malloc(uiTocTextEntries * META_STRING_SIZE))) {
-			throw _T("Can't alloc memory PCD_TEXT_INFO\n");
+		size_t uiCDTextDataMaxSize = uiTocTextsize + uiCDTextDataSize;
+		PUCHAR pPTocText = (PUCHAR)malloc(uiCDTextDataMaxSize + pDevData->adapterDescriptor->AlignmentMask);
+		if(!pPTocText) {
+			OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
+			return FALSE;
 		}
-		CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc = 
-			((CDROM_TOC_CD_TEXT_DATA*)pTocText)->Descriptors;
-		size_t allTextSize = uiTocTextEntries * sizeof(pDesc->Text);
-		if(NULL == (pTmpText = (CHAR*)malloc(allTextSize))) {
-			throw _T("Can't alloc memory CHAR*\n");
-		}
-
-		UCHAR byAlbumTitleCnt = 0;
-		UCHAR byAlbumCnt = 0;
-		UCHAR byPerformerCnt = 0;
-		UCHAR bySongwriterCnt = 0;
-		UCHAR byComposerCnt = 0;
-		UCHAR byArrangerCnt = 0;
-		UCHAR byMessagesCnt = 0;
-		UCHAR byDiscIdCnt = 0;
-		UCHAR byGenreCnt = 0;
-		UCHAR byTocInfoCnt = 0;
-		UCHAR byTocInfo2Cnt = 0;
-		UCHAR byUpcEanCnt = 0;
-		UCHAR bySizeInfoCnt = 0;
-
-		UCHAR byAlbumTitleIdx = 0;
-		UCHAR byAlbumIdx = 0;
-		UCHAR byPerformerIdx = 0;
-		UCHAR bySongwriterIdx = 0;
-		UCHAR byComposerIdx = 0;
-		UCHAR byArrangerIdx = 0;
-		UCHAR byMessagesIdx = 0;
-		UCHAR byDiscIdIdx = 0;
-		UCHAR byGenreIdx = 0;
-		UCHAR byTocInfoIdx = 0;
-		UCHAR byTocInfo2Idx = 0;
-		UCHAR byUpcEanIdx = 0;
-		UCHAR bySizeInfoIdx = 0;
-		for(size_t t = 0; t < uiTocTextEntries; t++) {
-			WriteCcdFileForCDTextEntry(t, pDesc, fpCcd);
-			if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ALBUM_NAME) {
-				byAlbumCnt = pDesc[t].TrackNumber;
-				byAlbumIdx = pDesc[t].TrackNumber;
+		PUCHAR pTocText = (PUCHAR)ConvParagraphBoundary(pPTocText, pDevData);
+		aCmd[7] = HIBYTE(uiCDTextDataMaxSize);
+		aCmd[8] = LOBYTE(uiCDTextDataMaxSize);
+		PCD_TEXT_INFO pInfo = NULL;
+		CHAR* pTmpText = NULL;
+		try {
+			if(!ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, pTocText, 
+				(ULONG)uiCDTextDataMaxSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
+				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+				throw _T("Can't get CDROM_TOC_CD_TEXT_DATA_BLOCK\n");
 			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_PERFORMER) {
-				if( pDesc[t].Text[0] != 0) {
-					byPerformerCnt = pDesc[t].TrackNumber;
-					byPerformerIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt);
-					if(byPerformerCnt == 0) {
-						byPerformerCnt++;
-						byPerformerIdx++;
+			WriteCcdFileForCDText(uiTocTextEntries, fpCcd);
+			if(NULL == (pInfo = (PCD_TEXT_INFO)malloc(uiTocTextEntries * META_STRING_SIZE))) {
+				throw _T("Can't alloc memory PCD_TEXT_INFO\n");
+			}
+			CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc = 
+				((CDROM_TOC_CD_TEXT_DATA*)pTocText)->Descriptors;
+			size_t allTextSize = uiTocTextEntries * sizeof(pDesc->Text);
+			if(NULL == (pTmpText = (CHAR*)malloc(allTextSize))) {
+				throw _T("Can't alloc memory CHAR*\n");
+			}
+
+			UCHAR byAlbumTitleCnt = 0;
+			UCHAR byAlbumCnt = 0;
+			UCHAR byPerformerCnt = 0;
+			UCHAR bySongwriterCnt = 0;
+			UCHAR byComposerCnt = 0;
+			UCHAR byArrangerCnt = 0;
+			UCHAR byMessagesCnt = 0;
+			UCHAR byDiscIdCnt = 0;
+			UCHAR byGenreCnt = 0;
+			UCHAR byTocInfoCnt = 0;
+			UCHAR byTocInfo2Cnt = 0;
+			UCHAR byUpcEanCnt = 0;
+			UCHAR bySizeInfoCnt = 0;
+
+			UCHAR byAlbumTitleIdx = 0;
+			UCHAR byAlbumIdx = 0;
+			UCHAR byPerformerIdx = 0;
+			UCHAR bySongwriterIdx = 0;
+			UCHAR byComposerIdx = 0;
+			UCHAR byArrangerIdx = 0;
+			UCHAR byMessagesIdx = 0;
+			UCHAR byDiscIdIdx = 0;
+			UCHAR byGenreIdx = 0;
+			UCHAR byTocInfoIdx = 0;
+			UCHAR byTocInfo2Idx = 0;
+			UCHAR byUpcEanIdx = 0;
+			UCHAR bySizeInfoIdx = 0;
+			for(size_t t = 0; t < uiTocTextEntries; t++) {
+				WriteCcdFileForCDTextEntry(t, pDesc, fpCcd);
+				if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ALBUM_NAME) {
+					byAlbumCnt = pDesc[t].TrackNumber;
+					byAlbumIdx = pDesc[t].TrackNumber;
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_PERFORMER) {
+					if( pDesc[t].Text[0] != 0) {
+						byPerformerCnt = pDesc[t].TrackNumber;
+						byPerformerIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt);
+						if(byPerformerCnt == 0) {
+							byPerformerCnt++;
+							byPerformerIdx++;
+						}
 					}
 				}
-			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SONGWRITER) {
-				bySongwriterCnt = pDesc[t].TrackNumber;
-				bySongwriterIdx = 
-					(UCHAR)(pDesc[t].TrackNumber + byAlbumCnt + byPerformerCnt);
-			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_COMPOSER) {
-				byComposerCnt = pDesc[t].TrackNumber;
-				byComposerIdx = (UCHAR)(pDesc[t].TrackNumber + 
-					byAlbumCnt + byPerformerCnt + bySongwriterCnt);
-			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ARRANGER) {
-				byArrangerCnt = pDesc[t].TrackNumber;
-				byArrangerIdx = (UCHAR)(pDesc[t].TrackNumber + 
-					byAlbumCnt + byPerformerCnt + bySongwriterCnt + byComposerCnt);
-			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_MESSAGES) {
-				byMessagesCnt = pDesc[t].TrackNumber;
-				byMessagesIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt + 
-					byPerformerCnt + bySongwriterCnt + byComposerCnt + byArrangerCnt);
-			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_DISC_ID) {
-				byDiscIdCnt = pDesc[t].TrackNumber;
-				byDiscIdIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
-					byPerformerCnt + bySongwriterCnt + byComposerCnt + 
-					byArrangerCnt + byMessagesCnt);
-				if(byDiscIdCnt == 0) {
-					byDiscIdCnt++;
-					byDiscIdIdx++;
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SONGWRITER) {
+					bySongwriterCnt = pDesc[t].TrackNumber;
+					bySongwriterIdx = 
+						(UCHAR)(pDesc[t].TrackNumber + byAlbumCnt + byPerformerCnt);
 				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_COMPOSER) {
+					byComposerCnt = pDesc[t].TrackNumber;
+					byComposerIdx = (UCHAR)(pDesc[t].TrackNumber + 
+						byAlbumCnt + byPerformerCnt + bySongwriterCnt);
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_ARRANGER) {
+					byArrangerCnt = pDesc[t].TrackNumber;
+					byArrangerIdx = (UCHAR)(pDesc[t].TrackNumber + 
+						byAlbumCnt + byPerformerCnt + bySongwriterCnt + byComposerCnt);
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_MESSAGES) {
+					byMessagesCnt = pDesc[t].TrackNumber;
+					byMessagesIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt + 
+						byPerformerCnt + bySongwriterCnt + byComposerCnt + byArrangerCnt);
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_DISC_ID) {
+					byDiscIdCnt = pDesc[t].TrackNumber;
+					byDiscIdIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
+						byPerformerCnt + bySongwriterCnt + byComposerCnt + 
+						byArrangerCnt + byMessagesCnt);
+					if(byDiscIdCnt == 0) {
+						byDiscIdCnt++;
+						byDiscIdIdx++;
+					}
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_GENRE) {
+					byGenreCnt = pDesc[t].TrackNumber;
+					byGenreIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt + 
+						byPerformerCnt + bySongwriterCnt + byComposerCnt + 
+						byArrangerCnt + byMessagesCnt + byDiscIdCnt);
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO) {
+					byTocInfoCnt = pDesc[t].TrackNumber;
+					byTocInfoIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
+						byPerformerCnt + bySongwriterCnt + byComposerCnt +
+						byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt);
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO2) {
+					byTocInfo2Cnt = pDesc[t].TrackNumber;
+					byTocInfo2Idx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
+						byPerformerCnt + bySongwriterCnt + byComposerCnt + 
+						byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt +
+						byTocInfoCnt);
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_UPC_EAN) {
+					byUpcEanCnt = pDesc[t].TrackNumber;
+					byUpcEanIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
+						byPerformerCnt + bySongwriterCnt + byComposerCnt +
+						byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt +
+						byTocInfoCnt + byTocInfo2Cnt);
+				}
+				else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SIZE_INFO) {
+					bySizeInfoCnt = pDesc[t].TrackNumber;
+					bySizeInfoIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
+						byPerformerCnt + bySongwriterCnt + byComposerCnt +
+						byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt +
+						byTocInfoCnt + byTocInfo2Cnt + byUpcEanCnt);
+				}
+				memcpy(pTmpText + 12 * t, (CHAR*)(pDesc[t].Text), 12);
 			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_GENRE) {
-				byGenreCnt = pDesc[t].TrackNumber;
-				byGenreIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt + 
-					byPerformerCnt + bySongwriterCnt + byComposerCnt + 
-					byArrangerCnt + byMessagesCnt + byDiscIdCnt);
+			if(byAlbumCnt != 0) {
+				byAlbumTitleCnt++;
+				byAlbumTitleIdx++;
 			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO) {
-				byTocInfoCnt = pDesc[t].TrackNumber;
-				byTocInfoIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
-					byPerformerCnt + bySongwriterCnt + byComposerCnt +
-					byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt);
+			size_t uiIdx = 0;
+			size_t uiAllSize = (size_t)(byAlbumTitleCnt + byAlbumCnt + byPerformerCnt +
+				bySongwriterCnt + byComposerCnt + byArrangerCnt + byMessagesCnt +
+				byDiscIdCnt + byGenreCnt + byTocInfoCnt + byTocInfo2Cnt + byUpcEanCnt +
+				bySizeInfoCnt);
+			INT nTitleCnt = 0;
+			for(size_t z = 0; z < uiAllSize; z++) {
+				size_t len = strlen(pTmpText + uiIdx);
+				if(len == 0) {
+					z--;
+				}
+				else if(len != 0) {
+					ZeroMemory(pInfo[z].Text, sizeof(pInfo[z].Text));
+					strncpy(pInfo[z].Text, pTmpText + uiIdx, len);
+					if(byAlbumTitleIdx != 0 && z < byAlbumTitleIdx) {
+						OutputLogString(fpLog, _T("\tAlbumTitle: %s\n"), pInfo[z].Text);
+						SetAlbumTitle(pInfo[z].Text);
+					}
+					else if(byAlbumTitleIdx != 0 && byAlbumTitleIdx != byAlbumIdx && 
+						byAlbumTitleIdx <= z && z <= byAlbumIdx) {
+						OutputLogString(fpLog, _T("\tTitle: %s\n"), pInfo[z].Text);
+						SetTitle(pInfo[z].Text, nTitleCnt);
+						nTitleCnt++;
+					}
+					else if(byPerformerIdx != 0 && byAlbumIdx != byPerformerIdx && 
+						byAlbumIdx <= z && z <= byPerformerIdx) {
+						OutputLogString(fpLog, _T("\tPerformer: %s\n"), pInfo[z].Text);
+						SetPerformer(pInfo[z].Text);
+					}
+					else if(bySongwriterIdx != 0 && byPerformerIdx != bySongwriterIdx && 
+						byPerformerIdx <= z && z <= bySongwriterIdx) {
+						OutputLogString(fpLog, _T("\tSongwriter: %s\n"), pInfo[z].Text);
+						SetSongWriter(pInfo[z].Text);
+					}
+					else if(byComposerIdx != 0 && bySongwriterIdx != byComposerIdx && 
+						bySongwriterIdx <= z && z <= byComposerIdx) {
+						OutputLogString(fpLog, _T("\tComposer: %s\n"), pInfo[z].Text);
+					}
+					else if(byArrangerIdx && byComposerIdx != byArrangerIdx && 
+						byComposerIdx <= z && z <= byArrangerIdx) {
+						OutputLogString(fpLog, _T("\tArranger: %s\n"), pInfo[z].Text);
+					}
+					else if(byMessagesIdx != 0 && byArrangerIdx != byMessagesIdx && 
+						byArrangerIdx <= z && z <= byMessagesIdx) {
+						OutputLogString(fpLog, _T("\tMessages: %s\n"), pInfo[z].Text);
+					}
+					else if(byDiscIdIdx != 0 && byMessagesIdx != byDiscIdIdx && 
+						byMessagesIdx <= z && z <= byDiscIdIdx) {
+						OutputLogString(fpLog, _T("\tDiscId: %s\n"), pInfo[z].Text);
+					}
+					else if(byGenreIdx != 0 && byDiscIdIdx != byGenreIdx && 
+						byDiscIdIdx <= z && z <= byGenreIdx) {
+						OutputLogString(fpLog, _T("\tGenre: %s\n"), pInfo[z].Text);
+					}
+					// detail in Page 54-55 of EN 60908:1999
+					else if(byTocInfoIdx != 0 && byGenreIdx != byTocInfoIdx && 
+						byGenreIdx <= z && z <= byTocInfoIdx) {
+						OutputLogString(fpLog, _T("\tTocInfo: %x\n"), pInfo[z].Text);
+					}
+					else if(byTocInfo2Idx != 0 && byTocInfoIdx != byTocInfo2Idx && 
+						byTocInfoIdx <= z && z <= byTocInfo2Idx) {
+						OutputLogString(fpLog, _T("\tTocInfo2: %x\n"), pInfo[z].Text);
+					}
+					else if(byUpcEanIdx != 0 && byTocInfo2Idx != byUpcEanIdx && 
+						byTocInfo2Idx <= z && z <= byUpcEanIdx) {
+						OutputLogString(fpLog, _T("\tUpcEan: %s\n"), pInfo[z].Text);
+					}
+					// detail in Page 56 of EN 60908:1999
+					else if(bySizeInfoIdx != 0 && byUpcEanIdx != bySizeInfoIdx && 
+						byUpcEanIdx <= z && z <= bySizeInfoIdx) {
+						OutputLogString(fpLog, _T("\tSizeInfo: %x\n"), pInfo[z].Text);
+					}
+				}
+				uiIdx += len + 1;
 			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_TOC_INFO2) {
-				byTocInfo2Cnt = pDesc[t].TrackNumber;
-				byTocInfo2Idx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
-					byPerformerCnt + bySongwriterCnt + byComposerCnt + 
-					byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt +
-					byTocInfoCnt);
-			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_UPC_EAN) {
-				byUpcEanCnt = pDesc[t].TrackNumber;
-				byUpcEanIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
-					byPerformerCnt + bySongwriterCnt + byComposerCnt +
-					byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt +
-					byTocInfoCnt + byTocInfo2Cnt);
-			}
-			else if(pDesc[t].PackType == CDROM_CD_TEXT_PACK_SIZE_INFO) {
-				bySizeInfoCnt = pDesc[t].TrackNumber;
-				bySizeInfoIdx = (UCHAR)(pDesc[t].TrackNumber + byAlbumCnt +
-					byPerformerCnt + bySongwriterCnt + byComposerCnt +
-					byArrangerCnt + byMessagesCnt + byDiscIdCnt + byGenreCnt +
-					byTocInfoCnt + byTocInfo2Cnt + byUpcEanCnt);
-			}
-			memcpy(pTmpText + 12 * t, (CHAR*)(pDesc[t].Text), 12);
 		}
-		if(byAlbumCnt != 0) {
-			byAlbumTitleCnt++;
-			byAlbumTitleIdx++;
+		catch(LPTSTR str) {
+			OutputErrorString(str);
+			bRet = FALSE;
 		}
-		size_t uiIdx = 0;
-		size_t uiAllSize = (size_t)(byAlbumTitleCnt + byAlbumCnt + byPerformerCnt +
-			bySongwriterCnt + byComposerCnt + byArrangerCnt + byMessagesCnt +
-			byDiscIdCnt + byGenreCnt + byTocInfoCnt + byTocInfo2Cnt + byUpcEanCnt +
-			bySizeInfoCnt);
-		INT nTitleCnt = 0;
-		for(size_t z = 0; z < uiAllSize; z++) {
-			size_t len = strlen(pTmpText + uiIdx);
-			if(len == 0) {
-				z--;
-			}
-			else if(len != 0) {
-				ZeroMemory(pInfo[z].Text, sizeof(pInfo[z].Text));
-				strncpy(pInfo[z].Text, pTmpText + uiIdx, len);
-				if(byAlbumTitleIdx != 0 && z < byAlbumTitleIdx) {
-					OutputLogString(fpLog, _T("\tAlbumTitle: %s\n"), pInfo[z].Text);
-					SetAlbumTitle(pInfo[z].Text);
-				}
-				else if(byAlbumTitleIdx != 0 && byAlbumTitleIdx != byAlbumIdx && 
-					byAlbumTitleIdx <= z && z <= byAlbumIdx) {
-					OutputLogString(fpLog, _T("\tTitle: %s\n"), pInfo[z].Text);
-					SetTitle(pInfo[z].Text, nTitleCnt);
-					nTitleCnt++;
-				}
-				else if(byPerformerIdx != 0 && byAlbumIdx != byPerformerIdx && 
-					byAlbumIdx <= z && z <= byPerformerIdx) {
-					OutputLogString(fpLog, _T("\tPerformer: %s\n"), pInfo[z].Text);
-					SetPerformer(pInfo[z].Text);
-				}
-				else if(bySongwriterIdx != 0 && byPerformerIdx != bySongwriterIdx && 
-					byPerformerIdx <= z && z <= bySongwriterIdx) {
-					OutputLogString(fpLog, _T("\tSongwriter: %s\n"), pInfo[z].Text);
-					SetSongWriter(pInfo[z].Text);
-				}
-				else if(byComposerIdx != 0 && bySongwriterIdx != byComposerIdx && 
-					bySongwriterIdx <= z && z <= byComposerIdx) {
-					OutputLogString(fpLog, _T("\tComposer: %s\n"), pInfo[z].Text);
-				}
-				else if(byArrangerIdx && byComposerIdx != byArrangerIdx && 
-					byComposerIdx <= z && z <= byArrangerIdx) {
-					OutputLogString(fpLog, _T("\tArranger: %s\n"), pInfo[z].Text);
-				}
-				else if(byMessagesIdx != 0 && byArrangerIdx != byMessagesIdx && 
-					byArrangerIdx <= z && z <= byMessagesIdx) {
-					OutputLogString(fpLog, _T("\tMessages: %s\n"), pInfo[z].Text);
-				}
-				else if(byDiscIdIdx != 0 && byMessagesIdx != byDiscIdIdx && 
-					byMessagesIdx <= z && z <= byDiscIdIdx) {
-					OutputLogString(fpLog, _T("\tDiscId: %s\n"), pInfo[z].Text);
-				}
-				else if(byGenreIdx != 0 && byDiscIdIdx != byGenreIdx && 
-					byDiscIdIdx <= z && z <= byGenreIdx) {
-					OutputLogString(fpLog, _T("\tGenre: %s\n"), pInfo[z].Text);
-				}
-				// detail in Page 54-55 of EN 60908:1999
-				else if(byTocInfoIdx != 0 && byGenreIdx != byTocInfoIdx && 
-					byGenreIdx <= z && z <= byTocInfoIdx) {
-					OutputLogString(fpLog, _T("\tTocInfo: %x\n"), pInfo[z].Text);
-				}
-				else if(byTocInfo2Idx != 0 && byTocInfoIdx != byTocInfo2Idx && 
-					byTocInfoIdx <= z && z <= byTocInfo2Idx) {
-					OutputLogString(fpLog, _T("\tTocInfo2: %x\n"), pInfo[z].Text);
-				}
-				else if(byUpcEanIdx != 0 && byTocInfo2Idx != byUpcEanIdx && 
-					byTocInfo2Idx <= z && z <= byUpcEanIdx) {
-					OutputLogString(fpLog, _T("\tUpcEan: %s\n"), pInfo[z].Text);
-				}
-				// detail in Page 56 of EN 60908:1999
-				else if(bySizeInfoIdx != 0 && byUpcEanIdx != bySizeInfoIdx && 
-					byUpcEanIdx <= z && z <= bySizeInfoIdx) {
-					OutputLogString(fpLog, _T("\tSizeInfo: %x\n"), pInfo[z].Text);
-				}
-			}
-			uiIdx += len + 1;
-		}
+		FreeAndNull(pPTocText);
+		FreeAndNull(pInfo);
+		FreeAndNull(pTmpText);
 	}
-	catch(LPTSTR str) {
-		OutputErrorString(str);
-		bRet = FALSE;
-	}
-	FreeAndNull(pPTocText);
-	FreeAndNull(pInfo);
-	FreeAndNull(pTmpText);
 	return bRet;
 }
 
