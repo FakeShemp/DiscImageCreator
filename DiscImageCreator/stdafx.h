@@ -84,6 +84,10 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 	#define AFLAG "a"
 #endif
 
+#define META_CATALOG_SIZE		(13)
+#define META_ISRC_SIZE			(12)
+#define META_STRING_SIZE		(80)
+
 #pragma pack(1)
 __declspec(align(1)) typedef struct _DEVICE_DATA {
 	HANDLE hDevice;
@@ -102,7 +106,7 @@ __declspec(align(1)) typedef struct _DEVICE_DATA {
 typedef struct _DISC_DATA {
 	CDROM_TOC toc;
 	USHORT pusCurrentMedia;
-	INT aSessionNum[MAXIMUM_NUMBER_TRACKS];
+	INT* aSessionNum;
 	INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2];
 	INT nFirstDataLBA;
 	INT nLastLBAof1stSession;
@@ -111,6 +115,11 @@ typedef struct _DISC_DATA {
 	INT nCombinedOffset;
 	INT nLength;
 	BOOL bAudioOnly;
+	_TCHAR szCatalog[META_CATALOG_SIZE+1];
+	_TCHAR **szISRC;
+	_TCHAR **szTitle;
+	_TCHAR **szPerformer;
+	_TCHAR **szSongWriter;
 } DISC_DATA, *PDISC_DATA;
 # pragma pack ()
 

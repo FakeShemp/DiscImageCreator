@@ -158,6 +158,7 @@ void OutputRawSub96(
 	);
 
 void OutputSubcode(
+	PDISC_DATA pDiscData,
 	INT nLBA,
 	INT nTrackNum,
 	CONST PUCHAR Subcode,
@@ -171,6 +172,16 @@ void OutputTocFull(
 	size_t uiTocEntries,
 	PDISC_DATA pDiscData,
 	FILE* fpCcd,
+	FILE* fpLog
+	);
+
+void OutputCDText(
+	PDISC_DATA pDiscData,
+	size_t uiTocTextEntries,
+	size_t allTextSize,
+	CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc,
+	CHAR* pTmpText,
+	PCD_TEXT_INFO pInfo,
 	FILE* fpLog
 	);
 
@@ -283,11 +294,8 @@ void OutputCopyrightManagementInformation(
 	FILE* fpLog
 	);
 
-void SetAlbumTitle(
-	LPCSTR pszString
-	);
-
 void SetISRCToString(
+	PDISC_DATA pDiscData,
 	CONST PUCHAR Subcode,
 	INT nTrackNum,
 	LPTSTR pszOutString,
@@ -295,22 +303,10 @@ void SetISRCToString(
 	);
 
 void SetMCNToString(
+	PDISC_DATA pDiscData,
 	CONST PUCHAR Subcode,
 	LPTSTR pszOutString,
 	BOOL bCopy
-	);
-
-void SetPerformer(
-	LPCSTR pszString
-	);
-
-void SetSongWriter(
-	LPCSTR pszString
-	);
-
-void SetTitle(
-	LPCSTR pszString,
-	INT idx
 	);
 
 void WriteCcdFileForDisc(
@@ -325,6 +321,7 @@ void WriteCcdFileForDiscCDTextLength(
 	);
 
 void WriteCcdFileForDiscCatalog(
+	PDISC_DATA pDiscData,
 	FILE* fpCcd
 	);
 
@@ -334,7 +331,7 @@ void WriteCcdFileForCDText(
 	);
 
 void WriteCcdFileForCDTextEntry(
-	size_t t,
+	size_t uiTocTextEntries,
 	CONST CDROM_TOC_CD_TEXT_DATA_BLOCK* pDesc,
 	FILE* fpCcd
 	);
@@ -356,6 +353,7 @@ void WriteCcdFileForEntry(
 	);
 
 void WriteCcdFileForTrack(
+	PDISC_DATA pDiscData,
 	INT nTrackNum,
 	UCHAR byModeNum,
 	BOOL bISRC,
@@ -368,8 +366,14 @@ void WriteCcdFileForTrackIndex(
 	FILE* fpCcd
 	);
 
-void WriteCueFile(
+void WriteCueFileFirst(
+	PDISC_DATA pDiscData,
 	BOOL bCatalog,
+	FILE* fpCue
+	);
+
+void WriteCueFile(
+	PDISC_DATA pDiscData,
 	BOOL bCDG,
 	LPCTSTR pszFilename,
 	INT nTrackNum,

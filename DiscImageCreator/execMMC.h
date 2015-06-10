@@ -13,9 +13,6 @@
 #define HEADER_SIZE				(4)
 #define SUBHEADER_SIZE			(8)
 
-#define META_CATALOG_SIZE		(13)
-#define META_ISRC_SIZE			(12)
-#define META_STRING_SIZE		(80)
 
 typedef struct _READ_CD_FLAG {
 	enum _SectorType {
@@ -47,7 +44,7 @@ typedef struct _READ_CD_FLAG {
 } READ_CD_FLAG;
 
 typedef struct _CD_TEXT_INFO {
-	CHAR Text[META_STRING_SIZE];
+	CHAR Text[META_STRING_SIZE+1];
 } CD_TEXT_INFO, *PCD_TEXT_INFO;
 
 #pragma pack(1)
@@ -78,6 +75,7 @@ BOOL ReadCDForSearchingOffset(
 
 BOOL ReadCDPartial(
 	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
 	INT nStart,
 	INT nEnd,
@@ -136,6 +134,7 @@ BOOL ReadTOCFull(
 
 BOOL ReadTOCText(
 	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog,
 	FILE* fpCcd
 	);

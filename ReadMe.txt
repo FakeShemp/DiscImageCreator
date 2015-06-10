@@ -196,3 +196,6 @@ fix ReadTOCText function
 fix subchannel reading
  plextor + audio only disc => read cd command(0xbe) + read subchannel(0x100[pack])
 => because if R-W channel bit is full on, reading speed is very slow.
+
+**2012-01-29
+fix cue file of CD-TEXT Disc.

@@ -56,7 +56,7 @@ BOOL Is3DOData(
 	);
 
 BOOL CheckAndFixSubchannel(
-	PCDROM_TOC toc,
+	PDISC_DATA pDiscData,
 	INT nLBA,
 	PUCHAR Subcode,
 	PSUB_Q_DATA subQ,

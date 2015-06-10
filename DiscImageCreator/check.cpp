@@ -385,7 +385,7 @@ BOOL CheckAndFixPSubchannel(
 }
 
 BOOL CheckAndFixSubchannel(
-	PCDROM_TOC toc,
+	PDISC_DATA pDiscData,
 	INT nLBA,
 	PUCHAR Subcode,
 	PSUB_Q_DATA subQ,
@@ -408,10 +408,10 @@ BOOL CheckAndFixSubchannel(
 
 	if(subQ->byAdr == ADR_ENCODES_MEDIA_CATALOG) {
 		BOOL bMCN = IsValidMCN(Subcode);
-		SetMCNToString(Subcode, szCatalog, bMCN);
+		SetMCNToString(pDiscData, Subcode, szCatalog, bMCN);
 		szCatalog[13] = '\0';
 		// only once
-		if(prevSubQ->byTrackNum == toc->FirstTrack) {
+		if(prevSubQ->byTrackNum == pDiscData->toc.FirstTrack) {
 			*bCatalog = bMCN;
 		}
 		if(!bMCN) {
@@ -472,7 +472,7 @@ BOOL CheckAndFixSubchannel(
 	}
 	else if(subQ->byAdr == ADR_ENCODES_ISRC) {
 		BOOL bISRC = IsValidISRC(Subcode);
-		SetISRCToString(Subcode, *byCurrentTrackNum, szISRC, bISRC);
+		SetISRCToString(pDiscData, Subcode, *byCurrentTrackNum, szISRC, bISRC);
 		szISRC[12] = '\0';
 		aISRC[*byCurrentTrackNum-1] = bISRC;
 		if(!bISRC) {
@@ -505,7 +505,7 @@ BOOL CheckAndFixSubchannel(
 	if(subQ->byAdr == ADR_ENCODES_CURRENT_POSITION || bBadAdr) {
 		BOOL bPrevTrackNum = TRUE;
 		if(!IsValidTrackNumber(prevPrevSubQ, prevSubQ,
-			subQ, toc->FirstTrack, toc->LastTrack, &bPrevTrackNum)) {
+			subQ, pDiscData->toc.FirstTrack, pDiscData->toc.LastTrack, &bPrevTrackNum)) {
 			OutputLogString(fpLog, _T("LBA %6d, TrackNum[%02d], correct[%02d]\n"), 
 				nLBA, subQ->byTrackNum, prevSubQ->byTrackNum);
 			// Bikkuriman Daijikai (Japan)
@@ -517,7 +517,7 @@ BOOL CheckAndFixSubchannel(
 			// LBA[004374, 0x01116], Data, Copy NG, TOC[TrackNum-0a, Index-00, RelativeTime-00:00:00, AbsoluteTime-01:00:24] RtoW:ZERO mode
 			// LBA[004375, 0x01117], Data, Copy NG, TOC[TrackNum-02, Index-01, RelativeTime-00:00:00, AbsoluteTime-01:00:25] RtoW:ZERO mode
 			subQ->byTrackNum = prevSubQ->byTrackNum;
-			if(prevSubQ->byTrackNum < toc->LastTrack &&
+			if(prevSubQ->byTrackNum < pDiscData->toc.LastTrack &&
 				subQ->byIndex == 1 &&
 				subQ->nRelativeTime == 0) {
 				subQ->byTrackNum += 1;

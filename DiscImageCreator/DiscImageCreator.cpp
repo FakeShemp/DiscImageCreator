@@ -42,26 +42,8 @@ int exec(_TCHAR* argv[], ExecType execType)
 	}
 	FILE* fpLog = NULL;
 	BOOL bRet = TRUE;
+	DISC_DATA discData = {0};
 	try {
-		BOOL bDC = FALSE;
-		if(execType == ra && !_tcscmp(argv[5], _T("44990")) && !_tcscmp(argv[6], _T("549150"))) {
-			bDC = TRUE;
-		}
-#ifndef _DEBUG
-		_TCHAR szLogtxt[12] = {0};
-		if(bDC) {
-			_tcscpy(szLogtxt, _T("_dc.log.txt"));
-		}
-		else {
-			_tcscpy(szLogtxt, _T(".log.txt"));
-		}
-		fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T(WFLAG), 0, 0);
-
-		if(!fpLog) {
-			OutputErrorString(_T("Failed to open file %s\n"), szLogtxt);
-			throw;
-		}
-#endif
 		if(execType == c) {
 			StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
 		}
@@ -73,9 +55,32 @@ int exec(_TCHAR* argv[], ExecType execType)
 			if(!bRet) {
 				throw FALSE;
 			}
+
+			BOOL bDC = FALSE;
+			if(execType == ra && !_tcscmp(argv[5], _T("44990")) && !_tcscmp(argv[6], _T("549150"))) {
+				bDC = TRUE;
+			}
+#ifndef _DEBUG
+			_TCHAR szLogtxt[12] = {0};
+			if(bDC) {
+				_tcscpy(szLogtxt, _T("_dc.log.txt"));
+			}
+			else {
+				_tcscpy(szLogtxt, _T(".log.txt"));
+			}
+			fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T(WFLAG), 0, 0);
+
+			if(!fpLog) {
+				OutputErrorString(_T("Failed to open file %s\n"), szLogtxt);
+				throw FALSE;
+			}
+#endif
 			ULONG ulReturned = 0;
 			bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
 				sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
+			if(!bRet) {
+//				throw FALSE;
+			}
 			OutputScsiAdress(&devData, fpLog);
 
 			STORAGE_DESCRIPTOR_HEADER header = {0};
@@ -85,7 +90,9 @@ int exec(_TCHAR* argv[], ExecType execType)
 
 			bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
 				sizeof(STORAGE_PROPERTY_QUERY), &header, sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
-
+			if(!bRet) {
+				throw FALSE;
+			}
 			devData.adapterDescriptor = (PSTORAGE_ADAPTER_DESCRIPTOR)malloc(header.Size);
 			if (devData.adapterDescriptor == NULL) {
 				throw FALSE;
@@ -107,10 +114,6 @@ int exec(_TCHAR* argv[], ExecType execType)
 				devData.bPlextor = TRUE;
 			}
 			SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
-
-			DISC_DATA discData = {0};
-			discData.nLastLBAof1stSession = -1;
-			discData.nStartLBAof2ndSession = -1;
 			bRet = ReadConfiguration(&devData, &discData, fpLog);
 			if(!bRet) {
 				throw FALSE;
@@ -129,6 +132,42 @@ int exec(_TCHAR* argv[], ExecType execType)
 				if(!bRet) {
 					throw FALSE;
 				}
+				size_t dwTrackAllocSize = (size_t)discData.toc.LastTrack + 1;
+				size_t dwTrackPointerAllocSize = dwTrackAllocSize * sizeof(_INT);
+				if(NULL == (discData.aSessionNum = (PINT)malloc(dwTrackPointerAllocSize))) {
+					throw _T("Failed to alloc memory discData.aSessionNum\n");
+				}
+				if(NULL == (discData.szISRC = (_TCHAR**)malloc(dwTrackPointerAllocSize))) {
+					throw _T("Failed to alloc memory discData.szISRC\n");
+				}
+				if(NULL == (discData.szTitle = (_TCHAR**)malloc(dwTrackPointerAllocSize))) {
+					throw _T("Failed to alloc memory discData.szTitle\n");
+				}
+				if(NULL == (discData.szPerformer = (_TCHAR**)malloc(dwTrackPointerAllocSize))) {
+					throw _T("Failed to alloc memory discData.szPerformer\n");
+				}
+				if(NULL == (discData.szSongWriter = (_TCHAR**)malloc(dwTrackPointerAllocSize))) {
+					throw _T("Failed to alloc memory discData.szTitle\n");
+				}
+
+				for(INT h = 0; h < discData.toc.LastTrack + 1; h++) {
+					if(NULL == (discData.szISRC[h] = (_TCHAR*)malloc((META_ISRC_SIZE + 1) * sizeof(_TCHAR)))) {
+						throw _T("Failed to alloc memory discData.szISRC[h]\n");
+					}
+					if(NULL == (discData.szTitle[h] = (_TCHAR*)malloc((META_STRING_SIZE + 1) * sizeof(_TCHAR)))) {
+						throw _T("Failed to alloc memory discData.szTitle[h]\n");
+					}
+					if(NULL == (discData.szPerformer[h] = (_TCHAR*)malloc((META_STRING_SIZE + 1) * sizeof(_TCHAR)))) {
+						throw _T("Failed to alloc memory discData.szPerformer[h]\n");
+					}
+					if(NULL == (discData.szSongWriter[h] = (_TCHAR*)malloc((META_STRING_SIZE + 1) * sizeof(_TCHAR)))) {
+						throw _T("Failed to alloc memory discData.szSongWriter[h]\n");
+					}
+					FillMemory(discData.szISRC[h], (META_ISRC_SIZE + 1) * sizeof(_TCHAR), 0);
+					FillMemory(discData.szTitle[h], (META_STRING_SIZE + 1) * sizeof(_TCHAR), 0);
+					FillMemory(discData.szPerformer[h], (META_STRING_SIZE + 1) * sizeof(_TCHAR), 0);
+					FillMemory(discData.szSongWriter[h], (META_STRING_SIZE + 1) * sizeof(_TCHAR), 0);
+				}
 				bRet = ReadTOCFull(&devData, &discData, fpLog, fpCcd);
 				if(!bRet) {
 					throw FALSE;
@@ -141,11 +180,11 @@ int exec(_TCHAR* argv[], ExecType execType)
 				bRet = ReadCDForSearchingOffset(&devData, &discData, fpLog);
 
 				if(execType == rd) {
-					bRet = ReadCDPartial(&devData, argv[4],
+					bRet = ReadCDPartial(&devData, &discData, argv[4],
 						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC);
 				}
 				else if(execType == ra) {
-					bRet = ReadCDPartial(&devData, argv[4],
+					bRet = ReadCDPartial(&devData, &discData, argv[4],
 						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC);
 				}
 				else if(bRet == TRUE && execType == rall) {
@@ -185,6 +224,17 @@ int exec(_TCHAR* argv[], ExecType execType)
 	FcloseAndNull(fpLog);
 #endif
 	FreeAndNull(devData.adapterDescriptor);
+	FreeAndNull(discData.aSessionNum);
+	for(INT i = 0; i < discData.toc.LastTrack + 1; i++) {
+		FreeAndNull(discData.szISRC[i]);
+		FreeAndNull(discData.szTitle[i]);
+		FreeAndNull(discData.szPerformer[i]);
+		FreeAndNull(discData.szSongWriter[i]);
+	}
+	FreeAndNull(discData.szISRC);
+	FreeAndNull(discData.szTitle);
+	FreeAndNull(discData.szPerformer);
+	FreeAndNull(discData.szSongWriter);
 	CloseHandle(devData.hDevice);
 	return bRet;
 }
