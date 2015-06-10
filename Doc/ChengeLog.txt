@@ -205,6 +205,7 @@ http://www.mediafire.com/?yoejwfgut0p7xeh/
 - fixed: /m option
 
 *2015-02-27
+http://www.mediafire.com/?3ojaadqlch27abg/
 - added: fix subchannel for GD
 - added: padding to 0x55 for unreadable sector
 - added: path table record and directory record for CD to _infolog.txt
@@ -220,3 +221,22 @@ http://www.mediafire.com/?yoejwfgut0p7xeh/
 - fixed: SubQ Track
 - fixed: Cue file for CDTEXT
 - improved: detecting MCN sector
+
+*2015-05-14
+- added: Plextor scsi drive, PX-S88T
+- added: Flag for supporting ModeSense, ReadBufferCapacity, SetCDSpeed
+- added: If semaphore time error occurs, exec sleep(25000) (Because if it doesn't exec sleep, next ScsiPassThroughDirect fails.)
+- added: /c val4 option (to set c2 offset)
+- added: /s option (for reading subchannel precisely)
+- changed: devided errorlog.txt to suberrorlog.txt and c2errorlog.txt
+- changed: from READ_CD(0xbe) to READ_D8(0xd8) or READ12(0xa8) (for old plextor drive)
+- fixed: reread doesn't work from 20150227
+- fixed: startstop doesn't work command from 20150227
+- fixed: If ReadDiscInformation, ModeSense10, ReadBufferCapacity, SetCDSpeed is alway return TRUE;
+- fixed: If GetConfiguration fails, sets CD-TEXT flag manually. (Ultraplex is TRUE)
+- fixed: If ModeSense fails, sets drive buffer size manually. (Ultraplex is 512, PX-W1210S is 4096, PX-S88T is 2048)
+- fixed: MINIMUM_DRIVE_BUF_SIZE is from 256 to 512.
+- fixed: IsValidSubQTrack()
+- fixed: Set false SetCDSpeed, 0xd8 & subch 0x08 in PX-W1210TA forcibly
+- fixed: Buf size for executing EccEdc.
+- fixed: Transfer length for volume descriptor.

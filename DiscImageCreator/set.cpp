@@ -5,13 +5,14 @@
 #include "convert.h"
 #include "get.h"
 #include "output.h"
+#include "_external\crc16ccitt.h"
 
 BOOL PreserveTrackAttribution(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,
 	INT nLBA,
 	LPBYTE lpCurrentTrackNum,
-	PMAIN_HEADER pMainHeader,
+	PMAIN_HEADER pMain,
 	PSUB_Q pSubQ,
 	PSUB_Q pPrevSubQ
 	)
@@ -38,7 +39,7 @@ BOOL PreserveTrackAttribution(
 					if (pDisc->SUB.lpFirstLBAListOnSubSync[tIdx][0] == pDisc->SUB.lpFirstLBAListOnSubSync[tIdx][1]) {
 						pDisc->SUB.lpFirstLBAListOnSubSync[tIdx][0] = -1;
 					}
-					pDisc->SUB.bDesync = TRUE;
+					pDisc->SUB.byDesync = TRUE;
 				}
 				else {
 					pDisc->SUB.lpFirstLBAListOnSub[tIdx][pSubQ->byIndex] = nLBA;
@@ -57,7 +58,7 @@ BOOL PreserveTrackAttribution(
 		// preserve mode, ctl
 		if (nLBA == pDisc->SCSI.lpFirstLBAListOnToc[tIdx]) {
 			pDisc->SUB.lpCtlList[tIdx] = pSubQ->byCtl;
-			pDisc->MAIN.lpModeList[tIdx] = pMainHeader->byMode;
+			pDisc->MAIN.lpModeList[tIdx] = pMain->header[15];
 		}
 		// preserve index
 		if (pPrevSubQ->byIndex + 1 == pSubQ->byIndex && *lpCurrentTrackNum >= 0) {
@@ -102,7 +103,7 @@ BOOL PreserveTrackAttribution(
 				nLBA, nLBA, pSubQ->byTrackNum);
 		}
 
-		if (pExtArg->bReverse) {
+		if (pExtArg->byReverse) {
 			// preserve last LBA per data track
 			if (nLBA == pDisc->SCSI.nLastLBAofDataTrack) {
 				if (pDisc->SUB.lpLastLBAListOfDataTrackOnSub[tIdx] == -1 &&
@@ -133,47 +134,87 @@ BOOL PreserveTrackAttribution(
 	return TRUE;
 }
 
-VOID SetAndOutputC2ErrorDataPerSector(
-#if 0
-	PC2_ERROR pC2Error,
-#endif
+VOID SetC2ErrorDataDetail(
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
 	INT nLBA,
 	DWORD dwAllBufLen,
 	UINT uiC2ErrorLBACnt
+	)
+{
+	if (pC2ErrorPerSector[uiC2ErrorLBACnt].byErrorFlagBackup == RETURNED_NO_C2_ERROR_1ST ||
+		pC2ErrorPerSector[uiC2ErrorLBACnt].byErrorFlagBackup == RETURNED_NO_C2_ERROR_BUT_BYTE_ERROR) {
+		memcpy(pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufNoC2Sector,
+			pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufNoC2SectorBackup, dwAllBufLen);
+	}
+	pC2ErrorPerSector[uiC2ErrorLBACnt].byErrorFlag = RETURNED_EXIST_C2_ERROR;
+	pC2ErrorPerSector[uiC2ErrorLBACnt].nErrorLBANum = nLBA;
+}
+
+VOID SetC2ErrorData(
+	PDISC pDisc,
+	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
+	INT nC2Offset,
+	INT nLBA,
+	DWORD dwAllBufLen,
+	PUINT puiC2ErrorLBACnt,
+	BOOL b1stRead
 	)
 {
 	INT nBytePos = nLBA * CD_RAW_SECTOR_SIZE;
 	INT nBytePosEnd = nBytePos + CD_RAW_SECTOR_SIZE - 1;
-#if 0
-	OutputErrorLogA(
-		"LBA[%06d, %#07x], BytePos[%d-%d, %#x-%#x] C2 err exist. SlideSectorNum %d, ErrByteCnt %u\n"
-		"                      [ErrOfs:BytePos(dec), ErrOfs:BytePos(hex)]\n",
-		nLBA, nLBA, nBytePos, nBytePosEnd, nBytePos, nBytePosEnd, pC2Error->cSlideSectorNum,
-		pC2ErrorPerSector[uiC2ErrorLBACnt].uiErrorBytePosCnt);
-#else
-	OutputErrorLogA(
+	OutputC2ErrorLogA(
 		"LBA[%06d, %#07x], BytePos[%d-%d, %#x-%#x] C2 err exist. ErrByteCnt %u\n"
 		"                      [ErrOfs:BytePos(dec), ErrOfs:BytePos(hex)]\n",
 		nLBA, nLBA, nBytePos, nBytePosEnd, nBytePos, nBytePosEnd,
-		pC2ErrorPerSector[uiC2ErrorLBACnt].uiErrorBytePosCnt);
+		pC2ErrorPerSector[*puiC2ErrorLBACnt].uiErrorBytePosCnt);
+	UINT n = 0;
+	for (;  n < pC2ErrorPerSector[*puiC2ErrorLBACnt].uiErrorBytePosCnt; n++) {
+		INT nPos = nBytePos + pC2ErrorPerSector[*puiC2ErrorLBACnt].lpErrorBytePos[n];
+		OutputC2ErrorLogA("                      [%d:%d, %#x:%#x]\n", 
+			pC2ErrorPerSector[*puiC2ErrorLBACnt].lpErrorBytePos[n], nPos,
+			pC2ErrorPerSector[*puiC2ErrorLBACnt].lpErrorBytePos[n], nPos);
+	}
+	if (b1stRead) {
+#if 0
+		SHORT sFirstErrorBytePos = pC2ErrorPerSector[*puiC2ErrorLBACnt].lpErrorBytePos[0];
+		SHORT sEndErrorBytePos = sFirstErrorBytePos;
+		if (n > 0) {
+			sEndErrorBytePos = pC2ErrorPerSector[*puiC2ErrorLBACnt].lpErrorBytePos[n - 1];
+		}
+		if (pDisc->MAIN.nAdjustSectorNum > 0) {
+			if (CD_RAW_SECTOR_SIZE * (pDisc->MAIN.nAdjustSectorNum - 1) < sFirstErrorBytePos &&
+				sFirstErrorBytePos < CD_RAW_SECTOR_SIZE * pDisc->MAIN.nAdjustSectorNum) {
+				SetC2ErrorDataDetail(pC2ErrorPerSector,
+					nLBA + pDisc->MAIN.nAdjustSectorNum - 1, dwAllBufLen, (*puiC2ErrorLBACnt)++);
+			}
+			if (CD_RAW_SECTOR_SIZE * pDisc->MAIN.nAdjustSectorNum <= sEndErrorBytePos) {
+				SetC2ErrorDataDetail(pC2ErrorPerSector,
+					nLBA + pDisc->MAIN.nAdjustSectorNum, dwAllBufLen, (*puiC2ErrorLBACnt)++);
+			}
+		}
+		else if (pDisc->MAIN.nAdjustSectorNum < 0) {
+			if (CD_RAW_SECTOR_SIZE * pDisc->MAIN.nAdjustSectorNum <= sFirstErrorBytePos &&
+				sFirstErrorBytePos < CD_RAW_SECTOR_SIZE * (pDisc->MAIN.nAdjustSectorNum + 1)) {
+				SetC2ErrorDataDetail(pC2ErrorPerSector,
+					nLBA + pDisc->MAIN.nAdjustSectorNum, dwAllBufLen, (*puiC2ErrorLBACnt)++);
+			}
+			if (CD_RAW_SECTOR_SIZE * (pDisc->MAIN.nAdjustSectorNum + 1) <= sEndErrorBytePos &&
+				sEndErrorBytePos < CD_RAW_SECTOR_SIZE * (pDisc->MAIN.nAdjustSectorNum + 2)) {
+				SetC2ErrorDataDetail(pC2ErrorPerSector,
+					nLBA + pDisc->MAIN.nAdjustSectorNum + 1, dwAllBufLen, (*puiC2ErrorLBACnt)++);
+			}
+		}
+#else
+		UNREFERENCED_PARAMETER(pDisc);
+		SetC2ErrorDataDetail(pC2ErrorPerSector, nLBA + nC2Offset, dwAllBufLen, (*puiC2ErrorLBACnt)++);
 #endif
-	for (UINT n = 0; n < pC2ErrorPerSector[uiC2ErrorLBACnt].uiErrorBytePosCnt; n++) {
-		INT nPos = nBytePos + pC2ErrorPerSector[uiC2ErrorLBACnt].lpErrorBytePos[n];
-		OutputErrorLogA("                      [%u:%d, %#x:%#x]\n", 
-			pC2ErrorPerSector[uiC2ErrorLBACnt].lpErrorBytePos[n], nPos, 
-			pC2ErrorPerSector[uiC2ErrorLBACnt].lpErrorBytePos[n], nPos);
 	}
-	if (pC2ErrorPerSector[uiC2ErrorLBACnt].bErrorFlagBackup == RETURNED_NO_C2_ERROR_1ST ||
-		pC2ErrorPerSector[uiC2ErrorLBACnt].bErrorFlagBackup == RETURNED_NO_C2_ERROR_BUT_BYTE_ERROR) {
-		memcpy(pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufC2NoneSector,
-			pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufC2NoneSectorBackup, dwAllBufLen);
+	else {
+		SetC2ErrorDataDetail(pC2ErrorPerSector, nLBA, dwAllBufLen, (*puiC2ErrorLBACnt)++);
 	}
-	pC2ErrorPerSector[uiC2ErrorLBACnt].bErrorFlag = RETURNED_EXIST_C2_ERROR;
-	pC2ErrorPerSector[uiC2ErrorLBACnt].nErrorLBANum = nLBA;
 }
 
-VOID SetAndOutputC2NoErrorData(
+VOID SetNoC2ErrorData(
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
 	LPBYTE lpBuf,
 	INT nLBA,
@@ -181,15 +222,15 @@ VOID SetAndOutputC2NoErrorData(
 	UINT uiC2ErrorLBACnt
 	)
 {
-	OutputErrorLogA(
+	OutputC2ErrorLogA(
 		"LBA[%06d, %#07x], C2 err doesn't exist. Next check 2352 byte.\n",
 		nLBA, nLBA);
-	memcpy(pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufC2NoneSector, lpBuf, dwAllBufLen);
-	pC2ErrorPerSector[uiC2ErrorLBACnt].bErrorFlag = RETURNED_NO_C2_ERROR_1ST;
+	memcpy(pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufNoC2Sector, lpBuf, dwAllBufLen);
+	pC2ErrorPerSector[uiC2ErrorLBACnt].byErrorFlag = RETURNED_NO_C2_ERROR_1ST;
 	pC2ErrorPerSector[uiC2ErrorLBACnt].nErrorLBANum = nLBA;
 }
 
-VOID SetAndOutputC2NoErrorByteErrorData(
+VOID SetNoC2ErrorExistsByteErrorData(
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
 	LPBYTE lpBuf,
 	INT nLBA,
@@ -197,11 +238,11 @@ VOID SetAndOutputC2NoErrorByteErrorData(
 	UINT uiC2ErrorLBACnt
 	)
 {
-	OutputErrorLogA(
+	OutputC2ErrorLogA(
 		"LBA[%06d, %#07x], C2 err doesn't exist. But byte doesn't match\n",
 		nLBA, nLBA);
-	memcpy(pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufC2NoneSector, lpBuf, dwAllBufLen);
-	pC2ErrorPerSector[uiC2ErrorLBACnt].bErrorFlag = RETURNED_NO_C2_ERROR_BUT_BYTE_ERROR;
+	memcpy(pC2ErrorPerSector[uiC2ErrorLBACnt].lpBufNoC2Sector, lpBuf, dwAllBufLen);
+	pC2ErrorPerSector[uiC2ErrorLBACnt].byErrorFlag = RETURNED_NO_C2_ERROR_BUT_BYTE_ERROR;
 	pC2ErrorPerSector[uiC2ErrorLBACnt].nErrorLBANum = nLBA;
 }
 
@@ -212,8 +253,8 @@ VOID SetC2ErrorBackup(
 	)
 {
 	for (UINT c = 0; c < uiC2ErrorLBACntBackup; c++) {
-		pC2ErrorPerSector[c].bErrorFlagBackup = pC2ErrorPerSector[c].bErrorFlag;
-		pC2ErrorPerSector[c].bErrorFlag = RETURNED_NO_C2_ERROR_1ST;
+		pC2ErrorPerSector[c].byErrorFlagBackup = pC2ErrorPerSector[c].byErrorFlag;
+		pC2ErrorPerSector[c].byErrorFlag = RETURNED_NO_C2_ERROR_1ST;
 		pC2ErrorPerSector[c].nErrorLBANumBackup = pC2ErrorPerSector[c].nErrorLBANum;
 		pC2ErrorPerSector[c].nErrorLBANum = 0;
 		for (UINT d = 0; d < pC2ErrorPerSector[c].uiErrorBytePosCnt; d++) {
@@ -222,9 +263,9 @@ VOID SetC2ErrorBackup(
 		}
 		pC2ErrorPerSector[c].uiErrorBytePosCntBackup = pC2ErrorPerSector[c].uiErrorBytePosCnt;
 		pC2ErrorPerSector[c].uiErrorBytePosCnt = 0;
-		memcpy(pC2ErrorPerSector[c].lpBufC2NoneSectorBackup, 
-			pC2ErrorPerSector[c].lpBufC2NoneSector, dwAllBufLen);
-		ZeroMemory(pC2ErrorPerSector[c].lpBufC2NoneSector, dwAllBufLen);
+		memcpy(pC2ErrorPerSector[c].lpBufNoC2SectorBackup, 
+			pC2ErrorPerSector[c].lpBufNoC2Sector, dwAllBufLen);
+		ZeroMemory(pC2ErrorPerSector[c].lpBufNoC2Sector, dwAllBufLen);
 	}
 }
 
@@ -238,7 +279,7 @@ VOID SetAndOutputToc(
 	CONST INT typeSize = 7;
 	CHAR strType[typeSize] = { 0 };
 	BOOL bFirstData = TRUE;
-	BOOL bAudioOnly = TRUE;
+	BYTE byAudioOnly = TRUE;
 	for (BYTE i = pDisc->SCSI.toc.FirstTrack; i <= pDisc->SCSI.toc.LastTrack; i++) {
 		for (INT j = 0, k = 24; j < 4; j++, k -= 8) {
 			pDisc->SCSI.lpFirstLBAListOnToc[i - 1] |= 
@@ -260,7 +301,7 @@ VOID SetAndOutputToc(
 					pDisc->SCSI.lpFirstLBAListOnToc[i - 1];
 				pDisc->SCSI.byFirstDataTrack = i;
 				bFirstData = FALSE;
-				bAudioOnly = FALSE;
+				byAudioOnly = FALSE;
 			}
 			pDisc->SCSI.nLastLBAofDataTrack = 
 				pDisc->SCSI.lpLastLBAListOnToc[i - 1];
@@ -283,7 +324,7 @@ VOID SetAndOutputToc(
 	OutputDiscLogA(
 		"\t                                        Total  %8u\n", pDisc->SCSI.nAllLength);
 	if (*pExecType != gd) {
-		pDisc->SCSI.bAudioOnly = bAudioOnly;
+		pDisc->SCSI.byAudioOnly = byAudioOnly;
 	}
 }
 
@@ -291,7 +332,7 @@ VOID SetAndOutputTocFull(
 	PDISC pDisc,
 	PCDROM_TOC_FULL_TOC_DATA fullToc,
 	PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData,
-	size_t uiTocEntries,
+	WORD wTocEntries,
 	FILE* fpCcd
 	)
 {
@@ -305,7 +346,7 @@ VOID SetAndOutputTocFull(
 	pDisc->SCSI.nFirstLBAofLeadout = -1;
 	pDisc->SCSI.nFirstLBAof2ndSession = -1;
 
-	for (UINT a = 0; a < uiTocEntries; a++) {
+	for (WORD a = 0; a < wTocEntries; a++) {
 		INT nTmpLBAExt = 0;
 		INT nTmpLBA = 0;
 		if (fpCcd) {
@@ -321,7 +362,7 @@ VOID SetAndOutputTocFull(
 					break;
 				case 0x10:
 					OutputDiscLogA("Format: CD-I\n");
-					pDisc->SCSI.bCdi = TRUE;
+					pDisc->SCSI.byCdi = TRUE;
 					break;
 				case 0x20:
 					OutputDiscLogA("Format: CD-ROM-XA\n");
@@ -1148,8 +1189,18 @@ VOID SetFeatureCdRead(
 	PDEVICE pDevice
 	)
 {
-	pDevice->bCanCDText = (BOOL)(pCDRead->CDText);
-	pDevice->bC2ErrorData = (BOOL)(pCDRead->C2ErrorData);
+	pDevice->FEATURE.byCanCDText = pCDRead->CDText;
+	pDevice->FEATURE.byC2ErrorData = pCDRead->C2ErrorData;
+}
+
+VOID SetFeatureRealTimeStreaming(
+	PFEATURE_DATA_REAL_TIME_STREAMING pRTS,
+	PDEVICE pDevice
+	)
+{
+	pDevice->FEATURE.byModePage2a = pRTS->WriteSpeedInMP2A;
+	pDevice->FEATURE.bySetCDSpeed = pRTS->SetCDSpeed;
+	pDevice->FEATURE.byReadBufCapa = pRTS->ReadBufferCapacityBlock;
 }
 
 VOID SetCDOffset(
@@ -1200,7 +1251,7 @@ VOID SetCDTransfer(
 	)
 {
 	pDevice->TRANSFER.uiTransferLen = 1;
-	if (order == DRIVE_DATA_ORDER::C2None) {
+	if (order == DRIVE_DATA_ORDER::NoC2) {
 		pDevice->TRANSFER.dwBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE;
 		pDevice->TRANSFER.dwAllBufLen = 
 			pDevice->TRANSFER.dwBufLen * pDevice->TRANSFER.uiTransferLen;
@@ -1210,7 +1261,7 @@ VOID SetCDTransfer(
 	}
 	else if (order == DRIVE_DATA_ORDER::MainC2Sub) {
 		pDevice->TRANSFER.dwBufLen = CD_RAW_SECTOR_WITH_C2_294_AND_SUBCODE_SIZE;
-		if (pDevice->byPlexType == PLEX_DRIVE_TYPE::PXW4824) {
+		if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PXW4824A) {
 			pDevice->TRANSFER.dwAdditionalBufLen = 34; // unknown size
 		}
 		else {
@@ -1317,8 +1368,8 @@ VOID SetReadCDCommand(
 	cdb->TransferBlocks[0] = LOBYTE(HIWORD(uiTransferLen));
 	cdb->TransferBlocks[1] = HIBYTE(LOWORD(uiTransferLen));
 	cdb->TransferBlocks[2] = LOBYTE(LOWORD(uiTransferLen));
-	if (!bCheckReading && pDevice->bC2ErrorData &&
-		(pExtArg && pExtArg->bC2)) {
+	if (!bCheckReading && pDevice->FEATURE.byC2ErrorData &&
+		(pExtArg && pExtArg->byC2)) {
 		cdb->ErrorFlags = READ_CD_FLAG::byte294;
 	}
 	cdb->IncludeEDC = TRUE;
@@ -1329,40 +1380,40 @@ VOID SetReadCDCommand(
 }
 
 VOID SetReadD8Command(
-	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	CDB::_PLXTR_READ_CDDA* cdb,
 	UINT uiTransferLen,
-	BOOL bSub,
-	BOOL bCheckReading
+	PLXTR_READ_CDDA_FLAG::SUB_CHANNEL_SELECTION Sub
 	)
 {
-	cdb->OperationCode = SCSIOP_PLEX_READ_CD;
+	cdb->OperationCode = SCSIOP_PLXTR_READ_CDDA;
 	cdb->LogicalUnitNumber = pDevice->address.Lun;
 	cdb->TransferBlockByte0 = HIBYTE(HIWORD(uiTransferLen));
 	cdb->TransferBlockByte1 = LOBYTE(HIWORD(uiTransferLen));
 	cdb->TransferBlockByte2 = HIBYTE(LOWORD(uiTransferLen));
 	cdb->TransferBlockByte3 = LOBYTE(LOWORD(uiTransferLen));
-	if (bSub) {
-		if (!bCheckReading && pDevice->bC2ErrorData &&
-			(pExtArg && pExtArg->bC2)) {
-			cdb->SubCode = READ_D8_FLAG::MainC2Raw;
-		}
-		else {
-			cdb->SubCode = READ_D8_FLAG::MainPack;
-		}
+	cdb->SubCode = (UCHAR)Sub;
+}
+
+VOID SetModeFromBuffer(
+	WORD wDriveBufSize,
+	UINT uiMainDataSlideSize,
+	PMAIN_HEADER pMain,
+	PSUB_Q pSubQ,
+	LPBYTE lpBuf
+	)
+{
+	if (wDriveBufSize > MINIMUM_DRIVE_BUF_SIZE) {
+		pMain->header[15] =
+			GetMode(lpBuf + uiMainDataSlideSize, pSubQ->byCtl);
 	}
 	else {
-		cdb->SubCode = READ_D8_FLAG::SubNone;
+		pMain->header[15] = (BYTE)(pSubQ->byCtl & 0x0f);
 	}
 }
 
-VOID SetSubQDataFromReadCD(
-	WORD wDriveBufSize,
-	UINT uiMainDataSlideSize,
-	PMAIN_HEADER pMainHeader,
+VOID SetSubQDataFromBuffer(
 	PSUB_Q pSubQ,
-	LPBYTE lpBuf,
 	LPBYTE lpSubcode
 	)
 {
@@ -1374,13 +1425,39 @@ VOID SetSubQDataFromReadCD(
 		BcdToDec(lpSubcode[16]), BcdToDec(lpSubcode[17]));
 	pSubQ->nAbsoluteTime = MSFtoLBA(BcdToDec(lpSubcode[19]), 
 		BcdToDec(lpSubcode[20]), BcdToDec(lpSubcode[21]));
-	if (wDriveBufSize > MINIMUM_DRIVE_BUF_SIZE) {
-		pMainHeader->byMode =
-			GetMode(lpBuf + uiMainDataSlideSize, pSubQ->byCtl);
+}
+
+VOID SetBufferFromSubQData(
+	PSUB_Q pSubQ,
+	LPBYTE lpSubcode,
+	BYTE byPresent
+	)
+{
+	lpSubcode[12] = BYTE(pSubQ->byCtl << 4 | pSubQ->byAdr);
+	lpSubcode[13] = DecToBcd(pSubQ->byTrackNum);
+	lpSubcode[14] = DecToBcd(pSubQ->byIndex);
+	BYTE m, s, f;
+	if (byPresent) {
+		LBAtoMSF(pSubQ->nRelativeTime, &m, &s, &f);
 	}
 	else {
-		pMainHeader->byMode = (BYTE)(pSubQ->byCtl & 0x0f);
+		LBAtoMSF(pSubQ->nRelativeTime + 1, &m, &s, &f);
 	}
+	lpSubcode[15] = DecToBcd(m);
+	lpSubcode[16] = DecToBcd(s);
+	lpSubcode[17] = DecToBcd(f);
+	if (byPresent) {
+		LBAtoMSF(pSubQ->nAbsoluteTime, &m, &s, &f);
+	}
+	else {
+		LBAtoMSF(pSubQ->nAbsoluteTime + 1, &m, &s, &f);
+	}
+	lpSubcode[19] = DecToBcd(m);
+	lpSubcode[20] = DecToBcd(s);
+	lpSubcode[21] = DecToBcd(f);
+	WORD crc16 = (WORD)GetCrc16CCITT(10, &lpSubcode[12]);
+	lpSubcode[22] = HIBYTE(crc16);
+	lpSubcode[23] = LOBYTE(crc16);
 }
 
 BOOL UpdateSubQData(
@@ -1397,14 +1474,14 @@ BOOL UpdateSubQData(
 	}
 	else if ((pPrevSubQ->byAdr == ADR_ENCODES_MEDIA_CATALOG || 
 		pPrevSubQ->byAdr == ADR_ENCODES_ISRC) && pPrevSubQ->byIndex == 0) {
-			pSubQ->nRelativeTime = pPrevSubQ->nRelativeTime + 1;
+//			pSubQ->nRelativeTime = pPrevSubQ->nRelativeTime + 1;
 	}
 
-	if (pSubQ->byAdr != ADR_ENCODES_MEDIA_CATALOG && 
-		pSubQ->byAdr != ADR_ENCODES_ISRC) {
+//	if (pSubQ->byAdr != ADR_ENCODES_MEDIA_CATALOG && 
+//		pSubQ->byAdr != ADR_ENCODES_ISRC) {
 		pPrevSubQ->byAdr = pSubQ->byAdr;
-	}
-	else if (pPrevSubQ->byIndex == 0 && pPrevSubQ->nRelativeTime == 0) {
+//	}
+	/*else*/ if (pPrevSubQ->byIndex == 0 && pPrevSubQ->nRelativeTime == 0) {
 		pPrevSubQ->byIndex = 1;
 	}
 
@@ -1427,32 +1504,32 @@ BOOL UpdateSubQData(
 }
 
 VOID UpdateTmpMainHeader(
-	PMAIN_HEADER pMainHeader
+	PMAIN_HEADER pMain
 	)
 {
-	BYTE tmp = (BYTE)(pMainHeader->header[14] + 1);
+	BYTE tmp = (BYTE)(pMain->header[14] + 1);
 	if ((tmp & 0x0f) == 0x0a) {
 		tmp += 6;
 	}
 	if (tmp == 0x75) {
-		pMainHeader->header[14] = 0;
-		tmp = (BYTE)((pMainHeader->header[13] ^ 0x80) + 1);
+		pMain->header[14] = 0;
+		tmp = (BYTE)((pMain->header[13] ^ 0x80) + 1);
 		if ((tmp & 0x0f) == 0x0a) {
 			tmp += 6;
 		}
 		if (tmp == 0x60) {
-			pMainHeader->header[13] = 0x80;
-			tmp = (BYTE)((pMainHeader->header[12] ^ 0x01) + 1);
+			pMain->header[13] = 0x80;
+			tmp = (BYTE)((pMain->header[12] ^ 0x01) + 1);
 			if ((tmp & 0x0f) == 0x0a) {
 				tmp += 6;
 			}
-			pMainHeader->header[12] = (BYTE)(tmp ^ 0x01);
+			pMain->header[12] = (BYTE)(tmp ^ 0x01);
 		}
 		else {
-			pMainHeader->header[13] = (BYTE)(tmp ^ 0x80);
+			pMain->header[13] = (BYTE)(tmp ^ 0x80);
 		}
 	}
 	else {
-		pMainHeader->header[14] = tmp;
+		pMain->header[14] = tmp;
 	}
 }

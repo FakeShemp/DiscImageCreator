@@ -5,25 +5,18 @@
 
 #define DRIVE_MAX_SPEED	(72)
 
-BOOL GetConfiguration(
-	PDEVICE pDevice,
-	PDISC pDisc
+BOOL TestUnitReady(
+	PDEVICE pDevice
 	);
 
 BOOL Inquiry(
 	PDEVICE pDevice
 	);
 
-BOOL ModeSense10(
-	PDEVICE pDevice
-	);
-
-BOOL ReadBufferCapacity(
-	PDEVICE pDevice
-	);
-
-BOOL ReadDiscInformation(
-	PDEVICE pDevice
+BOOL StartStopUnit(
+	PDEVICE pDevice,
+	BYTE Start,
+	BYTE LoadEject
 	);
 
 BOOL ReadTOC(
@@ -44,31 +37,38 @@ BOOL ReadTOCText(
 	FILE* fpCcd
 	);
 
+BOOL GetConfiguration(
+	PDEVICE pDevice,
+	PDISC pDisc
+	);
+
+BOOL ReadDiscInformation(
+	PDEVICE pDevice
+	);
+
+BOOL ModeSense10(
+	PDEVICE pDevice
+	);
+
+BOOL ReadBufferCapacity(
+	PDEVICE pDevice
+	);
+
 BOOL SetCDSpeed(
 	PDEVICE pDevice,
 	DWORD dwCDSpeedNum
 	);
 
-BOOL StartStopUnit(
+// feature PLEXTOR drive below
+BOOL SetSpeedRead(
 	PDEVICE pDevice,
-    BYTE Start,
-    BYTE LoadEject
+	BOOL bState
 	);
 
-BOOL TestUnitReady(
-	PDEVICE pDevice
-	);
-
-// feature Plextor drive below
 BOOL Reset(
 	PDEVICE pDevice
 	);
 
 BOOL ReadEeprom(
 	PDEVICE pDevice
-	);
-
-BOOL SetSpeedRead(
-	PDEVICE pDevice,
-	BOOL bState
 	);

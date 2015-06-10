@@ -25,17 +25,17 @@
 }
 
 #ifdef _DEBUG
-extern _TCHAR logBufferW[DISC_RAW_READ];
-extern CHAR logBufferA[DISC_RAW_READ];
+extern _TCHAR logBufferW[DISC_RAW_READ_SIZE];
+extern CHAR logBufferA[DISC_RAW_READ_SIZE];
 #define OutputDebugStringExW(str, ...) \
 { \
-	_sntprintf(logBufferW, DISC_RAW_READ, str, __VA_ARGS__); \
+	_sntprintf(logBufferW, DISC_RAW_READ_SIZE, str, __VA_ARGS__); \
 	logBufferW[2047] = 0; \
 	OutputDebugString(logBufferW); \
 }
 #define OutputDebugStringExA(str, ...) \
 { \
-	_snprintf(logBufferA, DISC_RAW_READ, str, __VA_ARGS__); \
+	_snprintf(logBufferA, DISC_RAW_READ_SIZE, str, __VA_ARGS__); \
 	logBufferA[2047] = 0; \
 	OutputDebugStringA(logBufferA); \
 }
@@ -64,11 +64,19 @@ extern CHAR logBufferA[DISC_RAW_READ];
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
-#define OutputErrorLogW(str, ...) \
+#define OutputSubErrorLogW(str, ...) \
 { \
 	OutputDebugStringExW(str, __VA_ARGS__); \
 }
-#define OutputErrorLogA(str, ...) \
+#define OutputSubErrorLogA(str, ...) \
+{ \
+	OutputDebugStringExA(str, __VA_ARGS__); \
+}
+#define OutputC2ErrorLogW(str, ...) \
+{ \
+	OutputDebugStringExW(str, __VA_ARGS__); \
+}
+#define OutputC2ErrorLogA(str, ...) \
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
@@ -95,7 +103,8 @@ extern _LOG_FILE g_LogFile;
 { \
 	fflush(g_LogFile.fpDisc); \
 	fflush(g_LogFile.fpDrive); \
-	fflush(g_LogFile.fpError); \
+	fflush(g_LogFile.fpSubError); \
+	fflush(g_LogFile.fpC2Error); \
 	fflush(g_LogFile.fpInfo); \
 }
 
@@ -123,13 +132,21 @@ extern _LOG_FILE g_LogFile;
 { \
 	fprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
 }
-#define OutputErrorLogW(str, ...) \
+#define OutputSubErrorLogW(str, ...) \
 { \
-	_ftprintf(g_LogFile.fpError, str, __VA_ARGS__); \
+	_ftprintf(g_LogFile.fpSubError, str, __VA_ARGS__); \
 }
-#define OutputErrorLogA(str, ...) \
+#define OutputSubErrorLogA(str, ...) \
 { \
-	fprintf(g_LogFile.fpError, str, __VA_ARGS__); \
+	fprintf(g_LogFile.fpSubError, str, __VA_ARGS__); \
+}
+#define OutputC2ErrorLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpC2Error, str, __VA_ARGS__); \
+}
+#define OutputC2ErrorLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpC2Error, str, __VA_ARGS__); \
 }
 #define OutputInfoLogW(str, ...) \
 { \
@@ -154,8 +171,11 @@ extern _LOG_FILE g_LogFile;
 	if ((t & fileDrive) == fileDrive) { \
 		OutputDriveLogW(str, __VA_ARGS__); \
 	} \
-	if ((t & fileError) == fileError) { \
-		OutputErrorLogW(str, __VA_ARGS__); \
+	if ((t & fileSubError) == fileSubError) { \
+		OutputSubErrorLogW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileC2Error) == fileC2Error) { \
+		OutputC2ErrorLogW(str, __VA_ARGS__); \
 	} \
 	if ((t & fileInfo) == fileInfo) { \
 		OutputInfoLogW(str, __VA_ARGS__); \
@@ -176,8 +196,11 @@ extern _LOG_FILE g_LogFile;
 	if ((t & fileDrive) == fileDrive) { \
 		OutputDriveLogA(str, __VA_ARGS__); \
 	} \
-	if ((t & fileError) == fileError) { \
-		OutputErrorLogA(str, __VA_ARGS__); \
+	if ((t & fileSubError) == fileSubError) { \
+		OutputSubErrorLogA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileC2Error) == fileC2Error) { \
+		OutputC2ErrorLogA(str, __VA_ARGS__); \
 	} \
 	if ((t & fileInfo) == fileInfo) { \
 		OutputInfoLogA(str, __VA_ARGS__); \
@@ -194,7 +217,8 @@ extern _LOG_FILE g_LogFile;
 #define OutputErrorString OutputErrorStringW
 #define OutputDiscLog OutputDiscLogW
 #define OutputDriveLog OutputDriveLogW
-#define OutputErrorLog OutputErrorLogW
+#define OutputSubErrorLog OutputSubErrorLogW
+#define OutputC2ErrorLog OutputC2ErrorLogW
 #define OutputInfoLog OutputInfoLogW
 #else
 #define WFLAG "w"
@@ -205,7 +229,8 @@ extern _LOG_FILE g_LogFile;
 #define OutputErrorString OutputErrorStringA
 #define OutputDiscLog OutputDiscLogA
 #define OutputDriveLog OutputDriveLogA
-#define OutputErrorLog OutputErrorLogA
+#define OutputSubErrorLog OutputSubErrorLogA
+#define OutputC2ErrorLog OutputC2ErrorLogA
 #define OutputInfoLog OutputInfoLogA
 #endif
 
@@ -322,7 +347,7 @@ VOID WriteErrorBuffer(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	PMAIN_HEADER pMainHeader,
+	PMAIN_HEADER pMain,
 	LPBYTE lpBuf,
 	LPBYTE lpScrambledBuf,
 	LPBYTE lpSubcode,
@@ -355,6 +380,7 @@ BOOL CreateBinCueCcd(
 	PDISC pDisc,
 	LPCTSTR pszPath,
 	LPCTSTR pszImgName,
+	BOOL bCanCDText,
 	FILE* fpImg,
 	FILE* fpCue,
 	FILE* fpCueForImg,

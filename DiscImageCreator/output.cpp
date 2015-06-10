@@ -11,8 +11,8 @@
 #include "set.h"
 
 #ifdef _DEBUG
-_TCHAR logBufferW[DISC_RAW_READ];
-CHAR logBufferA[DISC_RAW_READ];
+_TCHAR logBufferW[DISC_RAW_READ_SIZE];
+CHAR logBufferA[DISC_RAW_READ_SIZE];
 #endif
 // These global variable is set at printAndSetArg().
 extern _TCHAR g_szCurrentdir[_MAX_PATH];
@@ -427,10 +427,11 @@ VOID WriteCcdFileForTrackIndex(
 
 VOID WriteCueForFirst(
 	PDISC pDisc,
+	BOOL bCanCDText,
 	FILE* fpCue
 	)
 {
-	if (pDisc->SUB.bCatalog) {
+	if (pDisc->SUB.byCatalog) {
 		_TCHAR str[META_CATALOG_SIZE] = { 0 };
 #ifdef UNICODE
 		MultiByteToWideChar(CP_ACP, 0, 
@@ -440,35 +441,37 @@ VOID WriteCueForFirst(
 #endif
 		_ftprintf(fpCue, _T("CATALOG %s\n"), str);
 	}
-	if (pDisc->SCSI.pszTitle[0][0] != 0) {
-		_TCHAR str[META_CDTEXT_SIZE] = { 0 };
+	if (bCanCDText) {
+		if (pDisc->SCSI.pszTitle[0][0] != 0) {
+			_TCHAR str[META_CDTEXT_SIZE] = { 0 };
 #ifdef UNICODE
-		MultiByteToWideChar(CP_ACP, 0, 
-			pDisc->SCSI.pszTitle[0], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
+			MultiByteToWideChar(CP_ACP, 0, 
+				pDisc->SCSI.pszTitle[0], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
 #else
-		strncpy(str, pDisc->SCSI.pszTitle[0], META_CDTEXT_SIZE);
+			strncpy(str, pDisc->SCSI.pszTitle[0], META_CDTEXT_SIZE);
 #endif
-		_ftprintf(fpCue, _T("TITLE \"%s\"\n"), str);
-	}
-	if (pDisc->SCSI.pszPerformer[0][0] != 0) {
-		_TCHAR str[META_CDTEXT_SIZE] = { 0 };
+			_ftprintf(fpCue, _T("TITLE \"%s\"\n"), str);
+		}
+		if (pDisc->SCSI.pszPerformer[0][0] != 0) {
+			_TCHAR str[META_CDTEXT_SIZE] = { 0 };
 #ifdef UNICODE
-		MultiByteToWideChar(CP_ACP, 0,
-			pDisc->SCSI.pszPerformer[0], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
+			MultiByteToWideChar(CP_ACP, 0,
+				pDisc->SCSI.pszPerformer[0], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
 #else
-		strncpy(str, pDisc->SCSI.pszPerformer[0], META_CDTEXT_SIZE);
+			strncpy(str, pDisc->SCSI.pszPerformer[0], META_CDTEXT_SIZE);
 #endif
-		_ftprintf(fpCue, _T("PERFORMER \"%s\"\n"), str);
-	}
-	if (pDisc->SCSI.pszSongWriter[0][0] != 0) {
-		_TCHAR str[META_CDTEXT_SIZE] = { 0 };
+			_ftprintf(fpCue, _T("PERFORMER \"%s\"\n"), str);
+		}
+		if (pDisc->SCSI.pszSongWriter[0][0] != 0) {
+			_TCHAR str[META_CDTEXT_SIZE] = { 0 };
 #ifdef UNICODE
-		MultiByteToWideChar(CP_ACP, 0,
-			pDisc->SCSI.pszSongWriter[0], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
+			MultiByteToWideChar(CP_ACP, 0,
+				pDisc->SCSI.pszSongWriter[0], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
 #else
-		strncpy(str, pDisc->SCSI.pszSongWriter[0], META_CDTEXT_SIZE);
+			strncpy(str, pDisc->SCSI.pszSongWriter[0], META_CDTEXT_SIZE);
 #endif
-		_ftprintf(fpCue, _T("SONGWRITER \"%s\"\n"), str);
+			_ftprintf(fpCue, _T("SONGWRITER \"%s\"\n"), str);
+		}
 	}
 }
 
@@ -482,6 +485,7 @@ VOID WriteCueForFileDirective(
 
 VOID WriteCueForUnderFileDirective(
 	PDISC pDisc,
+	BOOL bCanCDText,
 	BYTE byTrackNum,
 	FILE* fpCue
 	)
@@ -498,35 +502,37 @@ VOID WriteCueForUnderFileDirective(
 #endif
 			_ftprintf(fpCue, _T("    ISRC %s\n"), str);
 		}
-		if (pDisc->SCSI.pszTitle[byTrackNum][0] != 0) {
-			_TCHAR str[META_CDTEXT_SIZE] = { 0 };
+		if (bCanCDText) {
+			if (pDisc->SCSI.pszTitle[byTrackNum][0] != 0) {
+				_TCHAR str[META_CDTEXT_SIZE] = { 0 };
 #ifdef UNICODE
-			MultiByteToWideChar(CP_ACP, 0,
-				pDisc->SCSI.pszTitle[byTrackNum], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
+				MultiByteToWideChar(CP_ACP, 0,
+					pDisc->SCSI.pszTitle[byTrackNum], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
 #else
-			strncpy(str, pDisc->SCSI.pszTitle[byTrackNum], META_CDTEXT_SIZE);
+				strncpy(str, pDisc->SCSI.pszTitle[byTrackNum], META_CDTEXT_SIZE);
 #endif
-			_ftprintf(fpCue, _T("    TITLE \"%s\"\n"), str);
-		}
-		if (pDisc->SCSI.pszPerformer[byTrackNum][0] != 0) {
-			_TCHAR str[META_CDTEXT_SIZE] = { 0 };
+				_ftprintf(fpCue, _T("    TITLE \"%s\"\n"), str);
+			}
+			if (pDisc->SCSI.pszPerformer[byTrackNum][0] != 0) {
+				_TCHAR str[META_CDTEXT_SIZE] = { 0 };
 #ifdef UNICODE
-			MultiByteToWideChar(CP_ACP, 0,
-				pDisc->SCSI.pszPerformer[byTrackNum], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
+				MultiByteToWideChar(CP_ACP, 0,
+					pDisc->SCSI.pszPerformer[byTrackNum], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
 #else
-			strncpy(str, pDisc->SCSI.pszPerformer[byTrackNum], META_CDTEXT_SIZE);
+				strncpy(str, pDisc->SCSI.pszPerformer[byTrackNum], META_CDTEXT_SIZE);
 #endif
-			_ftprintf(fpCue, _T("    PERFORMER \"%s\"\n"), str);
-		}
-		if (pDisc->SCSI.pszSongWriter[byTrackNum][0] != 0) {
-			_TCHAR str[META_CDTEXT_SIZE] = { 0 };
+				_ftprintf(fpCue, _T("    PERFORMER \"%s\"\n"), str);
+			}
+			if (pDisc->SCSI.pszSongWriter[byTrackNum][0] != 0) {
+				_TCHAR str[META_CDTEXT_SIZE] = { 0 };
 #ifdef UNICODE
-			MultiByteToWideChar(CP_ACP, 0,
-				pDisc->SCSI.pszSongWriter[byTrackNum], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
+				MultiByteToWideChar(CP_ACP, 0,
+					pDisc->SCSI.pszSongWriter[byTrackNum], META_CDTEXT_SIZE, str, META_CDTEXT_SIZE);
 #else
-			strncpy(str, pDisc->SCSI.pszSongWriter[byTrackNum], META_CDTEXT_SIZE);
+				strncpy(str, pDisc->SCSI.pszSongWriter[byTrackNum], META_CDTEXT_SIZE);
 #endif
-			_ftprintf(fpCue, _T("    SONGWRITER \"%s\"\n"), str);
+				_ftprintf(fpCue, _T("    SONGWRITER \"%s\"\n"), str);
+			}
 		}
 		switch (pDisc->SUB.lpCtlList[byTrackNum - 1] & ~AUDIO_DATA_TRACK) {
 		case AUDIO_WITH_PREEMPHASIS:
@@ -553,7 +559,7 @@ VOID WriteCueForUnderFileDirective(
 		}
 	}
 	else {
-		if (pDisc->SCSI.bCdi) {
+		if (pDisc->SCSI.byCdi) {
 			_ftprintf(fpCue, _T("  TRACK %02u CDI/2352\n"), byTrackNum);
 		}
 		else {
@@ -598,7 +604,7 @@ VOID WriteMainChannel(
 {
 	INT sLBA = pDisc->MAIN.nFixStartLBA;
 	INT eLBA = pDisc->MAIN.nFixEndLBA;
-	if (pExtArg->bReverse) {
+	if (pExtArg->byReverse) {
 		sLBA = pDisc->MAIN.nFixEndLBA;
 		eLBA = pDisc->MAIN.nFixStartLBA;
 	}
@@ -607,11 +613,11 @@ VOID WriteMainChannel(
 		if (nLBA == sLBA) {
 			fwrite(lpBuf + pDisc->MAIN.uiMainDataSlideSize, sizeof(BYTE), 
 				CD_RAW_SECTOR_SIZE - pDisc->MAIN.uiMainDataSlideSize, fpImg);
-			if (!pExtArg->bReverse && pDisc->SUB.lpFirstLBAListOnSub) {
+			if (!pExtArg->byReverse && pDisc->SUB.lpFirstLBAListOnSub) {
 				pDisc->SUB.lpFirstLBAListOnSub[0][0] = -150;
 				pDisc->SUB.lpFirstLBAListOnSub[0][1] = nLBA - sLBA;
 			}
-			if (!pExtArg->bReverse && pDisc->SUB.lpFirstLBAListOnSubSync) {
+			if (!pExtArg->byReverse && pDisc->SUB.lpFirstLBAListOnSubSync) {
 				pDisc->SUB.lpFirstLBAListOnSubSync[0][0] = -150;
 				pDisc->SUB.lpFirstLBAListOnSubSync[0][1] = nLBA - sLBA;
 			}
@@ -692,7 +698,7 @@ VOID WriteErrorBuffer(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	PMAIN_HEADER pMainHeader,
+	PMAIN_HEADER pMain,
 	LPBYTE lpBuf,
 	LPBYTE lpScrambledBuf,
 	LPBYTE lpSubcode,
@@ -706,10 +712,10 @@ VOID WriteErrorBuffer(
 	for (UINT i = 0; i < pDisc->MAIN.uiMainDataSlideSize; i++) {
 		lpBuf[i] = (BYTE)(0x55 ^ lpScrambledBuf[CD_RAW_SECTOR_SIZE - pDisc->MAIN.uiMainDataSlideSize + i]);
 	}
-	for (UINT i = pDisc->MAIN.uiMainDataSlideSize; i < pDisc->MAIN.uiMainDataSlideSize + sizeof(pMainHeader->header); i++) {
-		lpBuf[i] = pMainHeader->header[i - pDisc->MAIN.uiMainDataSlideSize];
+	for (UINT i = pDisc->MAIN.uiMainDataSlideSize; i < pDisc->MAIN.uiMainDataSlideSize + sizeof(pMain->header); i++) {
+		lpBuf[i] = pMain->header[i - pDisc->MAIN.uiMainDataSlideSize];
 	}
-	for (UINT i = pDisc->MAIN.uiMainDataSlideSize + sizeof(pMainHeader->header); i < CD_RAW_SECTOR_SIZE; i++) {
+	for (UINT i = pDisc->MAIN.uiMainDataSlideSize + sizeof(pMain->header); i < CD_RAW_SECTOR_SIZE; i++) {
 		lpBuf[i] = (BYTE)(0x55 ^ lpScrambledBuf[i - pDisc->MAIN.uiMainDataSlideSize]);
 	}
 
@@ -731,10 +737,10 @@ VOID WriteErrorBuffer(
 
 	OutputErrorString(
 		_T("LBA[%06d, %#07x] Read error. padding 0x55 [%ubyte]\n"),
-		nLBA, nLBA, uiSize - sizeof(pMainHeader->header));
+		nLBA, nLBA, uiSize - sizeof(pMain->header));
 	fwrite(lpSubcode, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 
-	if (pExtArg->bC2 && pDevice->bC2ErrorData) {
+	if (pExtArg->byC2 && pDevice->FEATURE.byC2ErrorData) {
 		fwrite(lpBuf + pDevice->TRANSFER.dwBufC2Offset, sizeof(BYTE), CD_RAW_READ_C2_294_SIZE, fpC2);
 	}
 }
@@ -1071,11 +1077,11 @@ VOID DescrambleMainChannel(
 			INT nLastLBA = pDisc->SCSI.lpSessionNumList[k] >= 2 
 				? pDisc->SUB.lpLastLBAListOfDataTrackOnSub[k] - (SESSION_TO_SESSION_SKIP_LBA * (INT)(pDisc->SCSI.lpSessionNumList[k] - 1))
 				: pDisc->SUB.lpLastLBAListOfDataTrackOnSub[k];
-			if (pDisc->SUB.bIndex0InTrack1) {
+			if (pDisc->SUB.byIndex0InTrack1) {
 				nFirstLBA += 150;
 				nLastLBA += 150;
 			}
-			if (!pExtArg->bReverse) {
+			if (!pExtArg->byReverse) {
 				lSeekPtr = nFirstLBA;
 			}
 			INT nMode = 0;
@@ -1096,7 +1102,7 @@ VOID DescrambleMainChannel(
 					fwrite(aSrcBuf, sizeof(BYTE), sizeof(aSrcBuf), fpImg);
 					nMode = aSrcBuf[15];
 				}
-				else if (pExtArg->bReadContinue) {
+				else if (pExtArg->byReadContinue) {
 					BYTE m, s, f;
 					LBAtoMSF(nFirstLBA + 150, &m, &s, &f);
 					fwrite(g_aSyncHeader, sizeof(BYTE), sizeof(g_aSyncHeader), fpImg);
@@ -1171,19 +1177,20 @@ BOOL CreateBinCueCcd(
 	PDISC pDisc,
 	LPCTSTR pszPath,
 	LPCTSTR pszImgName,
+	BOOL bCanCDText,
 	FILE* fpImg,
 	FILE* fpCue,
 	FILE* fpCueForImg,
 	FILE* fpCcd
 	)
 {
-	WriteCueForFirst(pDisc, fpCueForImg);
+	WriteCueForFirst(pDisc, bCanCDText, fpCueForImg);
 	WriteCueForFileDirective(pszImgName, fpCueForImg);
-	WriteCueForFirst(pDisc, fpCue);
+	WriteCueForFirst(pDisc, bCanCDText, fpCue);
 
 	FILE* fpCueSyncForImg = NULL;
 	FILE* fpCueSync = NULL;
-	if (pDisc->SUB.bDesync) {
+	if (pDisc->SUB.byDesync) {
 		if (NULL == (fpCueSyncForImg = CreateOrOpenFileW(
 			pszPath, _T(" (Subs indexes)_img"), NULL, NULL, NULL, _T(".cue"), _T(WFLAG), 0, 0))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
@@ -1194,9 +1201,9 @@ BOOL CreateBinCueCcd(
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
 		}
-		WriteCueForFirst(pDisc, fpCueSyncForImg);
+		WriteCueForFirst(pDisc, bCanCDText, fpCueSyncForImg);
 		WriteCueForFileDirective(pszImgName, fpCueSyncForImg);
-		WriteCueForFirst(pDisc, fpCueSync);
+		WriteCueForFirst(pDisc, bCanCDText, fpCueSync);
 	}
 
 	BOOL bRet = TRUE;
@@ -1209,14 +1216,14 @@ BOOL CreateBinCueCcd(
 			bRet = FALSE;
 			break;
 		}
-		WriteCueForUnderFileDirective(pDisc, i, fpCueForImg);
+		WriteCueForUnderFileDirective(pDisc, bCanCDText, i, fpCueForImg);
 		WriteCueForFileDirective(pszPathWithoutPath, fpCue);
-		WriteCueForUnderFileDirective(pDisc, i, fpCue);
+		WriteCueForUnderFileDirective(pDisc, bCanCDText, i, fpCue);
 		WriteCcdFileForTrack(pDisc, i, fpCcd);
 
 		FILE* fpBinSync = NULL;
 		_TCHAR pszPathWithoutPathSync[_MAX_FNAME] = { 0 };
-		if (pDisc->SUB.bDesync) {
+		if (pDisc->SUB.byDesync) {
 			fpBinSync = CreateOrOpenFileW(pszPath, _T(" (Subs indexes)"), NULL, 
 				pszPathWithoutPathSync, NULL, _T(".bin"), _T("wb"), i, pDisc->SCSI.toc.LastTrack);
 			if (!fpBinSync) {
@@ -1224,9 +1231,9 @@ BOOL CreateBinCueCcd(
 				bRet = FALSE;
 				break;
 			}
-			WriteCueForUnderFileDirective(pDisc, i, fpCueSyncForImg);
+			WriteCueForUnderFileDirective(pDisc, bCanCDText, i, fpCueSyncForImg);
 			WriteCueForFileDirective(pszPathWithoutPathSync, fpCueSync);
-			WriteCueForUnderFileDirective(pDisc, i, fpCueSync);
+			WriteCueForUnderFileDirective(pDisc, bCanCDText, i, fpCueSync);
 		}
 		OutputString(
 			_T("\rCreating bin, cue and ccd (Track) %2u/%2u"), i, pDisc->SCSI.toc.LastTrack);
@@ -1250,7 +1257,7 @@ BOOL CreateBinCueCcd(
 				WriteCueForIndexDirective(index, 0, 0, 0, fpCueForImg);
 				WriteCueForIndexDirective(index, 0, 0, 0, fpCue);
 				WriteCcdFileForTrackIndex(index, 0, fpCcd);
-				if (pDisc->SUB.bDesync) {
+				if (pDisc->SUB.byDesync) {
 					WriteCueForIndexDirective(index, 0, 0, 0, fpCueSyncForImg);
 					WriteCueForIndexDirective(index, 0, 0, 0, fpCueSync);
 				}
@@ -1269,7 +1276,7 @@ BOOL CreateBinCueCcd(
 				WriteCueForIndexDirective(index, byMinute, bySecond, byFrame, fpCueForImg);
 				WriteCueForIndexDirective(index, byMinute, bySecond, byFrame, fpCue);
 				WriteCcdFileForTrackIndex(index, nLBAofFirstIdx, fpCcd);
-				if (pDisc->SUB.bDesync) {
+				if (pDisc->SUB.byDesync) {
 					WriteCueForIndexDirective(0, 0, 0, 0, fpCueSyncForImg);
 					WriteCueForIndexDirective(0, 0, 0, 0, fpCueSync);
 					WriteCueForIndexDirective(index, byMinute, bySecond, byFrame, fpCueSyncForImg);
@@ -1295,7 +1302,7 @@ BOOL CreateBinCueCcd(
 					break;
 				}
 			}
-			if (pDisc->SUB.bDesync) {
+			if (pDisc->SUB.byDesync) {
 				INT nLBAofNextIdxSync = pDisc->SUB.lpFirstLBAListOnSubSync[i - 1][index];
 				if (nLBAofNextIdxSync != -1) {
 					LBAtoMSF(nLBAofNextIdxSync,	&byMinute, &bySecond, &byFrame);
@@ -1310,7 +1317,7 @@ BOOL CreateBinCueCcd(
 		INT nLBA = pDisc->SUB.lpFirstLBAListOnSub[i - 1][0] == -1 ?
 			pDisc->SUB.lpFirstLBAListOnSub[i - 1][1] : 
 			pDisc->SUB.lpFirstLBAListOnSub[i - 1][0];
-		if (pDisc->SUB.bIndex0InTrack1) {
+		if (pDisc->SUB.byIndex0InTrack1) {
 			if (i == pDisc->SCSI.toc.FirstTrack) {
 				nLBA += 150 - abs(pDisc->MAIN.nAdjustSectorNum);
 			}
@@ -1324,7 +1331,7 @@ BOOL CreateBinCueCcd(
 		INT nNextLBA = pDisc->SUB.lpFirstLBAListOnSub[i][0] == -1 ?
 			pDisc->SUB.lpFirstLBAListOnSub[i][1] : 
 			pDisc->SUB.lpFirstLBAListOnSub[i][0];
-		if (pDisc->SUB.bIndex0InTrack1) {
+		if (pDisc->SUB.byIndex0InTrack1) {
 			nNextLBA += 150;
 		}
 		bRet = CreateBin(pDisc, i, nNextLBA, nLBA, fpImg, fpBin);
@@ -1332,11 +1339,11 @@ BOOL CreateBinCueCcd(
 		if (!bRet) {
 			break;
 		}
-		if (pDisc->SUB.bDesync) {
+		if (pDisc->SUB.byDesync) {
 			nLBA = pDisc->SUB.lpFirstLBAListOnSubSync[i - 1][0] == -1 ?
 				pDisc->SUB.lpFirstLBAListOnSubSync[i - 1][1] : 
 				pDisc->SUB.lpFirstLBAListOnSubSync[i - 1][0];
-			if (pDisc->SUB.bIndex0InTrack1) {
+			if (pDisc->SUB.byIndex0InTrack1) {
 				if (i == pDisc->SCSI.toc.FirstTrack) {
 					nLBA += 150 - abs(pDisc->MAIN.nAdjustSectorNum);
 				}
@@ -1350,7 +1357,7 @@ BOOL CreateBinCueCcd(
 			nNextLBA = pDisc->SUB.lpFirstLBAListOnSubSync[i][0] == -1 ?
 				pDisc->SUB.lpFirstLBAListOnSubSync[i][1] :
 				pDisc->SUB.lpFirstLBAListOnSubSync[i][0];
-			if (pDisc->SUB.bIndex0InTrack1) {
+			if (pDisc->SUB.byIndex0InTrack1) {
 				nNextLBA += 150;
 			}
 			bRet = CreateBin(pDisc, i, nNextLBA, nLBA, fpImg, fpBinSync);

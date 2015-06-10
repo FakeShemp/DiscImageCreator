@@ -9,22 +9,22 @@ BOOL PreserveTrackAttribution(
 	PDISC pDisc,
 	INT nLBA,
 	LPBYTE lpCurrentTrackNum,
-	PMAIN_HEADER pMainHeader,
+	PMAIN_HEADER pMain,
 	PSUB_Q pSubQ,
 	PSUB_Q pPrevSubQ
 	);
 
-VOID SetAndOutputC2ErrorDataPerSector(
-#if 0
-	PC2_ERROR pC2Error,
-#endif
+VOID SetC2ErrorData(
+	PDISC pDisc,
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
+	INT nC2Offset,
 	INT nLBA,
 	DWORD dwAllBufLen,
-	UINT uiC2ErrorLBACnt
+	PUINT puiC2ErrorLBACnt,
+	BOOL b1stRead
 	);
 
-VOID SetAndOutputC2NoErrorData(
+VOID SetNoC2ErrorData(
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
 	LPBYTE lpBuf,
 	INT nLBA,
@@ -32,7 +32,7 @@ VOID SetAndOutputC2NoErrorData(
 	UINT uiC2ErrorLBACnt
 	);
 
-VOID SetAndOutputC2NoErrorByteErrorData(
+VOID SetNoC2ErrorExistsByteErrorData(
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
 	LPBYTE lpBuf,
 	INT nLBA,
@@ -55,7 +55,7 @@ VOID SetAndOutputTocFull(
 	PDISC pDisc,
 	PCDROM_TOC_FULL_TOC_DATA fullToc,
 	PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData,
-	size_t uiTocEntries,
+	WORD wTocEntries,
 	FILE* fpCcd
 	);
 
@@ -77,6 +77,11 @@ VOID SetAndOutputTocCDWText(
 
 VOID SetFeatureCdRead(
 	PFEATURE_DATA_CD_READ pCDRead,
+	PDEVICE pDevice
+	);
+
+VOID SetFeatureRealTimeStreaming(
+	PFEATURE_DATA_REAL_TIME_STREAMING pRTS,
 	PDEVICE pDevice
 	);
 
@@ -117,21 +122,29 @@ VOID SetReadCDCommand(
 	);
 
 VOID SetReadD8Command(
-	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	CDB::_PLXTR_READ_CDDA* cdb,
 	UINT uiTransferLen,
-	BOOL bSub,
-	BOOL bCheckReading
+	PLXTR_READ_CDDA_FLAG::SUB_CHANNEL_SELECTION Sub
 	);
 
-VOID SetSubQDataFromReadCD(
+VOID SetModeFromBuffer(
 	WORD wDriveBufSize,
 	UINT uiMainDataSlideSize,
-	PMAIN_HEADER pMainHeader,
+	PMAIN_HEADER pMain,
 	PSUB_Q pSubQ,
-	LPBYTE lpBuf,
+	LPBYTE lpBuf
+	);
+
+VOID SetSubQDataFromBuffer(
+	PSUB_Q pSubQ,
 	LPBYTE lpSubcode
+	);
+
+VOID SetBufferFromSubQData(
+	PSUB_Q pSubQ,
+	LPBYTE lpSubcode,
+	BYTE byPresent
 	);
 
 BOOL UpdateSubQData(
@@ -142,5 +155,5 @@ BOOL UpdateSubQData(
 	);
 
 VOID UpdateTmpMainHeader(
-	PMAIN_HEADER pMainHeader
+	PMAIN_HEADER pMain
 	);

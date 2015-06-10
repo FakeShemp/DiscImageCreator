@@ -17,6 +17,7 @@
 #define DEFAULT_REREAD_VAL			(1024)
 #define DEFAULT_MAX_C2_ERROR_VAL	(4096)
 #define DEFAULT_REREAD_SPEED_VAL	(4)
+#define DEFAULT_C2_OFFSET_VAL		(0)
 #define DEFAULT_SPTD_TIMEOUT_VAL	(60)
 
 // These global variable is set at printAndSetPath().
@@ -136,9 +137,7 @@ int processOutputHash(_TCHAR* szFullPath)
 	if (!bRet) {
 		return FALSE;
 	}
-	/* Table of CRCs of all 8-bit messages. */
-	UINT crc_table[256] = { 0 };
-	make_crc_table(crc_table);
+	make_crc_table();
 	FILE* fpHash = CreateOrOpenFileW(
 		szFullPath, NULL, NULL, NULL, NULL, _T(".dat"), _T(WFLAG), 0, 0);
 	if (!fpHash) {
@@ -173,7 +172,7 @@ int processOutputHash(_TCHAR* szFullPath)
 				UINT64 ui64FileSize = GetFileSize64(0, fp);
 				DWORD dwSectorSizeOne = CD_RAW_SECTOR_SIZE;
 				if (!_tcscmp(ext, _T(".iso"))) {
-					dwSectorSizeOne = DISC_RAW_READ;
+					dwSectorSizeOne = DISC_RAW_READ_SIZE;
 				}
 				UINT64 ui64SectorSizeAll = ui64FileSize / (UINT64)dwSectorSizeOne;
 
@@ -188,8 +187,8 @@ int processOutputHash(_TCHAR* szFullPath)
 					// TODO: This code can more speed up! if reduce calling fread()
 					for (UINT64 i = 0; i < ui64SectorSizeAll; i++) {
 						fread(data, sizeof(BYTE), dwSectorSizeOne, fp);
-						bRet = CalcHash(crc_table, &crc32, 
-							&context, &sha, data, dwSectorSizeOne);
+						bRet = CalcHash(&crc32, &context,
+							&sha, data, dwSectorSizeOne);
 						if (!bRet) {
 							break;
 						}
@@ -274,6 +273,13 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 			sizeof(CDROM_EXCLUSIVE_LOCK), &dwReturned, NULL);
 		printf("RequestType %u, CallerName %s\n", lock.Access.RequestType, lock.CallerName);
 #endif
+		// 1st: set TimeOutValue here (because use ScsiPassThroughDirect)
+		if (pExtArg->byReadContinue) {
+			devData.dwTimeOutValue = pExtArg->dwTimeoutNum;
+		}
+		else {
+			devData.dwTimeOutValue = DEFAULT_SPTD_TIMEOUT_VAL;
+		}
 		if (*pExecType == stop) {
 			bRet = StartStopUnit(&devData, STOP_UNIT_CODE, STOP_UNIT_CODE);
 		}
@@ -294,19 +300,13 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 			PDISC pDisc = &discData;
 			MAIN_HEADER mainHeader = { 0 };
 			FILE* fpCcd = NULL;
-			if (pExtArg->bReadContinue) {
-				devData.dwTimeOutValue = pExtArg->dwTimeoutNum;
-			}
-			else {
-				devData.dwTimeOutValue = DEFAULT_SPTD_TIMEOUT_VAL;
-			}
-
 			try {
 				if (!TestUnitReady(&devData)) {
 					throw FALSE;
 				}
 #ifndef _DEBUG
-				if (!InitLogFile(pExecType, argv[3])) {
+				// 2nd: create logfile here (because logging all working)
+				if (!InitLogFile(pExecType, pExtArg, argv[3])) {
 					throw FALSE;
 				}
 #endif
@@ -325,30 +325,33 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 							throw FALSE;
 						}
 					}
+					// 3rd: get drive vender, product id here (because use IsValidPlextorDrive)
 					if (!Inquiry(&devData)) {
 						throw FALSE;
 					}
-					if (!ModeSense10(&devData)) {
-						throw FALSE;
-					}
-
+					// 4th: check PLEXTOR or not here (because use modesense and from there)
 					IsValidPlextorDrive(&devData);
-					if ((PLEX_DRIVE_TYPE)devData.byPlexType != PLEX_DRIVE_TYPE::No) {
+					if ((PLXTR_DRIVE_TYPE)devData.byPlxtrType != PLXTR_DRIVE_TYPE::No) {
+						if (pExtArg->byPre) {
+							SupportIndex0InTrack1(pExtArg, &devData, pDisc);
+						}
 						ReadEeprom(&devData);
 						SetSpeedRead(&devData, TRUE);
 					}
-					if (!ReadBufferCapacity(&devData)) {
-						throw FALSE;
-					}
-					if (!SetCDSpeed(&devData, s_dwSpeed)) {
-						throw FALSE;
-					}
+					// 5th: get currentMedia, if use CD-Text, C2 error, modesense, readbuffercapacity, setcdspeed or not here.
 					if (!GetConfiguration(&devData, &discData)) {
 						throw FALSE;
 					}
-					if (!ReadDiscInformation(&devData)) {
-						throw FALSE;
+					if (pExtArg->byC2 && !devData.FEATURE.byC2ErrorData) {
+						OutputErrorString(
+							_T("This drive doesn't support C2 error report. ")
+							_T("Ignore /c2 option.\n"));
 					}
+					ModeSense10(&devData);
+					ReadBufferCapacity(&devData);
+					SetCDSpeed(&devData, s_dwSpeed);
+
+					ReadDiscInformation(&devData);
 					if (!ReadTOC(pExecType, &devData, &discData)) {
 						throw FALSE;
 					}
@@ -357,7 +360,8 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 						discData.SCSI.wCurrentMedia == ProfileCdRewritable ||
 						(discData.SCSI.wCurrentMedia == ProfileInvalid && (*pExecType == gd))) {
 						_TCHAR out[_MAX_PATH] = { 0 };
-						if (*pExecType == cd && !pExtArg->bReverse) {
+						// 6th: open ccd here (because use ReadTOCFull and from there)
+						if (*pExecType == cd && !pExtArg->byReverse) {
 							fpCcd = CreateOrOpenFileW(argv[3], NULL, 
 								out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
 							if (!fpCcd) {
@@ -373,9 +377,6 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 							throw FALSE;
 						}
 						if (!InitTocTextData(pExecType, &devData, &pDisc)) {
-							throw FALSE;
-						}
-						if (!ReadTOCFull(&devData, &discData, fpCcd)) {
 							throw FALSE;
 						}
 						if (!ReadCDForSearchingOffset(pExecType, pExtArg, &devData, &discData)) {
@@ -408,31 +409,26 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 							OutputString(_T("========= end =========\n"));
 							throw FALSE;
 						}
-						if (*pExecType == gd) {
-							if (!ReadCDForGDTOC(&devData, &discData)) {
-								throw FALSE;
-							}
+						if (!ReadTOCFull(&devData, &discData, fpCcd)) {
+							throw FALSE;
 						}
 						if (*pExecType == cd) {
-							if (!ReadCDForCheckingSubPtoW(&devData)) {
-								throw FALSE;
-							}
 							if (!ReadCDForCheckingReadInOut(pExecType, pExtArg,
 								&devData, pDisc, &mainHeader, argv[3], READ_CD_FLAG::CDDA)) {
 								throw FALSE;
 							}
-							if (!pExtArg->bReverse) {
-								if (pExtArg->bPre) {
-									if (!ReadCDForCheckingIndex0InTrack1(pExtArg, &devData, pDisc)) {
-										throw FALSE;
-									}
+							if (!pExtArg->byReverse) {
+#if 0
+								if (!ReadCDForCheckingCommand(pExtArg, &devData, pDisc)) {
+									throw FALSE;
 								}
+#endif
 								// Basically, CD+G data exists an audio only disc
 								// But exceptionally, WonderMega Collection (SCD)(mixed disc) exists CD+G data.
 								if (!ReadCDForCheckingCDG(&devData, pDisc)) {
 									throw FALSE;
 								}
-								if(!pDisc->SCSI.bAudioOnly) {
+								if (!pDisc->SCSI.byAudioOnly) {
 									if (!ReadCDForFileSystem(pExtArg, &devData, pDisc)) {
 										throw FALSE;
 									}
@@ -442,16 +438,22 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 								&devData, &discData, &mainHeader, argv[3], fpCcd);
 						}
 						else if (*pExecType == gd) {
-							bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData,
-								&mainHeader, argv[3], FIRST_LBA_FOR_GD, 549149 + 1, READ_CD_FLAG::CDDA, FALSE);
+							if (!ReadCDForGDTOC(&devData, &discData)) {
+								throw FALSE;
+							}
+							bRet = ReadCDPartial(pExecType, pExtArg, &devData,
+								&discData, &mainHeader, argv[3], FIRST_LBA_FOR_GD,
+								549149 + 1, READ_CD_FLAG::CDDA, FALSE);
 						}
 						else if (*pExecType == data) {
-							bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData,
-								&mainHeader, argv[3], s_nStartLBA, s_nEndLBA, READ_CD_FLAG::All, FALSE);
+							bRet = ReadCDPartial(pExecType, pExtArg, &devData,
+								&discData, &mainHeader, argv[3], s_nStartLBA,
+								s_nEndLBA, READ_CD_FLAG::All, FALSE);
 						}
 						else if (*pExecType == audio) {
-							bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData,
-								&mainHeader, argv[3], s_nStartLBA, s_nEndLBA, READ_CD_FLAG::CDDA, FALSE);
+							bRet = ReadCDPartial(pExecType, pExtArg, &devData,
+								&discData, &mainHeader, argv[3], s_nStartLBA,
+								s_nEndLBA, READ_CD_FLAG::CDDA, FALSE);
 						}
 					}
 					else if (discData.SCSI.wCurrentMedia == ProfileDvdRom || 
@@ -468,7 +470,7 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 #ifndef _DEBUG
 						FlushLog();
 #endif
-						if (pExtArg->bCmi) {
+						if (pExtArg->byCmi) {
 							bRet = ReadDVDForCMI(&devData, &discData);
 						}
 						if (bRet) {
@@ -493,12 +495,12 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 			TerminateLBAPerTrack(&pDisc);
 			TerminateSubData(pExecType, &pDisc);
 			TerminateTocFullData(&pDisc);
-			if (devData.bSuccessReadToc) {
+			if (devData.bySuccessReadToc) {
 				TerminateTocTextData(pExecType, &devData, &pDisc);
 			}
 			FcloseAndNull(fpCcd);
 #ifndef _DEBUG
-			TerminateLogFile(pExecType);
+			TerminateLogFile(pExecType, pExtArg);
 #endif
 		}
 #if 0
@@ -544,9 +546,10 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 			OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 			return FALSE;
 		}
+		pExtArg->nSubAddionalNum = 1;
 		for (INT i = 6; i <= argc; i++) {
 			if (!_tcscmp(argv[i - 1], _T("/a"))) {
-				pExtArg->bAdd = TRUE;
+				pExtArg->byAdd = TRUE;
 				if (argc > i) {
 					pExtArg->nAudioCDOffsetNum = _tcstol(argv[i], &endptr, 10);
 					if (*endptr) {
@@ -556,7 +559,7 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 				}
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/c2"))) {
-				pExtArg->bC2 = TRUE;
+				pExtArg->byC2 = TRUE;
 				if (argc > i && _tcsncmp(argv[i], _T("/"), 1)) {
 					pExtArg->dwMaxRereadNum = _tcstoul(argv[i], &endptr, 10);
 					if (*endptr) {
@@ -575,54 +578,79 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 								OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 								return FALSE;
 							}
+							if (argc > i + 3 && _tcsncmp(argv[i + 3], _T("/"), 1)) {
+								pExtArg->nC2OffsetNum = _tcstol(argv[i + 3], &endptr, 10);
+								if (*endptr) {
+									OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
+									return FALSE;
+								}
+							}
+							else {
+								pExtArg->nC2OffsetNum = DEFAULT_C2_OFFSET_VAL;
+								OutputString(
+									_T("/c2 val4 is omitted. set [%d]\n")
+									, DEFAULT_C2_OFFSET_VAL);
+							}
 						}
 						else {
 							pExtArg->dwRereadSpeedNum = DEFAULT_REREAD_SPEED_VAL;
+							pExtArg->nC2OffsetNum = DEFAULT_C2_OFFSET_VAL;
 							OutputString(
-								_T("/c2 val3 is omitted. set [%d]\n"), DEFAULT_REREAD_SPEED_VAL);
+								_T("/c2 val3 is omitted. set [%d]\n")
+								_T("/c2 val4 is omitted. set [%d]\n")
+								, DEFAULT_REREAD_SPEED_VAL
+								, DEFAULT_C2_OFFSET_VAL);
 						}
 					}
 					else {
 						pExtArg->dwMaxC2ErrorNum = DEFAULT_MAX_C2_ERROR_VAL;
-						OutputString(
-							_T("/c2 val2 is omitted. set [%d]\n"), DEFAULT_MAX_C2_ERROR_VAL);
 						pExtArg->dwRereadSpeedNum = DEFAULT_REREAD_SPEED_VAL;
+						pExtArg->nC2OffsetNum = DEFAULT_C2_OFFSET_VAL;
 						OutputString(
-							_T("/c2 val3 is omitted. set [%d]\n"), DEFAULT_REREAD_SPEED_VAL);
+							_T("/c2 val2 is omitted. set [%d]\n")
+							_T("/c2 val3 is omitted. set [%d]\n")
+							_T("/c2 val4 is omitted. set [%d]\n")
+							, DEFAULT_MAX_C2_ERROR_VAL
+							, DEFAULT_REREAD_SPEED_VAL
+							, DEFAULT_C2_OFFSET_VAL);
 					}
 				}
 				else {
 					pExtArg->dwMaxRereadNum = DEFAULT_REREAD_VAL;
-					OutputString(
-						_T("/c2 val1 is omitted. set [%d]\n"), DEFAULT_REREAD_VAL);
 					pExtArg->dwMaxC2ErrorNum = DEFAULT_MAX_C2_ERROR_VAL;
-					OutputString(
-						_T("/c2 val2 is omitted. set [%d]\n"), DEFAULT_MAX_C2_ERROR_VAL);
 					pExtArg->dwRereadSpeedNum = DEFAULT_REREAD_SPEED_VAL;
-					OutputString(_T(
-						"/c2 val3 is omitted. set [%d]\n"), DEFAULT_REREAD_SPEED_VAL);
+					pExtArg->nC2OffsetNum = DEFAULT_C2_OFFSET_VAL;
+					OutputString(
+						_T("/c2 val1 is omitted. set [%d]\n")
+						_T("/c2 val2 is omitted. set [%d]\n")
+						_T("/c2 val3 is omitted. set [%d]\n")
+						_T("/c2 val4 is omitted. set [%d]\n")
+						, DEFAULT_REREAD_VAL
+						, DEFAULT_MAX_C2_ERROR_VAL
+						, DEFAULT_REREAD_SPEED_VAL
+						, DEFAULT_C2_OFFSET_VAL);
 				}
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/f"))) {
-				pExtArg->bFua = TRUE;
+				pExtArg->byFua = TRUE;
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/i"))) {
-				pExtArg->bISRC = TRUE;
+				pExtArg->byISRC = TRUE;
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/l"))) {
-				pExtArg->bLibCrypt = TRUE;
+				pExtArg->byLibCrypt = TRUE;
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/m"))) {
-				pExtArg->bMCN = TRUE;
+				pExtArg->byMCN = TRUE;
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/p"))) {
-				pExtArg->bPre = TRUE;
+				pExtArg->byPre = TRUE;
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/r"))) {
-				pExtArg->bReverse = TRUE;
+				pExtArg->byReverse = TRUE;
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/rc"))) {
-				pExtArg->bReadContinue = TRUE;
+				pExtArg->byReadContinue = TRUE;
 				if (argc > i && _tcsncmp(argv[i], _T("/"), 1)) {
 					pExtArg->dwTimeoutNum = _tcstoul(argv[i], &endptr, 10);
 					if (*endptr) {
@@ -634,6 +662,15 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 					pExtArg->dwTimeoutNum = DEFAULT_SPTD_TIMEOUT_VAL;
 					OutputString(
 						_T("/rc val is omitted. set [%d]\n"), DEFAULT_SPTD_TIMEOUT_VAL);
+				}
+			}
+			else if (!_tcscmp(argv[i - 1], _T("/s"))) {
+				if (argc > i) {
+					pExtArg->nSubAddionalNum = _tcstol(argv[i], &endptr, 10);
+					if (*endptr) {
+						OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
+						return FALSE;
+					}
 				}
 			}
 		}
@@ -653,10 +690,10 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 		}
 		for (INT i = 6; i <= argc; i++) {
 			if (!_tcscmp(argv[i - 1], _T("/c"))) {
-				pExtArg->bCmi = TRUE;
+				pExtArg->byCmi = TRUE;
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/f"))) {
-				pExtArg->bFua = TRUE;
+				pExtArg->byFua = TRUE;
 			}
 		}
 		*pExecType = dvd;
@@ -686,7 +723,7 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 			*pExecType = audio;
 			for (INT i = 8; i <= argc; i++) {
 				if (!_tcscmp(argv[i - 1], _T("/a"))) {
-					pExtArg->bAdd = TRUE;
+					pExtArg->byAdd = TRUE;
 					if (argc > i) {
 						pExtArg->nAudioCDOffsetNum = _tcstol(argv[i], &endptr, 10);
 						if (*endptr) {
@@ -733,7 +770,8 @@ void printUsage(void)
 	OutputString(
 		_T("Usage\n")
 		_T("\tcd <DriveLetter> <Filename> <DriveSpeed(0-72)> [/a (val)]\n")
-		_T("\t   [/c2 (val1) (val2) (val3)] [/f] [/i] [/l] [/m] [/p] [/r] [/rc (val)]\n")
+		_T("\t   [/c2 (val1) (val2) (val3) (val4)] [/f] [/i] [/l] [/m]\n")
+		_T("\t   [/p] [/r] [/rc (val)] [/s (val)]\n")
 		_T("\t\tRipping a CD from a to z\n")
 		_T("\tdvd <DriveLetter> <Filename> <DriveSpeed(0-72)> [/c] [/f]\n")
 		_T("\t\tRipping a DVD from a to z\n")
@@ -747,10 +785,10 @@ void printUsage(void)
 		_T("\t\tRipping a CD from start to end (audio) (Only CD)\n")
 		_T("\tfloppy <DriveLetter> <Filename>\n")
 		_T("\t\tRipping a floppy\n")
-		_T("\tstop <DriveLetter>\n")
-		_T("\t\tSpin off the disc\n"));
+		_T("\tstop <DriveLetter>\n"));
 	_tsystem(_T("pause"));
 	OutputString(
+		_T("\t\tSpin off the disc\n")
 		_T("\tstart <DriveLetter>\n")
 		_T("\t\tSpin up the disc\n")
 		_T("\teject <DriveLetter>\n")
@@ -758,7 +796,7 @@ void printUsage(void)
 		_T("\tclose <DriveLetter>\n")
 		_T("\t\tClose the tray\n")
 		_T("\treset <DriveLetter>\n")
-		_T("\t\tReset the drive (Only Plextor)\n")
+		_T("\t\tReset the drive (Only PLEXTOR)\n")
 		_T("\tsub <Subfile>\n")
 		_T("\t\tParse CloneCD sub file\n")
 		_T("Option Info\n")
@@ -768,25 +806,31 @@ void printUsage(void)
 		_T("\t\t\tval1\tvalue to reread (default: 1024)\n")
 		_T("\t\t\tval2\tvalue to fix a C2 error (default: 4096)\n")
 		_T("\t\t\tval3\tvalue to reread speed (default: 4)\n")
+		_T("\t\t\tval4\tvalue to c2 offset (default: 0)\n")
 		_T("\t/f\tRipping to Force Unit Access\n")
 		_T("\t\t\tTo defeat the cache, very slow\n")
 		_T("\t/i\tIgnore invalid ISRC\n")
-		_T("\t\t\tFor Valis II [PC-Engine]\n")
-		_T("\t/l\tNot fix SubQ (RMSF, AMSF, CRC) (RMSFs 03:xx:xx and 09:xx:xx)\n")
-		_T("\t\t\tFor PlayStation LibCrypt disc\n"));
+		_T("\t\t\tFor Valis II [PC-Engine]\n"));
 	_tsystem(_T("pause"));
 	OutputString(
-		_T("\t/m\tIf MCN sector exists in the first sector of the track, use this\n")
-		_T("\t\t\tFor PC-Engine disc\n")
+		_T("\t/l\tNot fix SubQ (RMSF, AMSF, CRC) (RMSFs 03:xx:xx and 09:xx:xx)\n")
+		_T("\t\t\tFor PlayStation LibCrypt disc\n")
+		_T("\t/m\tIf MCN exists in the first pregap sector of the track, use this\n")
+		_T("\t\t\tFor some PC-Engine disc\n")
 		_T("\t/p\tRipping AMSF from 00:00:00 to 00:01:74\n")
 		_T("\t\t\tFor SagaFrontier Original Sound Track (Disc 3) etc.\n")
 		_T("\t\t\tSupport drive: PLEXTOR PX-W5224, PREMIUM, PREMIUM2\n")
-		_T("\t\t\t               PX-708, PX-712, PX-716, PX-755, PX-760\n")
+		_T("\t\t\t               PX-704, 708, 712, 714, 716, 755, 760\n")
 		_T("\t/r\tReverse reading CD (including data track)\n")
 		_T("\t\t\tFor Alpha-Disc, very slow\n")
-		_T("\t/rc\tIf read error, continue reading and ignore c2 error (Only CD)\n")
-		_T("\t\t\tFor RingPROTECH, safedisc, smartE\n")
-		_T("\t\t\tval\t timeout value (default: 60)\n")
+		_T("\t/rc\tIf read error, continue reading and ignore c2 error on specific\n")
+		_T("\t   \tsector (Only CD)\n")
+		_T("\t\t\tFor LaserLock, RingPROTECH, safedisc, smartE\n")
+		_T("\t\t\tval\ttimeout value (default: 60)\n")
+		_T("\t/s\tIf it reads subchannel precisely, use this\n")
+		_T("\t\t\tval\t0: no read next sub (fast, but lack precision)\n")
+		_T("\t\t\t   \t1: read next sub (normal, this val is default)\n")
+		_T("\t\t\t   \t2: read next and next next sub (slow, precision)\n")
 		_T("\t/c\tLog Copyright Management Information\n"));
 }
 
@@ -886,6 +930,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		nRet = FALSE;
 	}
+#ifdef _DEBUG
+	_tsystem(_T("pause"));
+#endif
 	return nRet = nRet == TRUE ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 

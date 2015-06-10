@@ -101,20 +101,38 @@ BOOL ScsiPassThroughDirect(
 	DWORD dwLength = sizeof(SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER);
 	DWORD dwReturned = 0;
 	BOOL bRet = TRUE;
+	BOOL bNoSense = FALSE;
 	SetLastError(NO_ERROR);
 	if (!DeviceIoControl(pDevice->hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT,
 		&swb, dwLength, &swb, dwLength, &dwReturned, NULL)) {
 		OutputLastErrorNumAndString(pszFuncName, lLineNum);
 		bRet = FALSE;
+		// When semaphore time out occurred, if doesn't execute sleep,
+		// UNIT_ATTENSION errors occurs next ScsiPassThroughDirect executing.
+		DWORD millisec = 25000;
+		OutputErrorString(_T("Sleep at %d milliseconds...\n"), millisec);
+		Sleep(millisec);
 	}
-	else if (swb.ScsiPassThroughDirect.ScsiStatus >= SCSISTAT_CHECK_CONDITION &&
-		swb.SenseData.SenseKey >= SCSI_SENSE_NO_SENSE) {
-		OutputString(_T("[F:%s][L:%d] OperationCode: %#04x\n"),
-			pszFuncName, lLineNum, swb.ScsiPassThroughDirect.Cdb[0]);
-		OutputScsiStatus(swb.ScsiPassThroughDirect.ScsiStatus);
-		OutputSenseData(&swb.SenseData);
+	else {
+		if (swb.SenseData.SenseKey == SCSI_SENSE_NO_SENSE &&
+			swb.SenseData.AdditionalSenseCode == SCSI_ADSENSE_NO_SENSE &&
+			swb.SenseData.AdditionalSenseCodeQualifier == 0x00) {
+			bNoSense = TRUE;
+		}
+		if (swb.ScsiPassThroughDirect.ScsiStatus >= SCSISTAT_CHECK_CONDITION &&
+			!bNoSense) {
+			OutputString(_T("[F:%s][L:%d] OperationCode: %#04x\n"),
+				pszFuncName, lLineNum, swb.ScsiPassThroughDirect.Cdb[0]);
+			OutputScsiStatus(swb.ScsiPassThroughDirect.ScsiStatus);
+			OutputSenseData(&swb.SenseData);
+		}
 	}
-	*byScsiStatus = swb.ScsiPassThroughDirect.ScsiStatus;
+	if (bNoSense) {
+		*byScsiStatus = SCSISTAT_GOOD;
+	}
+	else {
+		*byScsiStatus = swb.ScsiPassThroughDirect.ScsiStatus;
+	}
 	return bRet;
 }
 

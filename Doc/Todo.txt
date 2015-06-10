@@ -1,10 +1,16 @@
-================================== Wish list ==================================
+==================================== TODO =====================================
 . fix C2 error disc per byte.
   A number of error bytes per sector according to the 294-bytes C2-error part
   in each sector and to take the good bytes from each rereading, instead of
   trying to reread the entire sector without errors.
 
-. cue file for multisession disc
+. dat file (Still not sorting correctly.)
+
+. support cue file for multisession disc
   SESSION directives
 
-. dat file (Still not sorting correctly.)
+. support mdf/mds (for SecuROM v4 or higher, StarForce, CD-Cops)
+
+. support twin sector disc (for ALPHA-ROM, ROOT, TAGES)
+
+. support illegal or fake TOC disc (for CDS-100)

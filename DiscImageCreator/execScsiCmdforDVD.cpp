@@ -33,7 +33,7 @@ BOOL ReadDVD(
 		}
 		LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevice, pBuf);
 
-		UINT uiTransferLen = pDevice->uiMaxTransferLength / DISC_RAW_READ;
+		UINT uiTransferLen = pDevice->uiMaxTransferLength / DISC_RAW_READ_SIZE;
 		CDB::_READ12 cdb = { 0 };
 		cdb.OperationCode = SCSIOP_READ12;
 		cdb.LogicalUnitNumber = pDevice->address.Lun;
@@ -41,7 +41,7 @@ BOOL ReadDVD(
 		cdb.TransferLength[1] = LOBYTE(HIWORD(uiTransferLen));
 		cdb.TransferLength[2] = HIBYTE(LOWORD(uiTransferLen));
 		cdb.TransferLength[3] = LOBYTE(LOWORD(uiTransferLen));
-		if (pExtArg->bFua) {
+		if (pExtArg->byFua) {
 			cdb.ForceUnitAccess = TRUE;
 		}
 		else {
@@ -63,9 +63,9 @@ BOOL ReadDVD(
 				throw FALSE;
 			}
 		}
-		INT nVal1 = DISC_RAW_READ * 16;
-		INT nVal2 = DISC_RAW_READ * 21;
-		for (INT i = nVal1; i <= nVal2; i += DISC_RAW_READ) {
+		INT nVal1 = DISC_RAW_READ_SIZE * 16;
+		INT nVal2 = DISC_RAW_READ_SIZE * 21;
+		for (INT i = nVal1; i <= nVal2; i += DISC_RAW_READ_SIZE) {
 			OutputFsVolumeRecognitionSequence(pExtArg, pDisc, lpBuf + i);
 		}
 
@@ -76,8 +76,8 @@ BOOL ReadDVD(
 			throw FALSE;
 		}
 		if (lpBuf[20] == 0 && lpBuf[21] == 0 && lpBuf[22] == 0 && lpBuf[23] == 0) {
-			INT nVal3 = DISC_RAW_READ * 5;
-			for (INT i = 0; i <= nVal3; i += DISC_RAW_READ) {
+			INT nVal3 = DISC_RAW_READ_SIZE * 5;
+			for (INT i = 0; i <= nVal3; i += DISC_RAW_READ_SIZE) {
 				OutputFsVolumeDescriptorSequence(lpBuf + i);
 			}
 		}
@@ -108,7 +108,7 @@ BOOL ReadDVD(
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw FALSE;
 			}
-			fwrite(lpBuf, sizeof(BYTE), (size_t)DISC_RAW_READ * uiTransferLen, fp);
+			fwrite(lpBuf, sizeof(BYTE), (size_t)DISC_RAW_READ_SIZE * uiTransferLen, fp);
 			OutputString(_T("\rCreating iso(LBA) %8u/%8u"),
 				nLBA + uiTransferLen - 1, pDisc->SCSI.nAllLength - 1);
 		}
@@ -147,7 +147,7 @@ BOOL ReadDVDRaw(
 		LPBYTE lpBuf = (LPBYTE)ConvParagraphBoundary(pDevice, pBuf);
 		BYTE cdblen = CDB12GENERIC_LENGTH;
 		BYTE lpCmd[CDB12GENERIC_LENGTH] = { 0 };
-		if (szVendorId && !strncmp(szVendorId, "PLEXTER", 7)) {
+		if (szVendorId && !strncmp(szVendorId, "PLXTRTER", 7)) {
 			lpCmd[0] = SCSIOP_READ_DATA_BUFF;
 			lpCmd[1] = 0x02;
 			lpCmd[2] = 0x00;
@@ -169,7 +169,7 @@ BOOL ReadDVDRaw(
 		for (INT nLBA = 0; nLBA < pDisc->SCSI.nAllLength; nLBA += uiTransferLen) {
 			if (pDisc->SCSI.nAllLength - nLBA < (INT)uiTransferLen) {
 				uiTransferLen = (UINT)(pDisc->SCSI.nAllLength - nLBA);
-				if (szVendorId && !strncmp(szVendorId, "PLEXTER", 7)) {
+				if (szVendorId && !strncmp(szVendorId, "PLXTRTER", 7)) {
 					lpCmd[6] = LOBYTE(HIWORD(DVD_RAW_READ * uiTransferLen));
 					lpCmd[7] = HIBYTE(LOWORD(DVD_RAW_READ * uiTransferLen));
 					lpCmd[8] = LOBYTE(LOWORD(DVD_RAW_READ * uiTransferLen));
@@ -179,7 +179,7 @@ BOOL ReadDVDRaw(
 					lpCmd[11] = LOBYTE(LOWORD(DVD_RAW_READ * uiTransferLen));
 				}
 			}
-			if (szVendorId && !strncmp(szVendorId, "PLEXTER", 7)) {
+			if (szVendorId && !strncmp(szVendorId, "PLXTRTER", 7)) {
 				lpCmd[3] = LOBYTE(HIWORD(nLBA));
 				lpCmd[4] = HIBYTE(LOWORD(nLBA));
 				lpCmd[5] = LOBYTE(LOWORD(nLBA));
@@ -362,7 +362,7 @@ BOOL ReadDVDStructure(
 			OutputDVDStructureFormat(pDisc, pEntry->FormatCode, 
 				wFormatLen - sizeof(DVD_DESCRIPTOR_HEADER), 
 				lpFormat + sizeof(DVD_DESCRIPTOR_HEADER), &byLayerNum, 0,
-				pDevice->bSuccessReadToc);
+				pDevice->bySuccessReadToc);
 			if (byLayerNum == 1 &&
 				(pEntry->FormatCode == 0 || pEntry->FormatCode == 0x01 || 
 				pEntry->FormatCode == 0x04 || pEntry->FormatCode == 0x10 || 
@@ -378,7 +378,7 @@ BOOL ReadDVDStructure(
 					OutputDVDStructureFormat(pDisc, pEntry->FormatCode,
 						wFormatLen - sizeof(DVD_DESCRIPTOR_HEADER), 
 						lpFormat + sizeof(DVD_DESCRIPTOR_HEADER), &byLayerNum,
-						1, pDevice->bSuccessReadToc);
+						1, pDevice->bySuccessReadToc);
 				}
 			}
 		}

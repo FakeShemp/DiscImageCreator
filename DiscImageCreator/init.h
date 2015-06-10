@@ -7,7 +7,6 @@
 BOOL InitC2ErrorData(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,
-	PC2_ERROR pC2Error,
 	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector,
 	DWORD dwAllBufLen
 	);
@@ -29,7 +28,7 @@ BOOL InitTocTextData(
 	);
 
 VOID InitMainDataHeader(
-	PMAIN_HEADER pMainHeader
+	PMAIN_HEADER pMain
 	);
 
 BOOL InitSubData(
@@ -40,11 +39,12 @@ BOOL InitSubData(
 #ifndef _DEBUG
 BOOL InitLogFile(
 	PEXEC_TYPE pExecType,
+	PEXT_ARG pExtArg,
 	_TCHAR* szFullPath
 	);
 #endif
 
-VOID TerminateC2ErrorDataPerSector(
+VOID TerminateC2ErrorData(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector
@@ -71,6 +71,7 @@ VOID TerminateSubData(
 
 #ifndef _DEBUG
 VOID TerminateLogFile(
-	PEXEC_TYPE pExecType
+	PEXEC_TYPE pExecType,
+	PEXT_ARG pExtArg
 	);
 #endif

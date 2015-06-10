@@ -25,9 +25,8 @@ VOID OutputFsRecordingDateAndTime(
 {
 	OutputInfoLogA(
 		"\tRecording Date and Time: %x %u-%02u-%02u %02u:%02u:%02u.%u.%u.%u\n",
-		MAKEWORD(lpBuf[0], lpBuf[1]), MAKEWORD(lpBuf[2], lpBuf[3]),
-		lpBuf[4], lpBuf[5], lpBuf[6], lpBuf[7], lpBuf[8],
-		lpBuf[9], lpBuf[10], lpBuf[11]);
+		MAKEWORD(lpBuf[0], lpBuf[1]), MAKEWORD(lpBuf[2], lpBuf[3]), lpBuf[4],
+		lpBuf[5], lpBuf[6], lpBuf[7], lpBuf[8], lpBuf[9], lpBuf[10], lpBuf[11]);
 }
 
 VOID OutputFsBootDescriptor(
@@ -65,7 +64,7 @@ VOID OutputFsBootDescriptor(
 		"\t               Flags: %u\n"
 		"\t            Boot Use: ",
 		MAKEWORD(lpBuf[108], lpBuf[109]));
-	for (INT i = 142; i <= 2047; i++) {
+	for (INT i = 142; i < 2048; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -138,7 +137,7 @@ VOID OutputFsRegid(
 		"\t\tIdentifier Suffix: ",
 		lpBuf[0],
 		(PCHAR)&lpBuf[1]);
-	for (INT i = 24; i <= 31; i++) {
+	for (INT i = 24; i < 32; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -190,7 +189,7 @@ VOID OutputFsPrimaryVolumeDescriptorForUDF(
 	OutputInfoLogA("\tImplementation Identifier\n");
 	OutputFsRegid(lpBuf + 388);
 	OutputInfoLogA("\tImplementation Use: ");
-	for (INT i = 420; i <= 483; i++) {
+	for (INT i = 420; i < 484; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -251,7 +250,7 @@ VOID OutputFsImplementationUseVolumeDescriptor(
 
 	OutputFsRegid(lpBuf + 352);
 	OutputInfoLogA("\tImplementation Use: ");
-	for (INT i = 384; i <= 511; i++) {
+	for (INT i = 384; i < 512; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -273,7 +272,7 @@ VOID OutputFsPartitionDescriptor(
 	OutputFsRegid(lpBuf + 24);
 
 	OutputInfoLogA("\tPartition Contents Use: ");
-	for (INT i = 56; i <= 183; i++) {
+	for (INT i = 56; i < 184; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 
@@ -289,7 +288,7 @@ VOID OutputFsPartitionDescriptor(
 
 	OutputFsRegid(lpBuf + 196);
 	OutputInfoLogA("\tImplementation Use: ");
-	for (INT i = 228; i <= 355; i++) {
+	for (INT i = 228; i < 356; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -345,7 +344,7 @@ VOID OutputFsLogicalVolumeDescriptor(
 	OutputFsRegid(lpBuf + 272);
 
 	OutputInfoLogA("\tImplementation Use: ");
-	for (INT i = 304; i <= 431; i++) {
+	for (INT i = 304; i < 432; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -479,8 +478,7 @@ VOID OutputFsVolumeDescriptorSequence(
 		MAKEWORD(lpBuf[6], lpBuf[7]),
 		MAKEWORD(lpBuf[8], lpBuf[9]),
 		MAKEWORD(lpBuf[10], lpBuf[11]),
-		MAKELONG(MAKEWORD(lpBuf[12], lpBuf[13]),
-		MAKEWORD(lpBuf[14], lpBuf[15])));
+		MAKELONG(MAKEWORD(lpBuf[12], lpBuf[13]), MAKEWORD(lpBuf[14], lpBuf[15])));
 
 	switch (wTagId) {
 	case 1:

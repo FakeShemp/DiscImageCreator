@@ -13,7 +13,6 @@ VOID CalcInit(
 	);
 
 BOOL CalcHash(
-	PUINT crc_table,
 	LPDWORD crc,
 	MD5_CTX* context,
 	SHA1Context* sha,

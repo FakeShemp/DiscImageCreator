@@ -227,5 +227,9 @@ BOOL GetEccEdcCmd(
 			_T("\"\"%s\" %s \"%s\"\""), path, pszCmd, pszImgPath);
 		bRet = TRUE;
 	}
+	else {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		OutputErrorString(_T(" => %s\n"), path);
+	}
 	return bRet;
 }

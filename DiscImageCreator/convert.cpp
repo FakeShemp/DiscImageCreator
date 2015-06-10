@@ -6,23 +6,23 @@
 
 /*
 	<src>
-		lpBuf[2352-2447] & 0x80 -> P channel
-		lpBuf[2352-2447] & 0x40 -> Q channel
-		lpBuf[2352-2447] & 0x20 -> R channel
-		lpBuf[2352-2447] & 0x10 -> S channel
-		lpBuf[2352-2447] & 0x08 -> T channel
-		lpBuf[2352-2447] & 0x04 -> U channel
-		lpBuf[2352-2447] & 0x02 -> V channel
-		lpBuf[2352-2447] & 0x01 -> W channel
+		lpColumnSubcode[2352-2447] & 0x80 -> P channel
+		lpColumnSubcode[2352-2447] & 0x40 -> Q channel
+		lpColumnSubcode[2352-2447] & 0x20 -> R channel
+		lpColumnSubcode[2352-2447] & 0x10 -> S channel
+		lpColumnSubcode[2352-2447] & 0x08 -> T channel
+		lpColumnSubcode[2352-2447] & 0x04 -> U channel
+		lpColumnSubcode[2352-2447] & 0x02 -> V channel
+		lpColumnSubcode[2352-2447] & 0x01 -> W channel
 	<dst>
-		lpSubcode[ 0-11] -> P channel
-		lpSubcode[12-23] -> Q channel
-		lpSubcode[24-35] -> R channel
-		lpSubcode[36-47] -> S channel
-		lpSubcode[48-59] -> T channel
-		lpSubcode[60-71] -> U channel
-		lpSubcode[72-83] -> V channel
-		lpSubcode[84-95] -> W channel
+		lpRowSubcode[ 0-11] -> P channel
+		lpRowSubcode[12-23] -> Q channel
+		lpRowSubcode[24-35] -> R channel
+		lpRowSubcode[36-47] -> S channel
+		lpRowSubcode[48-59] -> T channel
+		lpRowSubcode[60-71] -> U channel
+		lpRowSubcode[72-83] -> V channel
+		lpRowSubcode[84-95] -> W channel
 */
 /*
 	//p(0x80)	//0x80  0	//0x40 L1	//0x20 L2	//0x10 L3	//0x08 L4	//0x04 L5	//0x02 L6	//0x01 L7

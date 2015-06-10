@@ -2,9 +2,15 @@
 . C2 error fixing Algorithm (because bug exists)
 
 ============================ Known issue (not fix) ============================
-. reading with/without subcode, differ offset. (firmware bug?)
-  PLEXTOR PX-W2410TA: +686(with), +98(without)
-  PLEXTOR PX-320A   : +686(with), +98(without)
+. About PLEXTOR READ CDDA Command(0xd8), the offset it can acquire varies
+ according to the subch. (firmware bug?)
+  PLEXTOR PX-W8220T : +354(subch is 0x02), +355(subch is 0x00)
+  PLEXTOR PX-320A   : +686(subch is 0x02), +98(subch is 0x00)
+  PLEXTOR PX-W2410TA: +686(subch is 0x02), +98(subch is 0x00)
+  PLEXTOR PX-W1210S : +686(subch is 0x08), +98(subch is 0x00)
+
+. Reading speed: a drive of buffer size under 512 is very slow, so unread next sector.
+   => Read next sector to get next subchannel and fix subchannel.
 
 . extension (Windows specification)
   with extension

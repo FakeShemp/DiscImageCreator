@@ -3,26 +3,8 @@
  */
 #pragma once
 
-BOOL ReadCDAll(
+BOOL ReadCDForSearchingOffset(
 	PEXEC_TYPE pExecType,
-	PEXT_ARG pExtArg,
-	PDEVICE pDevice,
-	PDISC pDisc,
-	PMAIN_HEADER pMainHeader,
-	LPCTSTR pszPath,
-	FILE* fpCcd
-	);
-
-BOOL ReadCDForCheckingSubPtoW(
-	PDEVICE pDevice
-	);
-
-BOOL ReadCDForCheckingCDG(
-	PDEVICE pDevice,
-	PDISC pDisc
-	);
-
-BOOL ReadCDForCheckingIndex0InTrack1(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc
@@ -33,14 +15,18 @@ BOOL ReadCDForCheckingReadInOut(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	PMAIN_HEADER pMainHeader,
+	PMAIN_HEADER pMain,
 	LPCTSTR pszPath,
 	READ_CD_FLAG::EXPECTED_SECTOR_TYPE flg
 	);
 
-BOOL ReadCDForSearchingOffset(
-	PEXEC_TYPE pExecType,
+BOOL ReadCDForCheckingCommand(
 	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
+	PDISC pDisc
+	);
+
+BOOL ReadCDForCheckingCDG(
 	PDEVICE pDevice,
 	PDISC pDisc
 	);
@@ -51,22 +37,27 @@ BOOL ReadCDForFileSystem(
 	PDISC pDisc
 	);
 
+BOOL ReadCDAll(
+	PEXEC_TYPE pExecType,
+	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
+	PDISC pDisc,
+	PMAIN_HEADER pMain,
+	LPCTSTR pszPath,
+	FILE* fpCcd
+	);
+
 BOOL ReadCDPartial(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	PMAIN_HEADER pMainHeader,
+	PMAIN_HEADER pMain,
 	LPCTSTR pszPath,
 	INT nStart,
 	INT nEnd,
 	READ_CD_FLAG::EXPECTED_SECTOR_TYPE flg,
 	BOOL bCheckReading
-	);
-
-BOOL ReadCDForFlushingDriveCache(
-	PDEVICE pDevice,
-	INT nLBA
 	);
 
 BOOL ReadCDForGDTOC(

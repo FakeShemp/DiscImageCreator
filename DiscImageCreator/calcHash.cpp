@@ -15,7 +15,6 @@ VOID CalcInit(
 }
 
 BOOL CalcHash(
-	PUINT crc_table,
 	LPDWORD crc,
 	MD5_CTX* context,
 	SHA1Context* sha,
@@ -25,7 +24,7 @@ BOOL CalcHash(
 {
 	BOOL bRet = TRUE;
 	/* Return the CRC of the bytes buf[0..len-1]. */
-	*crc = update_crc(crc_table, *crc, lpBuf, (INT)dwSize);
+	*crc = update_crc(*crc, lpBuf, (INT)dwSize);
 	// calc md5
 	MD5Update(context, lpBuf, dwSize);
 	// calc sha1

@@ -1,24 +1,40 @@
 ============================= What is this tool? ==============================
 * Summary
- This program rips CD, DVD, GD, Floppy. In case of CD, it rips considering a drive offset.
- It works on Windows PC (WinXP or higher).
+  This command-line program rips CD, DVD, GD, Floppy. In case of CD and GD, it
+ rips considering a drive + CD (=combined) offset.
+  It works on Windows PC (WinXP or higher).
 
-* Recommend Drive
+* Recommend drive
  CD: PLEXTOR
-     (not OEM Drive -> PX-708, PX-712, PX-716, PX-755, PX-760, Premium, PX-5224, PX-4824)
-     (Drives must be able to rip by scrambled mode and read lead-out and read lead-in.) 
- GD: http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
-     and TSSTcorp(TS-H353A, TS-H352C, TS-H192C)
+  - No OEM Drive: PX-760, PX-755, PX-716, PX-714, PX-712, PX-708, PX-704, Premium2,
+   Premium, PX-W5224, PX-4824, PX-4012 (Premium2, PX-714, PX-704 can't test it enough).
+  - Drives must be able to rip by scrambled mode and read lead-out and read lead-in.
+     Firmware of a plextor drive: http://www.skcj.co.jp/discon/download/index.html
+     - Without a reason, you should update a latest firmware.
+     PleXTools Professional XL: http://www.plextor-digital.com/index.php/component/option,com_jdownloads/Itemid,55/catid,86/cid,470/task,view.download/
+     PX-Info Utility: http://www.plextor-digital.com/index.php/component/option,com_jdownloads/Itemid,0/catid,86/cid,468/task,view.download/
+     - Useful tool for PLEXTOR.
+ GD: http://forum.redump.org/post/14552/#p14552
+   and TSSTcorp(TS-H353A, TS-H352C, TS-H192C)
  DVD: All supported drive
  Floppy: All supported drive
+
+* Not recommend (because can't read lead-in and/or lead-out, can't exec 0xd8 command)
+ CD:
+  - PLEXTOR
+     PX-8xx/PX-Bxxx(many maker), PX-751A(BenQ DW1670), PX-750A/UF(TEAC DV-W516E),
+     PX-740A/UF(BenQ DW1640), PX-6xx(Pioneer, Panasonic and so on),
+     PX-504A/UF(NEC ND-1100A), PX-2xx(Lite-on, BenQ, NEC), PX-1xx(Pioneer and so on),
+     PX-S2410TU(TEAC CD-W224E), PX-54TA(Mitsumi FX5400), PX-R24CS(RICOH RO-1420C),
+  - Other maker
 
 * Development Tool
 ** first release - 20131124
  Visual Studio 2010
  Windows Driver Kit(WDK)
   Sample code path: WinDDK\7600.16385.1\src\storage\tools\spti
-  url:http://msdn.microsoft.com/en-us/library/windows/hardware/ff561595(v=vs.85).aspx
-** 2013-12-17 - latest release
+  url: http://msdn.microsoft.com/en-us/library/windows/hardware/ff561595(v=vs.85).aspx
+** 20131217 - latest release
  Visual Studio 2013 (including WDK)
 
 * License
@@ -45,27 +61,29 @@
 
 ========================== Created files information ==========================
  .bin
-  2352byte/sector binary image. This file is used a cue file.
+  2352byte/sector binary image. This file is used to a cue file.
  .c2
   store c2 error. 1bit expresses 1byte.
  .ccd
-  store CD information. Original is CloneCD(http://www.slysoft.com/en/clonecd.html)
+  store CD information. Original format is CloneCD (http://www.slysoft.com/en/clonecd.html)
  .cue
-  store CD information. Original is CDRWIN(http://www.goldenhawk.com/cdrwin.htm)
+  store CD information. Original format is CDRWIN (http://www.goldenhawk.com/cdrwin.htm)
  .dat
-  store crc32/md5/sha1 of bin file.
+  store crc32/md5/sha1 of bin file. Original format is clrmamepro (http://mamedev.emulab.it/clrmamepro/)
  .img
-  2352byte/sector binary image. This file is used a ccd file.
+  2352byte/sector binary image. This file is used to a ccd file.
  .scm
   scrambled image file of img file.
  .sub
-  store sub channel data. This file is used a ccd file.
+  store sub channel data. This file is used to a ccd file.
  _disclog.txt
   store disc information returned by SCSI command.
  _drivelog.txt
   store drive information returned by SCSI command.
- _errorlog.txt
-  store disc error information.
+ _c2errorlog.txt
+  store disc c2 error information getting read disc.
+ _suberrorlog.txt
+  store disc sub error information getting read disc.
  _infolog.txt
   store volume descriptor, path table, directory table of CD.
  _sub.txt
@@ -76,29 +94,39 @@
  Download and install Visual C++ Redistributable Packages.
   http://www.microsoft.com/en-us/download/details.aspx?id=40784
  EccEdc checking tool
-  http://www.mediafire.com/download/?7ac64jer16sl7zi/
+  http://www.mediafire.com/download/?7ac64jer16sl7zi
   Put it to directory of DiscImageCreator.exe.
   (If EccEdc doesn't exist, DiscImageCreator works.)
 
 * Ripping Guide for CD, DVD, Floppy
  Run exe without args to get detail info.
 
-* Ripping Guide for GD-ROM
-** Plan1
-http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
+* Ripping Guide for CD (SafeDisc)
+** Method 1 (Other tools)
+ http://forum.redump.org/topic/2201/dumping-safedisc-cds/
 
-** Plan2(The high density area)
-1. create the audio trap disc in advance. 
-   (a disc with a hacked TOC of 99 mins audio, burn it with CloneCD or Alcohol 52/120%). 
+** Method 2
+1. run below.
+   DiscImageCreator.exe cd [DriveLetter] foo.bin [DriveSpeed(0-72)] /rc
+
+* Ripping Guide for GD-ROM (The high density area)
+** Preparation
+ create the audio trap disc in advance.
+ (a disc with a hacked TOC of 99 mins audio, burn it with CloneCD or Alcohol 52/120%).
    http://www.mediafire.com/?2nygv2oyzzz
-2. insert the audio trap disc to a supported drive.
-3. run below. (stop spinning disc)
+
+** Method 1 (Other tools)
+ http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
+
+** Method 2
+1. insert the audio trap disc to a supported drive.
+2. run below. (stop spinning disc)
    DiscImageCreator.exe stop [DriveLetter]
-4. use a pin to press the escape eject button, so the tray will eject (or remove
+3. use a pin to press the escape eject button, so the tray will eject (or remove
    the drive cover).
-5. insert the gdrom and gently push the tray back (or put the drive cover back on).
-6. run below. (start rippping gdrom)
-   DiscImageCreator.exe gd [DriveLetter] [DriveSpeed(0-72)] foo.bin
+4. insert the gdrom and gently push the tray back (or put the drive cover back on).
+5. run below. (start rippping gdrom)
+   DiscImageCreator.exe gd [DriveLetter] foo.bin [DriveSpeed(0-72)]
 
 ========================== Supported/Unsupported Disc =========================
 * Supported Disc (I tested these)
@@ -122,23 +150,12 @@ http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
  - VCD
 
 * Support WIP (Because I haven't enough to test)
- - Protected Disc (because I don't have a disc.)
-    duplicated(twin) sector
-     => Alpha-ROM, ROOT, TAGES
-    different frequency
-     => SecuROM(v4 or higher), StarForce, CD-Cops
-    bad(error) sector
-     => SafeDisc, SmartE, Cactus Data Shield 300
-    weak sector
-     => SafeDisc v2 or higher
-    unique data on subchannel
-     => PSX PAL, SecuROM(v1)
-    no signal sector
-     => RingPROTECH, ProRing
-    Fake TOC
-     => Cactus Data Shield 100
-    Intensional(deliberate) C1/C2 error
-     => Cactus Data Shield 200
+ - Protected Disc
+    bad(error) sector                   => SafeDisc, SmartE, Cactus Data Shield 300
+    weak sector                         => SafeDisc v2 or higher
+    unique data on subchannel           => PSX PAL, SecuROM(v1)
+    no signal sector                    => LaserLock, RingPROTECH, ProRing
+    Intensional(deliberate) C1/C2 error => Cactus Data Shield 200
 
 * Supported Disc? (I haven't tested these yet)
  - Acorn Archimedes
@@ -158,53 +175,85 @@ http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
  - VTech V.Flash
 
 * Unsupported Disc
- - Blu-ray Disc (because I don't have a drive.)
- - HD DVD (because I don't have a drive.)
- - Nintendo GameCube
- - Nintendo Wii (because I don't implement a code to decrypt.)
-                (if you have a supported drive, you can rip a "encrypted" image.)
+ - Protected Disc
+    different frequency     => SecuROM(v4 or higher), StarForce, CD-Cops
+     These needs DPM(Data position measurement). cue, ccd doesn't support DPM.
+     To store DPM, needs to use the Alcohol 120/52% (http://www.alcohol-soft.com/)
+    duplicated(double, triple) sector => Alpha-ROM, ROOT, TAGES
+     It can read in reverse, but specifications are not decided in redump.org
+    Fake TOC                => Cactus Data Shield 100, CD Lock
+     Can't analyze the illegal TOC at the present.
+ - HD DVD & Blu-ray Disc
+    I don't have a drive
+ - Nintendo GameCube & Wii
+    I don't implement a code to decrypt. (if you have a supported drive,
+   you can rip a "encrypted" image.)
 
 ========================= Drive information (I tested) ========================
-Vendor					Model					Firmware	Lead-in	Lead-out	Scrambled		GD-ROM					Wii-ROM
-HITACHI(HL-DT-ST)		GDR-8161B				0045		No		No			No				No						Yes
-HITACHI-LG(HL-DT-ST)	GWA-8164B(GDR8164B)		0M08		No		No			No				No						Yes
-HITACHI-LG(HL-DT-ST)	GDR-H20N				0D04		No		No			No				No						Yes
-HITACHI-LG(HL-DT-ST)	GDR-H20N				0D08		No		No			No				No						Yes
-LG(HL-DT-ST)			GCC-4320B				1.00		No		No			Yes				No						No
-HP(HL-DT-ST)			GDR-8163B				0B26		No		No			No				No						Yes
-HP(TSSTcorp)			TS-H353A				BA08		No		No			No				Yes						No
-HP(TSSTcorp)			TS-H353B				bc03(BC05)	No		No			Yes				No						No
-LITEON					DH-20A3S				9P56		No		No			Yes				No						No
-LITEON					DH-20A3S				9P58		No		No			Yes				No						No
-LITEON					LH-18A1P				GL0B		Yes		Yes			No				No						No
-LITEON					LH-18A1P				GL0J		Yes		Yes			No				No						No
-LITEON					LH-20A1S				9L09		Yes		Yes			No				No						No
-LITEON					LTD-163					GDHG		No		No			No				Partial(about 99:59:74)	No
-LITEON(JLMS)			LTD-166S(XJ-HD166S)		DS1E		Yes		No			No				No						No
-LITEON					SOHW-812S(SOHW-832S)	CG5M		Yes		Yes			No				No						No
-NEC						CDR-1700A(286)			3.06		No		No			No				No						No
-NEC						CDR-3001A(28F)			3.32		No		No			No				No						No
-Optiarc					AD-7203S				1-B0		No		No			No				No						No
-PLEXTOR					PX-W8432Ti(PX-W8432T)	1.09		Yes		Yes			Yes(only pce)	No						No
-PLEXTOR					PX-W1210TA(PX-W1210A)	1.10		Yes		Yes			Yes(only pce)	No						No
-PLEXTOR					PX-W2410TA(PX-W2410A)	1.04		Yes		Yes			Yes(only pce)	No						No
-PLEXTOR					PX-W4824TA				1.07		Yes		Yes			Yes				No						No
-PLEXTOR					PX-W5224A				1.04		Yes		Yes			Yes				No						No
-PLEXTOR					PX-320A					1.06		Yes		Yes			Yes(only pce)	No						No
-PLEXTOR					PX-504A					1.02		No		No			No				No						No
-PLEXTOR					PX-712SA(PX-712A)		1.09		Yes		Yes			Yes				Partial(about 79:59:74)	No
-PLEXTOR					PX-750A					1.03		No		No			No				No						No
-PLEXTOR					PX-755SA(PX-755A)		1.08		Yes		Yes			Yes				Partial(about 79:59:74)	No
-PLEXTOR					PX-760A					1.07		Yes		Yes			Yes				No						No
-Slimtype				DS8A3S					HAT9		No		No			Yes				No						No
-TSSTcorp				TS-H192C				HI03		No		No			No				Yes						No
-TSSTcorp				TS-H192C				IB01(IB00)	No		No			No				No						No
-TSSTcorp				TS-H352C				NE02		No		No			No				Yes						No
-TSSTcorp				TS-H492C				IB01		No		No			No				No						No
-TSSTcorp				TS-H652C(TS-H652D)		TI06		No		No			No				No						No
-TSSTcorp				TS-L162C				DE00		No		No			No				No						No
+Vendor					Model					Firmware(*1)	Lead-in	Lead-out	Scrambled	GD-ROM(*2)				Wii-ROM
+LG(HL-DT-ST)			GCC-4320B				1.00			No		No			Yes			No						No
+HITACHI(HL-DT-ST)		GDR-8161B				0045			No		No			No			No						Yes
+HP(HL-DT-ST)			GDR-8163B				0B26			No		No			No			No						Yes
+HITACHI-LG(HL-DT-ST)	GDR-8163B				0S24			No		No			No			No						Yes
+HITACHI-LG(HL-DT-ST)	GWA-8164B(GDR8164B)		0M08			No		No			No			No						Yes
+HITACHI-LG(HL-DT-ST)	GDR-H20N				0D04			No		No			No			No						Yes
+HITACHI-LG(HL-DT-ST)	GDR-H20N				0D08			No		No			No			No						Yes
+LITEON					DH-20A3S				9P58			No		No			Yes			No						No
+LITEON					LH-18A1P				GL0J			Yes		Yes			No			No						No
+LITEON					LH-20A1S				9L09			Yes		Yes			No			No						No
+LITEON					LTD-163					GDHG			No		No			No			Partial(about 99:59:74)	No
+LITEON(JLMS)			LTD-166S(XJ-HD166S)		DS1E			Yes		No			No			No						No
+LITEON					SOHW-812S(SOHW-832S)	CG5M			Yes		Yes			No			No						No
+MATSHITA				SW-9574S				ADX4			No		No			No			No						No
+NEC						CDR-1700A(286)			3.06			No		No			No			No						No
+NEC						CDR-3001A(28F)			3.32			No		No			No			No						No
+Optiarc					AD-7203S				1-B0			No		No			No			No						No
+PLEXTOR					PX-40TS					1.14			Yes		Yes			Yes			No						No
+PLEXTOR					PX-W8220T				1.05			Yes		Yes			Yes			No						No
+PLEXTOR					PX-W8432Ti(PX-W8432T)	1.09			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W124TS				1.07			Yes		Yes			Yes			No						No
+PLEXTOR					PX-W1210TS				1.06			Yes		Yes			Yes			No						No
+PLEXTOR					PX-W1210TA(PX-W1210A)	1.10			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-S88T					1.06			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W2410TA(PX-W2410A)	1.04			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W4824TA				1.07			Yes		Yes			Yes			No						No
+PLEXTOR					PX-W5224A				1.04			Yes		Yes			Yes			No						No
+PLEXTOR					PREMIUM					1.07			Yes		Yes			Yes			No						No
+PLEXTOR					PX-320A					1.06			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-504A					1.02			No		No			No			No						No
+PLEXTOR					PX-708A(PX-708UF)		1.12			Yes		Yes			Yes			No						No
+PLEXTOR					PX-712SA(PX-712A)		1.09			Yes		Yes			Yes			Partial(about 79:59:74)	No
+PLEXTOR					PX-716A					1.11			Yes		Yes			Yes			No						No
+PLEXTOR					PX-750A					1.03			No		No			No			No						No
+PLEXTOR					PX-755SA(PX-755A)		1.08			Yes		Yes			Yes			Partial(about 79:59:74)	No
+PLEXTOR					PX-760A					1.07			Yes		Yes			Yes			No						No
+Slimtype				DS8A3S					HAT9			No		No			Yes			No						No
+TSSTcorp				SH-W162L				LC03			No		No			Yes			No						No
+TSSTcorp				TS-L162C				DE00			No		No			No			No						No
+TSSTcorp				TS-H192C				DE01			No		No			No			Yes						No
+TSSTcorp				TS-H192C				HI05			No		No			No			Yes						No
+TSSTcorp				TS-H192C				IB01(IB00)		No		No			No			No						No
+TSSTcorp				TS-H192CN				NE06(NE07)		No		No			No			Yes						No
+TSSTcorp				TS-H292B				DE03			No		No			No			No						No
+TSSTcorp				TS-H352C				DE06			No		No			No			Yes						No
+TSSTcorp				TS-H352C				NE02			No		No			No			Yes						No
+HP(TSSTcorp)			TS-H353A				BA08			No		No			No			Yes						No
+HP(TSSTcorp)			TS-H353B				bc03(BC05)		No		No			Yes			No						No
+TSSTcorp				TS-H492C				IB01			No		No			No			No						No
+TSSTcorp				TS-H652C(TS-H652D)		TI06			No		No			No			No						No
 
-* Attention
+*1
+ HITACHI-LG: 0xyy (x is OEM code, yy is number)
+  D: DELL, M: ??, S: ??
+ PLEXTOR: 1.xx (xx is number)
+ TSSTcorp: xxyy (xx is OEM code, yy is number)
+  BA: ??, BC: ??, DE: DELL, HI: HITACHI, IB: IBM, LC: LaCie, NE: NEC, TI: ??
+
+*2
  If you rip a GD-ROM, you should rip to internal(and/or NTFS) HDD. 
  Otherwise, if you have a supported drive, you can't only rip about 99:59:74.
  The reason is unknown.
+ TSSTcorp TS-H192C Reading often fails. (03-02-00, MEDIUM_ERROR - NO SEEK COMPLETE)
+
+*3
+ Single data track disc fails. (05-64-00, ILLEGAL_REQUEST. ILLEGAL MODE FOR THIS TRACK)

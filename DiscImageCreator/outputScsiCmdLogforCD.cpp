@@ -19,7 +19,7 @@ VOID OutputFsBootRecord(
 		"\t                              Boot System Use: ",
 		str[0],
 		str[1]);
-	for (INT i = 71; i <= 2047; i++) {
+	for (INT i = 71; i < 2048; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -44,7 +44,7 @@ VOID OutputFsDirectoryRecord(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,
 	LPBYTE lpBuf,
-	INT nDataLen,
+	DWORD nDataLen,
 	LPSTR fname
 	)
 {
@@ -116,12 +116,12 @@ VOID OutputFsDirectoryRecord(
 		fname[n] = (CHAR)lpBuf[33 + n];
 	}
 	OutputInfoLogA("\n");
-	if (pExtArg->bReadContinue) {
-		if ((nFileFlag & 0x02) == 0 && pDisc->PROTECT.bExist) {
+	if (pExtArg->byReadContinue) {
+		if ((nFileFlag & 0x02) == 0 && pDisc->PROTECT.byExist) {
 			if (pDisc->PROTECT.ERROR_SECTOR.nExtentPos < nExtentPos) {
-				if (pDisc->PROTECT.bTmpForSafeDisc) {
+				if (pDisc->PROTECT.byTmpForSafeDisc) {
 					pDisc->PROTECT.ERROR_SECTOR.nNextExtentPos = nExtentPos;
-					pDisc->PROTECT.bTmpForSafeDisc = FALSE;
+					pDisc->PROTECT.byTmpForSafeDisc = FALSE;
 				}
 				if (nExtentPos <= pDisc->PROTECT.ERROR_SECTOR.nNextExtentPos) {
 					pDisc->PROTECT.ERROR_SECTOR.nSectorSize = nExtentPos - pDisc->PROTECT.ERROR_SECTOR.nExtentPos - 1;
@@ -129,22 +129,28 @@ VOID OutputFsDirectoryRecord(
 				}
 			}
 		}
-		if (!strncmp(fname, "PROTECT.PRO", 11) ||
+		if (
+			!strncmp(fname, "LASERLOK.IN", 11) ||
+			!strncmp(fname, "PROTECT.PRO", 11) ||
 			!strncmp(fname, "00000001.LT1", 12) ||
 			!strncmp(fname, "00000001.TMP", 12)
 			) {
-			pDisc->PROTECT.bExist = TRUE;
-			if (!strncmp(fname, "PROTECT.PRO", 11)) {
+			pDisc->PROTECT.byExist = TRUE;
+			if (
+				!strncmp(fname, "LASERLOK.IN", 11) ||
+				!strncmp(fname, "PROTECT.PRO", 11)
+				) {
 				strncpy(pDisc->PROTECT.name, fname, 11);
 				pDisc->PROTECT.ERROR_SECTOR.nExtentPos = nExtentPos;
-				pDisc->PROTECT.ERROR_SECTOR.nSectorSize = nDataLen / DISC_RAW_READ - 1;
+				pDisc->PROTECT.ERROR_SECTOR.nSectorSize = (INT)(nDataLen / DISC_RAW_READ_SIZE - 1);
 			}
-			else if (!strncmp(fname, "00000001.LT1", 12) ||
+			else if (
+				!strncmp(fname, "00000001.LT1", 12) ||
 				!strncmp(fname, "00000001.TMP", 12)
 				) {
 				strncpy(pDisc->PROTECT.name, fname, 12);
-				pDisc->PROTECT.bTmpForSafeDisc = TRUE;
-				pDisc->PROTECT.ERROR_SECTOR.nExtentPos = nExtentPos + nDataLen / DISC_RAW_READ;
+				pDisc->PROTECT.byTmpForSafeDisc = TRUE;
+				pDisc->PROTECT.ERROR_SECTOR.nExtentPos = (INT)(nExtentPos + nDataLen / DISC_RAW_READ_SIZE);
 			}
 		}
 	}
@@ -175,7 +181,7 @@ VOID OutputFsVolumeDescriptorSecond(
 		MAKEWORD(lpBuf[142], lpBuf[143]))
 		, MAKELONG(MAKEWORD(lpBuf[144], lpBuf[145]),
 		MAKEWORD(lpBuf[146], lpBuf[147])));
-	INT nDataLen = MAKELONG(MAKEWORD(lpBuf[166], lpBuf[167]),
+	DWORD nDataLen = MAKEDWORD(MAKEWORD(lpBuf[166], lpBuf[167]),
 		MAKEWORD(lpBuf[168], lpBuf[169]));
 	CHAR fname[64] = { 0 };
 	OutputFsDirectoryRecord(pExtArg, pDisc, lpBuf + 156, nDataLen, fname);
@@ -314,7 +320,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	wchar_t tmp18[3][18] = { 0 };
 	BOOL bTCHAR = FALSE;
 	if (lpBuf[8] == 0 && lpBuf[9] >= 0x20) {
-		LittleToBig(tmp16[0], (wchar_t*)&lpBuf[8], 32);
+		LittleToBig(tmp16[0], (wchar_t*)&lpBuf[8], 16);
 		bTCHAR = TRUE;
 	}
 	else if (lpBuf[8] >= 0x20 && lpBuf[9] == 0) {
@@ -332,7 +338,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[40] == 0 && lpBuf[41] >= 0x20) {
-		LittleToBig(tmp16[1], (wchar_t*)&lpBuf[40], 32);
+		LittleToBig(tmp16[1], (wchar_t*)&lpBuf[40], 16);
 	}
 	else if (lpBuf[40] >= 0x20 && lpBuf[41] == 0) {
 		wcsncpy(tmp16[1], (wchar_t*)&lpBuf[40], 16);
@@ -343,7 +349,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[190] == 0 && lpBuf[191] >= 0x20) {
-		LittleToBig(tmp64[0], (wchar_t*)&lpBuf[190], 128);
+		LittleToBig(tmp64[0], (wchar_t*)&lpBuf[190], 64);
 	}
 	else if (lpBuf[190] >= 0x20 && lpBuf[191] == 0) {
 		wcsncpy(tmp64[0], (wchar_t*)&lpBuf[190], 64);
@@ -354,7 +360,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[318] == 0 && lpBuf[319] >= 0x20) {
-		LittleToBig(tmp64[1], (wchar_t*)&lpBuf[318], 128);
+		LittleToBig(tmp64[1], (wchar_t*)&lpBuf[318], 64);
 	}
 	else if (lpBuf[318] >= 0x20 && lpBuf[319] == 0) {
 		wcsncpy(tmp64[1], (wchar_t*)&lpBuf[318], 64);
@@ -365,7 +371,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[446] == 0 && lpBuf[447] >= 0x20) {
-		LittleToBig(tmp64[2], (wchar_t*)&lpBuf[446], 128);
+		LittleToBig(tmp64[2], (wchar_t*)&lpBuf[446], 64);
 	}
 	else if (lpBuf[446] >= 0x20 && lpBuf[447] == 0) {
 		wcsncpy(tmp64[2], (wchar_t*)&lpBuf[446], 64);
@@ -376,7 +382,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[574] == 0 && lpBuf[575] >= 0x20) {
-		LittleToBig(tmp64[3], (wchar_t*)&lpBuf[574], 128);
+		LittleToBig(tmp64[3], (wchar_t*)&lpBuf[574], 64);
 	}
 	else if (lpBuf[574] >= 0x20 && lpBuf[575] == 0) {
 		wcsncpy(tmp64[3], (wchar_t*)&lpBuf[574], 64);
@@ -387,7 +393,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[702] == 0 && lpBuf[703] >= 0x20) {
-		LittleToBig(tmp18[0], (wchar_t*)&lpBuf[702], 36);
+		LittleToBig(tmp18[0], (wchar_t*)&lpBuf[702], 18);
 	}
 	else if (lpBuf[702] >= 0x20 && lpBuf[703] == 0) {
 		wcsncpy(tmp18[0], (wchar_t*)&lpBuf[702], 18);
@@ -398,7 +404,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[739] == 0 && lpBuf[740] >= 0x20) {
-		LittleToBig(tmp18[1], (wchar_t*)&lpBuf[739], 36);
+		LittleToBig(tmp18[1], (wchar_t*)&lpBuf[739], 18);
 	}
 	else if (lpBuf[739] >= 0x20 && lpBuf[740] == 0) {
 		wcsncpy(tmp18[1], (wchar_t*)&lpBuf[739], 18);
@@ -409,7 +415,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	}
 
 	if (lpBuf[776] == 0 && lpBuf[777] >= 0x20) {
-		LittleToBig(tmp18[2], (wchar_t*)&lpBuf[776], 36);
+		LittleToBig(tmp18[2], (wchar_t*)&lpBuf[776], 18);
 	}
 	else if (lpBuf[776] >= 0x20 && lpBuf[777] == 0) {
 		wcsncpy(tmp18[2], (wchar_t*)&lpBuf[776], 18);
@@ -447,7 +453,7 @@ VOID OutputFsVolumePartitionDescriptor(
 		MAKEWORD(lpBuf[78], lpBuf[79])),
 		MAKELONG(MAKEWORD(lpBuf[84], lpBuf[85]),
 		MAKEWORD(lpBuf[86], lpBuf[87])));
-	for (INT i = 88; i <= 2047; i++) {
+	for (INT i = 88; i < 2048; i++) {
 		OutputInfoLogA("%x", lpBuf[i]);
 	}
 	OutputInfoLogA("\n");
@@ -499,7 +505,7 @@ VOID OutputFsPathTableRecord(
 	LPBYTE lpBuf,
 	INT nLBA,
 	INT nPathTblSize,
-	LPINT pDirTblPosList,
+	LPUINT pDirTblPosList,
 	LPSTR* pDirTblNameList,
 	LPINT nDirPosNum
 	)
@@ -509,7 +515,7 @@ VOID OutputFsPathTableRecord(
 		, nLBA, nLBA);
 	for (INT i = 0; i < nPathTblSize;) {
 		size_t nLenDI = lpBuf[i];
-		INT nPos = MAKELONG(MAKEWORD(lpBuf[2 + i], lpBuf[3 + i]),
+		DWORD nPos = MAKEDWORD(MAKEWORD(lpBuf[2 + i], lpBuf[3 + i]),
 			MAKEWORD(lpBuf[4 + i], lpBuf[5 + i]));
 		if (nLenDI > 0) {
 			OutputInfoLogA(
@@ -836,8 +842,8 @@ VOID OutputTocForGD(
 	)
 {
 	OutputDiscLogA(
-		"================================= TOC For GD ==================================\n");
-	for (BYTE r = pDisc->GDROM_TOC.FirstTrack; r < pDisc->GDROM_TOC.LastTrack; r++) {
+		"============================ TOC For GD (HD Area) =============================\n");
+	for (INT r = pDisc->GDROM_TOC.FirstTrack - 1; r < pDisc->GDROM_TOC.LastTrack; r++) {
 		OutputDiscLogA("\tTrack %2u, Ctl %u, Mode %u"
 			, pDisc->GDROM_TOC.TrackData[r].TrackNumber
 			, pDisc->GDROM_TOC.TrackData[r].Control
@@ -909,7 +915,7 @@ VOID OutputCDOffset(
 		OutputDiscLogA(
 			"(Drive offset data referes to http://www.accuraterip.com) =======");
 	}
-	if (pExtArg->bAdd && pDisc->SCSI.bAudioOnly) {
+	if (pExtArg->byAdd && pDisc->SCSI.byAudioOnly) {
 		pDisc->MAIN.nCombinedOffset += pExtArg->nAudioCDOffsetNum * 4;
 		OutputDiscLogA(
 			"\n"
@@ -946,27 +952,28 @@ VOID OutputCDC2Error296(
 	UNREFERENCED_PARAMETER(type);
 #endif
 	OutputLogA(type,
-		"======================== c2 error, LBA[%06d, %#07x] =======================\n"
-		"\t         +0 +1 +2 +3 +4 +5 +6 +7\n", nLBA, nLBA);
+		"======================== C2 error, LBA[%06d, %#07x] =======================\n"
+		"\t               +0 +1 +2 +3 +4 +5 +6 +7\n", nLBA, nLBA);
 
 	for (INT i = 0; i < CD_RAW_READ_C2_SIZE; i += 8) {
 		OutputLogA(type,
-			"\t%3x(%3d) %02x %02x %02x %02x %02x %02x %02x %02x\n",
-			i, i, lpBuf[i], lpBuf[i + 1], lpBuf[i + 2], lpBuf[i + 3],
+			"\t%3x(%3d, %4d) %02x %02x %02x %02x %02x %02x %02x %02x\n",
+			i, i, i * 8, lpBuf[i], lpBuf[i + 1], lpBuf[i + 2], lpBuf[i + 3],
 			lpBuf[i + 4], lpBuf[i + 5], lpBuf[i + 6], lpBuf[i + 7]);
 	}
 }
 
-VOID OutputCDMain2352(
+VOID OutputCDMain(
 	LPBYTE lpBuf,
-	INT nLBA
+	INT nLBA,
+	INT nSize
 	)
 {
 	OutputDiscLogA(
 		"===================== Main Channel, LBA[%06d, %#07x] ======================\n"
 		"\t          +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n", nLBA, nLBA);
 
-	for (INT i = 0; i < CD_RAW_SECTOR_SIZE; i += 16) {
+	for (INT i = 0; i < nSize; i += 16) {
 		OutputDiscLogA(
 			"\t%3x(%4d) %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
 			i, i, lpBuf[i], lpBuf[i + 1], lpBuf[i + 2], lpBuf[i + 3], lpBuf[i + 4], lpBuf[i + 5],

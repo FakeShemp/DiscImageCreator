@@ -15,34 +15,43 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 	SENSE_DATA SenseData;
 } SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER, *PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER;
 
-typedef struct _SENSE {
-	_declspec(align(4)) MODE_PARAMETER_HEADER10 header;
-	_declspec(align(4)) CDVD_CAPABILITIES_PAGE cdvd;
-} SENSE, *PSENSE;
+typedef struct _CDVD_CAPABILITIES_PAGE_WITH_HEADER10 {
+	MODE_PARAMETER_HEADER10 header;
+	CDVD_CAPABILITIES_PAGE cdvd;
+} CDVD_CAPABILITIES_PAGE_WITH_HEADER10, *PCDVD_CAPABILITIES_PAGE_WITH_HEADER10;
+
+typedef struct _CDVD_CAPABILITIES_PAGE_WITH_HEADER {
+	MODE_PARAMETER_HEADER header;
+	CDVD_CAPABILITIES_PAGE cdvd;
+} CDVD_CAPABILITIES_PAGE_WITH_HEADER, *PCDVD_CAPABILITIES_PAGE_WITH_HEADER;
 
 typedef struct _LOG_FILE {
 	FILE* fpDrive;
 	FILE* fpDisc;
-	FILE* fpError;
+	FILE* fpSubError;
+	FILE* fpC2Error;
 	FILE* fpInfo;
 } LOG_FILE, *PLOG_FILE;
 
 typedef struct _EXT_ARG {
-	BOOL bAdd;
-	BOOL bC2;
-	BOOL bCmi;
-	BOOL bFua;
-	BOOL bISRC;
-	BOOL bMCN;
-	BOOL bLibCrypt;
-	BOOL bPre;
-	BOOL bReverse;
-	BOOL bReadContinue;
+	BYTE byAdd;
+	BYTE byC2;
+	BYTE byCmi;
+	BYTE byFua;
+	BYTE byISRC;
+	BYTE byMCN;
+	BYTE byLibCrypt;
+	BYTE byPre;
+	BYTE byReverse;
+	BYTE byReadContinue;
+	BYTE reserved[2];
 	INT nAudioCDOffsetNum;
 	DWORD dwMaxRereadNum;
 	DWORD dwMaxC2ErrorNum;
 	DWORD dwRereadSpeedNum;
+	INT nC2OffsetNum;
 	DWORD dwTimeoutNum;
+	INT nSubAddionalNum;
 } EXT_ARG, *PEXT_ARG;
 
 typedef struct _DEVICE {
@@ -52,11 +61,11 @@ typedef struct _DEVICE {
 	UINT uiMaxTransferLength;
 	CHAR szVendorId[DRIVE_VENDER_ID_SIZE];
 	CHAR szProductId[DRIVE_PRODUCT_ID_SIZE];
-	BYTE byPlexType;
+	BYTE byPlxtrType;
+	BYTE bySuccessReadToc;
+	BYTE reserved[2];
 	WORD wDriveBufSize;
-	BOOL bCanCDText;
-	BOOL bC2ErrorData;
-	BOOL bSuccessReadToc;
+	WORD wMaxReadSpeed;
 	DWORD dwTimeOutValue;
 	struct _TRANSFER {
 		UINT uiTransferLen;
@@ -66,6 +75,14 @@ typedef struct _DEVICE {
 		DWORD dwBufC2Offset;
 		DWORD dwBufSubOffset;
 	} TRANSFER, *PTRANSFER;
+	struct _FEATURE {
+		BYTE byCanCDText;
+		BYTE byC2ErrorData;
+		BYTE byModePage2a;
+		BYTE bySetCDSpeed;
+		BYTE byReadBufCapa;
+		BYTE reserved[3];
+	} FEATURE, *PFEATURE;
 } DEVICE, *PDEVICE;
 
 typedef struct _GDROM_TRACK_DATA {
@@ -84,22 +101,23 @@ typedef struct _GDROM_TRACK_DATA {
 typedef struct _DISC {
 	struct _SCSI {
 		_declspec(align(4)) CDROM_TOC toc; // get at CDROM_READ_TOC_EX_FORMAT_TOC
-		BOOL bAudioOnly;			// get at CDROM_READ_TOC_EX_FORMAT_TOC
+		INT nAllLength;				// get at CDROM_READ_TOC_EX_FORMAT_TOC
 		LPINT lpFirstLBAListOnToc;	// get at CDROM_READ_TOC_EX_FORMAT_TOC
 		LPINT lpLastLBAListOnToc;	// get at CDROM_READ_TOC_EX_FORMAT_TOC
 		INT nFirstLBAofDataTrack;	// get at CDROM_READ_TOC_EX_FORMAT_TOC
 		INT nLastLBAofDataTrack;	// get at CDROM_READ_TOC_EX_FORMAT_TOC
 		BYTE byFirstDataTrack;		// get at CDROM_READ_TOC_EX_FORMAT_TOC
 		BYTE byLastDataTrack;		// get at CDROM_READ_TOC_EX_FORMAT_TOC
-		WORD wCurrentMedia;			// get at SCSIOP_GET_CONFIGURATION
-		INT nAllLength;				// get at CDROM_READ_TOC_EX_FORMAT_TOC
+		BYTE byAudioOnly;			// get at CDROM_READ_TOC_EX_FORMAT_TOC
+		BYTE byCdi;					// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
 		LPBYTE lpSessionNumList;	// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
 		INT nFirstLBAofLeadout;		// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
 		INT nFirstLBAof2ndSession;	// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
-		BOOL bCdi;					// get at CDROM_READ_TOC_EX_FORMAT_FULL_TOC
 		LPSTR* pszTitle;			// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
 		LPSTR* pszPerformer;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
 		LPSTR* pszSongWriter;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
+		WORD wCurrentMedia;			// get at SCSIOP_GET_CONFIGURATION
+		BYTE reserved[2];
 	} SCSI;
 	struct _MAIN {
 		INT nAdjustSectorNum;
@@ -114,14 +132,18 @@ typedef struct _DISC {
 		// 0 origin, max is last track num.
 		LPBYTE lpModeList;
 	} MAIN;
+	struct _C2 {
+		SHORT sC2Offset;
+		BYTE reserved[2];
+	} C2, *PC2;
 	struct _SUB {
-		BOOL bDesync;
-		BOOL bIndex0InTrack1;
-		CHAR szCatalog[META_CATALOG_SIZE];
-		BOOL bCatalog;
+		BYTE byDesync;
+		BYTE byIndex0InTrack1;
+		BYTE byCatalog;
+		BYTE byISRC;
 		INT nFirstLBAForMCN;
 		INT nRangeLBAForMCN;
-		BOOL bISRC;
+		CHAR szCatalog[META_CATALOG_SIZE];
 		INT nFirstLBAForISRC;
 		INT nRangeLBAForISRC;
 		// 0 origin, max is last track num.
@@ -146,14 +168,16 @@ typedef struct _DISC {
 		LPBYTE lpRtoWList;
 	} SUB;
 	struct _GDROM_TOC {
+		UCHAR reserved[2];
 		UCHAR FirstTrack;
 		UCHAR LastTrack;
 		GDROM_TRACK_DATA TrackData[MAXIMUM_NUMBER_TRACKS];
 		LONG Length;
 	} GDROM_TOC;
 	struct _PROTECT {
-		BOOL bExist;
-		BOOL bTmpForSafeDisc;
+		BYTE reserved;
+		BYTE byExist;
+		BYTE byTmpForSafeDisc;
 		CHAR name[12 + 1];
 		// for skipping unreadable file
 		struct _ERROR_SECTOR {
@@ -166,10 +190,10 @@ typedef struct _DISC {
 
 typedef struct _MAIN_HEADER {
 	BYTE header[SYNC_SIZE + HEADER_SIZE];
-	BYTE byMode;		// 16th byte
 } MAIN_HEADER, *PMAIN_HEADER;
 
 typedef struct _SUB_Q {
+	BYTE reserved;
 	BYTE byCtl : 4;		// 13th byte
 	BYTE byAdr : 4;		// 13th byte
 	BYTE byTrackNum;	// 14th byte
@@ -187,22 +211,16 @@ typedef struct _SUB_R_TO_W {
 	CHAR parityP[4];
 } SUB_R_TO_W, *PSUB_R_TO_W;
 
-typedef struct _C2_ERROR {
-	SHORT sC2Offset;
-#if 0
-	CHAR cSlideSectorNum;
-#endif
-} C2_ERROR, *PC2_ERROR;
-
 typedef struct _C2_ERROR_PER_SECTOR {
-	BOOL bErrorFlag;
-	BOOL bErrorFlagBackup;
+	BYTE reserved[2];
+	BYTE byErrorFlag;
+	BYTE byErrorFlagBackup;
 	INT nErrorLBANum;
 	INT nErrorLBANumBackup;
 	UINT uiErrorBytePosCnt;
 	UINT uiErrorBytePosCntBackup;
 	PSHORT lpErrorBytePos;
 	PSHORT lpErrorBytePosBackup;
-	LPBYTE lpBufC2NoneSector;
-	LPBYTE lpBufC2NoneSectorBackup;
+	LPBYTE lpBufNoC2Sector;
+	LPBYTE lpBufNoC2SectorBackup;
 } C2_ERROR_PER_SECTOR, *PC2_ERROR_PER_SECTOR;

@@ -27,7 +27,7 @@ VOID OutputFsDirectoryRecord(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,
 	LPBYTE lpBuf,
-	INT nDataLen,
+	DWORD nDataLen,
 	LPSTR fname
 	);
 
@@ -35,7 +35,7 @@ VOID OutputFsPathTableRecord(
 	LPBYTE lpBuf,
 	INT nLBA,
 	INT nPathTblSize,
-	LPINT pDirTblPosList,
+	LPUINT pDirTblPosList,
 	LPSTR* pDirTblNameList,
 	LPINT nDirPosNum
 	);
@@ -89,9 +89,10 @@ VOID OutputCDC2Error296(
 	INT nLBA
 	);
 
-VOID OutputCDMain2352(
+VOID OutputCDMain(
 	LPBYTE lpBuf,
-	INT nLBA
+	INT nLBA,
+	INT nSize
 	);
 
 VOID OutputCDSub96Align(
