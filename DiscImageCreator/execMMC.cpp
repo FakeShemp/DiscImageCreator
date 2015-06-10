@@ -3,16 +3,16 @@
  */
 #include "stdafx.h"
 
-#define PARAGRAPH_BOUNDARY_NUM 0x0F
-
 inline PVOID ConvParagraphBoundary(
-	PVOID pv
+	PVOID pv,
+	PDEVICE_DATA pDevData
 	)
 {
 #ifdef WIN64
-	return ((PVOID)(((ULONG_PTR)pv + PARAGRAPH_BOUNDARY_NUM) & 0xFFFFFFFFFFFFFFF0));
+	return ((PVOID)(((ULONG_PTR)pv + pDevData->AlignmentMask64) & ~pDevData->AlignmentMask64));
 #else
-	return ((PVOID)(((DWORD)pv + PARAGRAPH_BOUNDARY_NUM) & 0xFFFFFFF0));
+	return ((PVOID)(((DWORD)pv + pDevData->adapterDescriptor->AlignmentMask)
+		& ~pDevData->adapterDescriptor->AlignmentMask));
 #endif
 }
 
@@ -315,9 +315,6 @@ BOOL DescrambleMainChannel(
 			OutputString(_T("\n"));
 		}
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 	return bRet;
 }
 
@@ -571,11 +568,11 @@ BOOL ReadCDAll(
 			ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
 		}
 
-		if(NULL == (aBuf = (PUCHAR)malloc(ulBufLen + PARAGRAPH_BOUNDARY_NUM))) {
+		if(NULL == (aBuf = (PUCHAR)malloc(ulBufLen + pDevData->adapterDescriptor->AlignmentMask))) {
 			throw _T("Failed to alloc memory aBuf[h]\n");
 		}
-		ZeroMemory(aBuf, ulBufLen + PARAGRAPH_BOUNDARY_NUM);
-		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
+		ZeroMemory(aBuf, ulBufLen + pDevData->adapterDescriptor->AlignmentMask);
+		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf, pDevData);
 		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
 		UCHAR byTransferLen = 1;
 		aCmd[0] = SCSIOP_READ_CD;
@@ -670,9 +667,8 @@ BOOL ReadCDAll(
 			if(pDiscData->nStartLBAof2ndSession != -1 && pDiscData->nLastLBAof1stSession == nLBA) {
 				INT nStartSession2 = pDiscData->nStartLBAof2ndSession - 1;
 				OutputLogString(fpLog, 
-					_T("Skip from Leadout of Session 1 [%d]"), pDiscData->nLastLBAof1stSession);
-				OutputLogString(fpLog, 
-					_T(" to Leadin of Session 2 [%d]\n"), nStartSession2);
+					_T("Skip from Leadout of Session 1 [%d] to Leadin of Session 2 [%d]\n"),
+					pDiscData->nLastLBAof1stSession, nStartSession2);
 				nLBA = nStartSession2;
 				prevSubQ.nAbsoluteTime = nLBA + 150;
 				continue;
@@ -841,8 +837,9 @@ BOOL ReadCDForSearchingOffset(
 	if(!bGetDrive) {
 		CHAR a[6];
 		ZeroMemory(a, sizeof(a));
-		OutputString(_T("This drive isn't defined in driveOffset.txt.\n"));
-		OutputString(_T("Please input Drive offset(Samples) -> "));
+		OutputString(
+			_T("This drive isn't defined in driveOffset.txt.\n")
+			_T("Please input Drive offset(Samples) -> "));
 		INT b = scanf("%6[^\n]%*[^\n]", a);
 		b = getchar();
 		nDriveSampleOffset = atoi(a) * 4;
@@ -853,16 +850,18 @@ BOOL ReadCDForSearchingOffset(
 		if(bGetDrive) {
 			OutputLogString(fpLog, _T("(Drive offset data referes to www.accuraterip.com)"));
 		}
-		OutputLogString(fpLog, _T("\n"));
-		OutputLogString(fpLog, _T("\tDrive Offset(Byte) %d, (Samples) %d\n"), 
+		OutputLogString(fpLog, _T("\n\tDrive Offset(Byte) %d, (Samples) %d\n"), 
 			pDiscData->nCombinedOffset, nDriveSampleOffset);
 		bRet = TRUE;
 	}
 	else {
 		UCHAR byScsiStatus = 0;
 		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
-		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE*2+PARAGRAPH_BOUNDARY_NUM] = {0};
-		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
+		PUCHAR aBuf = (PUCHAR)malloc(CD_RAW_SECTOR_WITH_SUBCODE_SIZE * 2 + pDevData->adapterDescriptor->AlignmentMask);
+		if(!aBuf) {
+			return FALSE;
+		}
+		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf, pDevData);
 
 		INT nDriveOffset = nDriveSampleOffset * 4;
 		UCHAR byTransferLen = 2;
@@ -887,6 +886,7 @@ BOOL ReadCDForSearchingOffset(
 		aCmd[5] = LOBYTE(LOWORD(pDiscData->nFirstDataLBA));
 		if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 			CD_RAW_SECTOR_WITH_SUBCODE_SIZE * 2, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
+			FreeAndNull(aBuf);
 			return FALSE;
 		}
 		if(byScsiStatus == 0) {
@@ -898,7 +898,7 @@ BOOL ReadCDForSearchingOffset(
 			UCHAR aBuf2[CD_RAW_SECTOR_SIZE*2] = {0};
 			memcpy(aBuf2, pBuf, CD_RAW_SECTOR_SIZE);
 			memcpy(aBuf2 + CD_RAW_SECTOR_SIZE, pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, CD_RAW_SECTOR_SIZE);
-			bRet = GetWriteOffset(aBuf2, pDiscData->nFirstDataLBA, &pDiscData->nCombinedOffset);
+			bRet = GetWriteOffset(aBuf2, pDiscData);
 		}
 		else {
 			// PLEXTOR(PX-W8432, PX-W1210T, PX-W2410T)
@@ -907,6 +907,7 @@ BOOL ReadCDForSearchingOffset(
 			// else if Track1 isn't DataTrack (pc engine etc)
 			// ==>no error.
 			OutputString(_T("This drive can't read data sector in scrambled mode.\n"));
+			FreeAndNull(aBuf);
 			return FALSE;
 		}
 
@@ -917,21 +918,19 @@ BOOL ReadCDForSearchingOffset(
 			}
 			OutputLogString(fpLog, _T("\n"));
 			OutputLogString(fpLog, 
-				_T("\t Combined Offset(Byte) %6d, (Samples) %5d\n"), 
-				pDiscData->nCombinedOffset, pDiscData->nCombinedOffset / 4);
-			OutputLogString(fpLog, 
-				_T("\t-   Drive Offset(Byte) %6d, (Samples) %5d\n"), 
-				nDriveOffset, nDriveSampleOffset);
-			OutputLogString(fpLog, 
-				_T("\t----------------------------------------------\n"));
-			OutputLogString(fpLog, 
-				_T("\t       CD Offset(Byte) %6d, (Samples) %5d\n"), 
+				_T("\t Combined Offset(Byte) %6d, (Samples) %5d\n")
+				_T("\t-   Drive Offset(Byte) %6d, (Samples) %5d\n")
+				_T("\t----------------------------------------------\n")
+				_T("\t       CD Offset(Byte) %6d, (Samples) %5d\n"),
+				pDiscData->nCombinedOffset, pDiscData->nCombinedOffset / 4,
+				nDriveOffset, nDriveSampleOffset,
 				pDiscData->nCombinedOffset - nDriveOffset, 
 				(pDiscData->nCombinedOffset - nDriveOffset) / 4);
 		}
 		else {
 			OutputErrorString(_T("Failed to get write-offset[L:%d]\n"), __LINE__);
 		}
+		FreeAndNull(aBuf);
 	}
 
 	if(0 < pDiscData->nCombinedOffset) {
@@ -940,12 +939,9 @@ BOOL ReadCDForSearchingOffset(
 	else if(pDiscData->nCombinedOffset < 0) {
 		pDiscData->nAdjustSectorNum = pDiscData->nCombinedOffset / CD_RAW_SECTOR_SIZE - 1;
 	}
-	OutputLogString(fpLog, _T("\tNeed overread sector:%d\n"), pDiscData->nAdjustSectorNum);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#else
+	OutputLogString(fpLog, _T("\tNeed overread sector: %d\n"), pDiscData->nAdjustSectorNum);
 	fflush(fpLog);
-#endif
+
 	return bRet;
 }
 
@@ -979,6 +975,7 @@ BOOL ReadCDPartial(
 	FILE* fpSub = NULL;
 	FILE* fpParse = NULL;
 	BOOL bRet = TRUE;
+	PUCHAR aBuf = NULL;
 	try {
 		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, szSub, _T("wb"), 0, 0))) {
 			throw _T("Failed to open .sub\n");
@@ -988,8 +985,8 @@ BOOL ReadCDPartial(
 		}
 		UCHAR byScsiStatus = 0;
 		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
-		UCHAR aBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+PARAGRAPH_BOUNDARY_NUM] = {0};
-		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
+		aBuf = (PUCHAR)malloc(CD_RAW_SECTOR_WITH_SUBCODE_SIZE + pDevData->adapterDescriptor->AlignmentMask);
+		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf, pDevData);
 
 		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
 		UCHAR byTransferLen = 1;
@@ -1041,6 +1038,7 @@ BOOL ReadCDPartial(
 	FcloseAndNull(fp);
 	FcloseAndNull(fpSub);
 	FcloseAndNull(fpParse);
+	FreeAndNull(aBuf);
 	return bRet;
 }
 
@@ -1069,7 +1067,7 @@ BOOL ReadConfiguration(
 		OutputLogString(fpLog, _T("\tUndefined this drive\n"));
 	}
 	else {
-		OutputLogString(fpLog, _T("\tCurrentMedia:"));
+		OutputLogString(fpLog, _T("\tCurrentMedia: "));
 		pDiscData->pusCurrentMedia = MAKEWORD(pHeader.CurrentProfile[1], pHeader.CurrentProfile[0]);
 		OutputFeatureProfileType(fpLog, pDiscData->pusCurrentMedia);
 		OutputLogString(fpLog, _T("\n"));
@@ -1077,12 +1075,12 @@ BOOL ReadConfiguration(
 		ULONG ulAllLen = MAKELONG(MAKEWORD(pHeader.DataLength[3], pHeader.DataLength[2]), 
 			MAKEWORD(pHeader.DataLength[1], pHeader.DataLength[0])) + sizeof(pHeader.DataLength);
 
-		PUCHAR pPConf = (PUCHAR)malloc((size_t)ulAllLen + PARAGRAPH_BOUNDARY_NUM);
+		PUCHAR pPConf = (PUCHAR)malloc((size_t)ulAllLen + pDevData->adapterDescriptor->AlignmentMask);
 		if(!pPConf) {
 			OutputErrorString(_T("Can't alloc memory [F:%s][L:%d]\n"), _T(__FUNCTION__), __LINE__);
 			return FALSE;
 		}
-		PUCHAR pConf = (PUCHAR)ConvParagraphBoundary(pPConf);
+		PUCHAR pConf = (PUCHAR)ConvParagraphBoundary(pPConf, pDevData);
 		aCmd[7] = HIBYTE(ulAllLen);
 		aCmd[8] = LOBYTE(ulAllLen);
 		bRet = ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, pConf, 
@@ -1092,7 +1090,7 @@ BOOL ReadConfiguration(
 			OutputLogString(fpLog, _T("\tUndefined this drive\n"));
 		}
 		else {
-			OutputFeatureNumber(pConf, ulAllLen, uiSize, &pDiscData->bCanCDText, &pDiscData->bC2ErrorData, fpLog);
+			OutputFeatureNumber(pConf, ulAllLen, uiSize, pDiscData, fpLog);
 		}
 		FreeAndNull(pPConf);
 	}
@@ -1116,7 +1114,7 @@ BOOL ReadDeviceInfo(
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-	OutputInquiryData(&inquiryData, pDiscData->pszVendorId, pDiscData->pszProductId, fpLog);
+	OutputInquiryData(&inquiryData, pDiscData, fpLog);
 	return TRUE;
 }
 
@@ -1136,15 +1134,16 @@ BOOL ReadDVD(
 	UCHAR byScsiStatus = 0;
 	UCHAR byTransferLen = 32;
 	PUCHAR pPBuf = NULL;
+	PUCHAR aBuf2 = NULL;
 	BOOL bRet = TRUE;
 	try {
-		pPBuf = (PUCHAR)malloc(CD_RAW_READ * (size_t)byTransferLen + PARAGRAPH_BOUNDARY_NUM);
+		pPBuf = (PUCHAR)malloc(CD_RAW_READ * (size_t)byTransferLen + pDevData->adapterDescriptor->AlignmentMask);
 		if(pPBuf == NULL) {
 			throw _T("Can't alloc memory aBuf\n");
 		}
 		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
-		ZeroMemory(pPBuf, CD_RAW_READ * (size_t)byTransferLen + PARAGRAPH_BOUNDARY_NUM);
-		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(pPBuf);
+		ZeroMemory(pPBuf, CD_RAW_READ * (size_t)byTransferLen + pDevData->adapterDescriptor->AlignmentMask);
+		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(pPBuf, pDevData);
 
 		aCmd[0] = SCSIOP_READ12;
 		aCmd[5] = 0;
@@ -1188,12 +1187,17 @@ BOOL ReadDVD(
 		OutputVolumeDescriptorSequence(0, pBuf, fpLog);
 		fflush(fpLog);
 
-		UCHAR aBuf2[sizeof(DVD_DESCRIPTOR_HEADER)+sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR)+PARAGRAPH_BOUNDARY_NUM] = {0};
+		aBuf2 = (PUCHAR)malloc(sizeof(DVD_DESCRIPTOR_HEADER) +
+			sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR) +
+			pDevData->adapterDescriptor->AlignmentMask);
+		if(!aBuf2) {
+			throw _T("");
+		}
 		UCHAR aCmd2[CDB10GENERIC_LENGTH] = {0};
 		PUCHAR pBuf2 = NULL;
 		size_t uiSize = 0;
 		if(pszOption && !_tcscmp(pszOption, _T("cmi"))) {
-			pBuf2 = (PUCHAR)ConvParagraphBoundary(aBuf2);
+			pBuf2 = (PUCHAR)ConvParagraphBoundary(aBuf2, pDevData);
 			uiSize = sizeof(DVD_DESCRIPTOR_HEADER) + 
 				sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR);
 			aCmd2[0] = SCSIOP_READ_DVD_STRUCTURE;
@@ -1245,10 +1249,8 @@ BOOL ReadDVD(
 		bRet = FALSE;
 	}
 	FreeAndNull(pPBuf);
+	FreeAndNull(aBuf2);
 	FcloseAndNull(fp);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 	return bRet;
 }
 
@@ -1274,7 +1276,7 @@ BOOL ReadDVDRaw(
 		}
 		UCHAR aCmd[CDB12GENERIC_LENGTH];
 		ZeroMemory(aBuf, DVD_RAW_READ * (size_t)byTransferLen + 0x10);
-		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf);
+		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf, pDevData);
 		ZeroMemory(aCmd, sizeof(aCmd));
 		UCHAR cdblen = CDB12GENERIC_LENGTH;
 		if(pszVendorId && !strncmp(pszVendorId, "PLEXTER", 7)) {
@@ -1416,7 +1418,7 @@ BOOL ReadDVDStructure(
 				OutputLogString(fpLog, _T("\tDisc Structure List\n"));
 			}
 			OutputLogString(fpLog, 
-				_T("\t\tFormatCode:%02X, SDR:%s, RDS:%s, Structure Length:%d\n"), 
+				_T("\t\tFormatCode:%02x, SDR:%s, RDS:%s, Structure Length:%d\n"), 
 				pDiscStructure[4+i], 
 				(pDiscStructure[5+i] & 0x80) == 0x80 ? "Yes" : "No ", 
 				(pDiscStructure[5+i] & 0x40) == 0x40 ? "Yes" : "No ", 
@@ -1458,9 +1460,6 @@ BOOL ReadDVDStructure(
 	}
 	FreeAndNull(pFormat);
 	FreeAndNull(pStructureLength);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 	return bRet;
 }
 
@@ -1526,9 +1525,6 @@ BOOL ReadTOC(
 	}
 	OutputLogString(fpLog, 
 		_T("\t                                   Total  %6u\n"), pDiscData->nLength);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 	return TRUE;
 }
 
@@ -1571,12 +1567,12 @@ BOOL ReadTOCFull(
 		return TRUE;
 	}
 	OutputLogString(fpLog, _T("CDROM_TOC_FULL_TOC_DATA:Length %d\n"), uiFulltocsize);
-	PUCHAR pPFullToc = (PUCHAR)malloc(uiFullTocDataMaxSize + PARAGRAPH_BOUNDARY_NUM);
+	PUCHAR pPFullToc = (PUCHAR)malloc(uiFullTocDataMaxSize + pDevData->adapterDescriptor->AlignmentMask);
 	if(!pPFullToc) {
 		OutputString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
-	PUCHAR pFullToc = (PUCHAR)ConvParagraphBoundary(pPFullToc);
+	PUCHAR pFullToc = (PUCHAR)ConvParagraphBoundary(pPFullToc, pDevData);
 	aCmd[7] = HIBYTE(uiFullTocDataMaxSize);
 	aCmd[8] = LOBYTE(uiFullTocDataMaxSize);
 	BOOL bRet = TRUE;
@@ -1592,9 +1588,13 @@ BOOL ReadTOCFull(
 		INT aLBA[] = {0, pDiscData->nFirstDataLBA};
 		for(size_t b = 0; b < uiTocEntries; b++) {
 			if(pTocData[b].Point < 100 && uiIdx < pTocData[b].SessionNumber) {
-				UCHAR aBuf2[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+PARAGRAPH_BOUNDARY_NUM] = {0};
+				PUCHAR aBuf2 = (PUCHAR)malloc(CD_RAW_SECTOR_WITH_SUBCODE_SIZE + pDevData->adapterDescriptor->AlignmentMask);
+				if(!aBuf2) {
+					return FALSE;
+				}
+				ZeroMemory(aBuf2, CD_RAW_SECTOR_WITH_SUBCODE_SIZE + pDevData->adapterDescriptor->AlignmentMask);
 				UCHAR aCmd2[CDB12GENERIC_LENGTH] = {0};
-				PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf2);
+				PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf2, pDevData);
 
 				if(!strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
 					// PX-504A don't support...
@@ -1640,22 +1640,19 @@ BOOL ReadTOCFull(
 						break;
 					}
 				}
+				FreeAndNull(aBuf2);
 				WriteCcdFileForSession(pTocData[b].SessionNumber, fpCcd);
 				WriteCcdFileForSessionPregap(ucMode, fpCcd);
 				uiIdx++;
 			}
 		}
-		OutputTocFull(&fullToc, pTocData, uiTocEntries,	&pDiscData->nLastLBAof1stSession,
-			&pDiscData->nStartLBAof2ndSession, pDiscData->aSessionNum, fpCcd, fpLog);
+		OutputTocFull(&fullToc, pTocData, uiTocEntries,	pDiscData, fpCcd, fpLog);
 	}
 	catch(LPTSTR str) {
 		OutputErrorString(str);
 		bRet = FALSE;
 	}
 	FreeAndNull(pPFullToc);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 	return bRet;
 }
 
@@ -1693,12 +1690,12 @@ BOOL ReadTOCText(
 		return TRUE;
 	}
 	size_t uiCDTextDataMaxSize = uiTocTextsize + uiCDTextDataSize;
-	PUCHAR pPTocText = (PUCHAR)malloc(uiCDTextDataMaxSize + PARAGRAPH_BOUNDARY_NUM);
+	PUCHAR pPTocText = (PUCHAR)malloc(uiCDTextDataMaxSize + pDevData->adapterDescriptor->AlignmentMask);
 	if(!pPTocText) {
 		OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
-	PUCHAR pTocText = (PUCHAR)ConvParagraphBoundary(pPTocText);
+	PUCHAR pTocText = (PUCHAR)ConvParagraphBoundary(pPTocText, pDevData);
 	aCmd[7] = HIBYTE(uiCDTextDataMaxSize);
 	aCmd[8] = LOBYTE(uiCDTextDataMaxSize);
 	BOOL bRet = TRUE;
@@ -1920,9 +1917,6 @@ BOOL ReadTOCText(
 	FreeAndNull(pPTocText);
 	FreeAndNull(pInfo);
 	FreeAndNull(pTmpText);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 	return bRet;
 }
 
@@ -2025,16 +2019,7 @@ BOOL SetCDSpeed(
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-	OutputLogString(fpLog, _T("Drive speed\n"));
-	OutputLogString(fpLog, _T("\tRequestType:%s\n"),
-		setspeed.RequestType == 0 ? _T("CdromSetSpeed") : _T("CdromSetStreaming"));
-	OutputLogString(fpLog, _T("\tReadSpeed:%uKB/sec\n"), setspeed.ReadSpeed);
-	OutputLogString(fpLog, _T("\tWriteSpeed:%uKB/sec\n"), setspeed.WriteSpeed);
-	OutputLogString(fpLog, _T("\tRotationControl:%s\n"),
-		setspeed.RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
+	OutputDriveSpeed(&setspeed, fpLog);
 	return TRUE;
 }
 

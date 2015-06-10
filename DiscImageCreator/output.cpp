@@ -134,14 +134,11 @@ void OutputC2Error296(
 	OutputLogString(fpLog, _T("c2 error LBA %d\n"), nLBA);
 
 	for(INT i = 0; i < CD_RAW_READ_C2_SIZE; i+=8) {
-		OutputLogString(fpLog, 
-			_T("\t%02X %02X %02X %02X %02X %02X %02X %02X\n"), 
-			pBuf[i], pBuf[i+1], pBuf[i+2], pBuf[i+3], pBuf[i+4], pBuf[i+5],
-			pBuf[i+6], pBuf[i+7]);
+		OutputLogString(fpLog, _T(
+			"\t%02x %02x %02x %02x %02x %02x %02x %02x\n"), 
+			pBuf[i], pBuf[i+1], pBuf[i+2], pBuf[i+3], 
+			pBuf[i+4], pBuf[i+5], pBuf[i+6], pBuf[i+7]);
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputMain2352(
@@ -150,30 +147,97 @@ void OutputMain2352(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("Main Channel LBA %d\n"), nLBA);
-	OutputLogString(fpLog, _T("\t    +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n"));
+	OutputLogString(fpLog, 
+		_T("Main Channel LBA %d\n")
+		_T("\t    +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n"),
+		nLBA);
 
 	for(INT i = 0; i < CD_RAW_SECTOR_SIZE; i += 16) {
 		OutputLogString(fpLog, 
-			_T("\t%3X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"), 
+			_T("\t%3X %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n"), 
 			i, pBuf[i], pBuf[i+1], pBuf[i+2], pBuf[i+3], pBuf[i+4], pBuf[i+5],
 			pBuf[i+6], pBuf[i+7], pBuf[i+8], pBuf[i+9], pBuf[i+10], pBuf[i+11], 
 			pBuf[i+12], pBuf[i+13], pBuf[i+14], pBuf[i+15]);
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
+}
+
+void OutputDriveSpeed(
+	PCDROM_SET_SPEED pSetspeed,
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog,
+		_T("Drive speed\n")
+		_T("\t    RequestType: %s\n")
+		_T("\t      ReadSpeed: %uKB/sec\n")
+		_T("\t     WriteSpeed: %uKB/sec\n")
+		_T("\tRotationControl: %s\n"),
+		pSetspeed->RequestType == 0 ? _T("CdromSetSpeed") : _T("CdromSetStreaming"),
+		pSetspeed->ReadSpeed,
+		pSetspeed->WriteSpeed,
+		pSetspeed->RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation")
+		);
+}
+
+void OutputScsiAdress(
+	PDEVICE_DATA pDevData,
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog, 
+		_T("IOCTL_SCSI_GET_ADDRESS\n")
+		_T("\t    Length: %x\n")
+		_T("\tPortNumber: %x\n")
+		_T("\t    PathId: %x\n")
+		_T("\t  TargetId: %x\n")
+		_T("\t       Lun: %x\n"),
+		pDevData->adress.Length,
+		pDevData->adress.PortNumber,
+		pDevData->adress.PathId,
+		pDevData->adress.TargetId,
+		pDevData->adress.Lun);
+}
+
+void OutputStorageAdaptorDescriptor(
+	PDEVICE_DATA pDevData,
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog,
+		_T("STORAGE ADAPTER DESCRIPTOR DATA\n")
+		_T("\t              Version: %08x\n")
+		_T("\t            TotalSize: %08x\n")
+		_T("\tMaximumTransferLength: %08x (bytes)\n")
+		_T("\t MaximumPhysicalPages: %08x\n")
+		_T("\t        AlignmentMask: %08x\n")
+		_T("\t       AdapterUsesPio: %s\n")
+		_T("\t     AdapterScansDown: %s\n")
+		_T("\t      CommandQueueing: %s\n")
+		_T("\t  AcceleratedTransfer: %s\n")
+		_T("\t      BusMajorVersion: %04x\n")
+		_T("\t      BusMinorVersion: %04x\n"),
+		pDevData->adapterDescriptor->Version,
+		pDevData->adapterDescriptor->Size,
+		pDevData->adapterDescriptor->MaximumTransferLength,
+		pDevData->adapterDescriptor->MaximumPhysicalPages,
+		pDevData->adapterDescriptor->AlignmentMask,
+		BOOLEAN_TO_STRING_TRUE_FALSE(pDevData->adapterDescriptor->AdapterUsesPio),
+		BOOLEAN_TO_STRING_TRUE_FALSE(pDevData->adapterDescriptor->AdapterScansDown),
+		BOOLEAN_TO_STRING_TRUE_FALSE(pDevData->adapterDescriptor->CommandQueueing),
+		BOOLEAN_TO_STRING_TRUE_FALSE(pDevData->adapterDescriptor->AcceleratedTransfer),
+		pDevData->adapterDescriptor->BusMajorVersion,
+		pDevData->adapterDescriptor->BusMinorVersion);
 }
 
 void OutputInquiryData(
 	PINQUIRYDATA pInquiry,
-	LPSTR pszVendorId,
-	LPSTR pszProductId,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("Device Info\n"));
-	OutputLogString(fpLog, _T("\tDeviceType:"));
+	OutputLogString(fpLog,
+		_T("Device Info\n")
+		_T("\t          DeviceType: "));
 	switch(pInquiry->DeviceType) {
 	case READ_ONLY_DIRECT_ACCESS_DEVICE:
 		OutputLogString(fpLog, _T("CD/DVD device\n"));
@@ -182,7 +246,8 @@ void OutputInquiryData(
 		OutputLogString(fpLog, _T("Other device\n"));
 		break;
 	}
-	OutputLogString(fpLog, _T("\tDeviceTypeQualifier:"));
+	OutputLogString(fpLog,
+		_T("\t DeviceTypeQualifier: "));
 	switch(pInquiry->DeviceTypeQualifier) {
 	case DEVICE_QUALIFIER_ACTIVE:
 		OutputLogString(fpLog, _T("Active\n"));
@@ -198,65 +263,75 @@ void OutputInquiryData(
 		break;
 	}
 
-	OutputLogString(fpLog, _T("\tDeviceTypeModifier:%d\n"), pInquiry->DeviceTypeModifier);
-	OutputLogString(fpLog, _T("\tRemovableMedia:%s\n"), 
-		pInquiry->RemovableMedia == 0 ? _T("No") :_T( "Yes"));
+	OutputLogString(fpLog,
+		_T("\t  DeviceTypeModifier: %x\n")
+		_T("\t      RemovableMedia: %s\n")
+		_T("\t            Versions: %x\n")
+		_T("\t  ResponseDataFormat: %x\n")
+		_T("\t           HiSupport: %s\n")
+		_T("\t             NormACA: %s\n")
+		_T("\t       TerminateTask: %s\n")
+		_T("\t                AERC: %s\n")
+		_T("\t    AdditionalLength: %x\n")
+		_T("\t       MediumChanger: %s\n")
+		_T("\t           MultiPort: %s\n")
+		_T("\t   EnclosureServices: %s\n")
+		_T("\t           SoftReset: %s\n")
+		_T("\t        CommandQueue: %s\n")
+		_T("\t      LinkedCommands: %s\n")
+		_T("\t  RelativeAddressing: %s\n"),
+		pInquiry->DeviceTypeModifier,
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->RemovableMedia),
+		pInquiry->Versions,
+		pInquiry->ResponseDataFormat,
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->HiSupport),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->NormACA),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->TerminateTask),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->AERC),
+		pInquiry->AdditionalLength,
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->MediumChanger),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->MultiPort),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->EnclosureServices),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->SoftReset),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->CommandQueue),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->LinkedCommands),
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->RelativeAddressing)
+		);
 
-	OutputLogString(fpLog, _T("\tVersions:%d\n"), pInquiry->Versions);
-
-	OutputLogString(fpLog, _T("\tResponseDataFormat:%d\n"), pInquiry->ResponseDataFormat);
-	OutputLogString(fpLog, _T("\tHiSupport:%s\n"),
-		pInquiry->HiSupport == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tNormACA:%s\n"),
-		pInquiry->NormACA == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tTerminateTask:%s\n"),
-		pInquiry->TerminateTask == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tAERC:%s\n"),
-		pInquiry->AERC == 0 ? _T("No") :_T( "Yes"));
-
-	OutputLogString(fpLog, _T("\tAdditionalLength:%d\n"), pInquiry->AdditionalLength);
-
-	OutputLogString(fpLog, _T("\tMediumChanger:%s\n"),
-		pInquiry->MediumChanger == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tMultiPort:%s\n"),
-		pInquiry->MultiPort == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tEnclosureServices:%s\n"),
-		pInquiry->EnclosureServices == 0 ? _T("No") :_T( "Yes"));
-
-	OutputLogString(fpLog, _T("\tSoftReset:%s\n"),
-		pInquiry->SoftReset == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tCommandQueue:%s\n"),
-		pInquiry->CommandQueue == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tLinkedCommands:%s\n"),
-		pInquiry->LinkedCommands == 0 ? _T("No") :_T( "Yes"));
-	OutputLogString(fpLog, _T("\tRelativeAddressing:%s\n"),
-		pInquiry->RelativeAddressing == 0 ? _T("No") :_T( "Yes"));
-
-	strncpy(pszVendorId, (PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId));
-	strncpy(pszProductId, (PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId));
+	strncpy(pDiscData->pszVendorId, (PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId));
+	strncpy(pDiscData->pszProductId, (PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId));
 #ifdef UNICODE
-	TCHAR buf[20+1] = {0};
+	TCHAR buf1[8] = {0};
+	TCHAR buf2[16] = {0};
+	TCHAR buf3[4] = {0};
+	TCHAR buf4[20] = {0};
 	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId), buf, sizeof(buf));
-	OutputLogString(fpLog, _T("\tVendorId:%.8s\n"), buf);
+		(PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId), buf1, sizeof(buf1));
 	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId), buf, sizeof(buf));
-	OutputLogString(fpLog, _T("\tProductId:%.16s\n"), buf);
+		(PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId), buf2, sizeof(buf2));
 	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->ProductRevisionLevel, sizeof(pInquiry->ProductRevisionLevel), buf, sizeof(buf));
-	OutputLogString(fpLog, _T("\tProductRevisionLevel:%.4s\n"), buf);
+		(PCHAR)pInquiry->ProductRevisionLevel, sizeof(pInquiry->ProductRevisionLevel), buf3, sizeof(buf3));
 	MultiByteToWideChar(CP_ACP, 0, 
-		(PCHAR)pInquiry->VendorSpecific, sizeof(pInquiry->VendorSpecific), buf, sizeof(buf));
-	OutputLogString(fpLog, _T("\tVendorSpecific:%.20s\n"), buf);
+		(PCHAR)pInquiry->VendorSpecific, sizeof(pInquiry->VendorSpecific), buf4, sizeof(buf4));
+	OutputLogString(fpLog,
+		_T("\t            VendorId: %.8s\n")
+		_T("\t           ProductId: %.16s\n")
+		_T("\tProductRevisionLevel: %.4s\n")
+		_T("\t      VendorSpecific: %.20s\n"),
+		buf1,
+		buf2,
+		buf3,
+		buf4);
 #else
-	OutputLogString(fpLog, _T("\tVendorId:%.8s\n"), pInquiry->VendorId);
-	OutputLogString(fpLog, _T("\tProductId:%.16s\n"), pInquiry->ProductId);
-	OutputLogString(fpLog, _T("\tProductRevisionLevel:%.4s\n"), pInquiry->ProductRevisionLevel);
-	OutputLogString(fpLog, _T("\tVendorSpecific:%.20s\n"), pInquiry->VendorSpecific);
-#endif
-
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
+	OutputLogString(fpLog,
+		_T("\t            VendorId: %.8s\n")
+		_T("\t           ProductId: %.16s\n")
+		_T("\tProductRevisionLevel: %.4s\n")
+		_T("\t      VendorSpecific: %.20s\n"),
+		pInquiry->VendorId,
+		pInquiry->ProductId,
+		pInquiry->ProductRevisionLevel,
+		pInquiry->VendorSpecific);
 #endif
 }
 
@@ -272,73 +347,90 @@ void OutputDVDStructureFormat(
 	switch(pFormat[i]) {
 	case DvdPhysicalDescriptor:
 	{
-		OutputLogString(fpLog, _T("\tPhysicalFormatInformation\n"));
-		OutputLogString(fpLog, _T("\t\tBookVersion:%d\n"), pStructure[4] & 0x0F);
 		LPCTSTR lpBookType[] = {
-			_T("DVD-ROM"), _T("DVD-RAM"), _T("DVD-R"), _T("DVD-RW"), _T("HD DVD-ROM"), _T("HD DVD-RAM"),
-			_T("HD DVD-R"), _T("Reserved"), _T("Reserved"),	_T("DVD+RW"), _T("DVD+R"), _T("Reserved"),
+			_T("DVD-ROM"), _T("DVD-RAM"), _T("DVD-R"), _T("DVD-RW"),
+			_T("HD DVD-ROM"), _T("HD DVD-RAM"), _T("HD DVD-R"), _T("Reserved"),
+			_T("Reserved"), _T("DVD+RW"), _T("DVD+R"), _T("Reserved"),
 			_T("Reserved"), _T("DVD+RW DL"), _T("DVD+R DL"), _T("Reserved")
 		};
-		OutputLogString(fpLog, _T("\t\tBookType:%s\n"), lpBookType[pStructure[4]>>4&0x0F]);
 
 		LPCTSTR lpMaximumRate[] = {
-			_T("2.52Mbps"), _T("5.04Mbps"), _T("10.08Mbps"), _T("20.16Mbps"), _T("30.24Mbps"), _T("Reserved"),
-			_T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
+			_T("2.52Mbps"), _T("5.04Mbps"), _T("10.08Mbps"), _T("20.16Mbps"),
+			_T("30.24Mbps"), _T("Reserved"),	_T("Reserved"), _T("Reserved"),
+			_T("Reserved"), _T("Reserved"),	_T("Reserved"), _T("Reserved"),
 			_T("Reserved"), _T("Reserved"), _T("Not Specified")
 		};
-		OutputLogString(fpLog, _T("\t\tMinimumRate:%s\n"), lpMaximumRate[pStructure[5]&0x0F]);
-		OutputLogString(fpLog, _T("\t\tDiskSize:%s\n"), (pStructure[5] & 0xF0) == 0 ? _T("120mm") : _T("80mm"));
 
 		LPCTSTR lpLayerType[] = {
 			_T("Layer contains embossed data"), _T("Layer contains recordable data"), 
 			_T("Layer contains rewritable data"), _T("Reserved")
 		};
-		OutputLogString(fpLog, _T("\t\tLayerType:%s\n"), lpLayerType[pStructure[6]&0x0F]);
-		OutputLogString(fpLog, _T("\t\tTrackPath:%s\n"), 
-			(pStructure[6] & 0x10) == 0 ? _T("Parallel Track Path") : _T("Opposite Track Path"));
-		OutputLogString(fpLog, _T("\t\tNumberOfLayers:%s\n"), 
-			(pStructure[6] & 0x60) == 0 ? _T("Single Layer") : _T("Double Layer"));
 
 		LPCTSTR lpTrackDensity[] = {
-			_T("0.74ƒÊm/track"), _T("0.80ƒÊm/track"), _T("0.615ƒÊm/track"), _T("0.40ƒÊm/track"),
-			_T("0.34ƒÊm/track"), _T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
-			_T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved")
+			_T("0.74ƒÊm/track"), _T("0.80ƒÊm/track"), _T("0.615ƒÊm/track"),
+			_T("0.40ƒÊm/track"), _T("0.34ƒÊm/track"), _T("Reserved"),
+			_T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
+			_T("Reserved"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
+			_T("Reserved"), _T("Reserved")
 		};
-		OutputLogString(fpLog, _T("\t\tTrackDensity:%s\n"), lpTrackDensity[pStructure[7]&0x0F]);
 
 		LPCTSTR lpLinearDensity[] = {
-			_T("0.267ƒÊm/bit"), _T("0.293ƒÊm/bit"), _T("0.409 to 0.435ƒÊm/bit"), _T("Reserved"),
-			_T("0.280 to 0.291ƒÊm/bit"), _T("0.153ƒÊm/bit"), _T("0.130 to 0.140ƒÊm/bit"),
-			_T("Reserved"), _T("0.353ƒÊm/bit"), _T("Reserved"), _T("Reserved"), _T("Reserved"),
-			_T("Reserved"), _T("Reserved"), _T("Reserved")
+			_T("0.267ƒÊm/bit"), _T("0.293ƒÊm/bit"), _T("0.409 to 0.435ƒÊm/bit"),
+			_T("Reserved"),	_T("0.280 to 0.291ƒÊm/bit"), _T("0.153ƒÊm/bit"),
+			_T("0.130 to 0.140ƒÊm/bit"), _T("Reserved"), _T("0.353ƒÊm/bit"),
+			_T("Reserved"), _T("Reserved"), _T("Reserved"),	_T("Reserved"),
+			_T("Reserved"), _T("Reserved")
 		};
-		OutputLogString(fpLog, _T("\t\tLinearDensity:%s\n"), lpLinearDensity[pStructure[7]>>4&0x0F]);
 
 		LONG ulStartSectorNum = MAKELONG(MAKEWORD(pStructure[11], 
 			pStructure[10]), MAKEWORD(pStructure[9], pStructure[8]));
-		OutputLogString(fpLog, _T("\t\tStartDataSector:%d(0x%X)\n"), 
-			ulStartSectorNum, ulStartSectorNum);
+
 		LONG ulEndSectorNum = MAKELONG(MAKEWORD(pStructure[15], 
 			pStructure[14]), MAKEWORD(pStructure[13], pStructure[12]));
-		OutputLogString(fpLog, _T("\t\tEndDataSector:%d(0x%X)\n"), 
-			ulEndSectorNum, ulEndSectorNum);
+
 		*nDVDSectorSize = ulEndSectorNum - ulStartSectorNum + 1;
 		INT ulEndSectorLayer0 = MAKELONG(MAKEWORD(pStructure[19], 
 			pStructure[18]), MAKEWORD(pStructure[17], pStructure[16]));
-		OutputLogString(fpLog, _T("\t\tEndLayerZeroSector:%X\n"), ulEndSectorLayer0);
 
-		OutputLogString(fpLog, _T("\t\tBCAFlag:%s\n"), 
+		OutputLogString(fpLog, _T(
+			"\tPhysicalFormatInformation\n")
+			_T("\t\t       BookVersion: %d\n")
+			_T("\t\t          BookType: %s\n")
+			_T("\t\t       MinimumRate: %s\n")
+			_T("\t\t          DiskSize: %s\n")
+			_T("\t\t         LayerType: %s\n")
+			_T("\t\t         TrackPath: %s\n")
+			_T("\t\t    NumberOfLayers: %s\n")
+			_T("\t\t      TrackDensity: %s\n")
+			_T("\t\t     LinearDensity: %s\n")
+			_T("\t\t   StartDataSector: %d(0x%x)\n")
+			_T("\t\t     EndDataSector: %d(0x%x)\n")
+			_T("\t\tEndLayerZeroSector: %x\n")
+			_T("\t\t           BCAFlag: %s\n")
+			_T("\t\t     MediaSpecific: "),
+			pStructure[4] & 0x0F,
+			lpBookType[pStructure[4]>>4&0x0F],
+			lpMaximumRate[pStructure[5]&0x0F],
+			(pStructure[5] & 0xF0) == 0 ? _T("120mm") : _T("80mm"),
+			lpLayerType[pStructure[6]&0x0F],
+			(pStructure[6] & 0x10) == 0 ? _T("Parallel Track Path") : _T("Opposite Track Path"),
+			(pStructure[6] & 0x60) == 0 ? _T("Single Layer") : _T("Double Layer"),
+			lpTrackDensity[pStructure[7]&0x0F],
+			lpLinearDensity[pStructure[7]>>4&0x0F],
+			ulStartSectorNum, ulStartSectorNum,
+			ulEndSectorNum, ulEndSectorNum,
+			ulEndSectorLayer0,
 			(pStructure[20] & 0x80) == 0 ? _T("None") : _T("Exist"));
 
-		OutputLogString(fpLog, _T("\t\tMediaSpecific:"));
 		for(ULONG k = 0; k < 2031; k++) {
-			OutputLogString(fpLog, _T("%02X"), pStructure[21+k]);
+			OutputLogString(fpLog, _T("%02x"), pStructure[21+k]);
 		}
 		OutputLogString(fpLog, _T("\n"));
 		break;
 	}
 	case DvdCopyrightDescriptor:
-		OutputLogString(fpLog, _T("\tCopyrightProtectionType:"));
+		OutputLogString(fpLog, _T(
+			"\tCopyrightProtectionType: "));
 		switch(pStructure[4]) {
 		case 0:
 			OutputLogString(fpLog, _T("No\n"));
@@ -356,66 +448,64 @@ void OutputDVDStructureFormat(
 			OutputLogString(fpLog, _T("AACS with BD content\n"));
 			break;
 		default:
-			OutputLogString(fpLog, _T("Unknown:[%02X]\n"), pStructure[4]);
+			OutputLogString(fpLog, _T("Unknown: %02x\n"), pStructure[4]);
 			break;
 		}
 		OutputLogString(fpLog, 
-			_T("\tRegionManagementInformation:%02X\n"), pStructure[5]);
+			_T("\tRegionManagementInformation: %02x\n"), pStructure[5]);
 		break;
 	case DvdDiskKeyDescriptor:
-		OutputLogString(fpLog, _T("\tDiskKeyData:"));
+		OutputLogString(fpLog, _T("\tDiskKeyData: "));
 		for(ULONG k = 0; k < 2048; k++) {
-			OutputLogString(fpLog, _T("%02X"), pStructure[4+k]);
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
 		}
 		OutputLogString(fpLog, _T("\n"));
 		break;
 	case DvdBCADescriptor:
-		OutputLogString(fpLog, _T("\tBCAInformation:"));
+		OutputLogString(fpLog, _T("\tBCAInformation: "));
 		for(ULONG k = 0; 
 			k < pStructureLength[i] - sizeof(DVD_DESCRIPTOR_HEADER); k++) {
-			OutputLogString(fpLog, _T("%02X"), pStructure[4+k]);
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
 		}
 		OutputLogString(fpLog, _T("\n"));
 		break;
 	case DvdManufacturerDescriptor:
-		OutputLogString(fpLog, _T("\tManufacturingInformation:"));
+		OutputLogString(fpLog, _T("\tManufacturingInformation: "));
 		for(ULONG k = 0; k < 2048; k++) {
-			OutputLogString(fpLog, _T("%02X"), pStructure[4+k]);
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
 		}
 		OutputLogString(fpLog, _T("\n"));
 		break;
 	case 6:
-		OutputLogString(fpLog, _T("\tmedia ID:"));
+		OutputLogString(fpLog, _T("\tmedia ID: "));
 		for(ULONG k = 0; 
 			k < pStructureLength[i] - sizeof(DVD_DESCRIPTOR_HEADER); k++) {
-			OutputLogString(fpLog, _T("%02X"), pStructure[4+k]);
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
 		}
 		OutputLogString(fpLog, _T("\n"));
 		break;
 	case 7:
-		OutputLogString(fpLog, _T("\tMedia Key Block Total Packs %d"), pStructure[3]);
-		OutputLogString(fpLog, _T("\tmedia key block:"));
+		OutputLogString(fpLog,
+			_T("\tMedia Key Block Total Packs: %d")
+			_T("\tmedia key block: "),
+			pStructure[3]);
 		for(ULONG k = 0; 
 			k < pStructureLength[i] - sizeof(DVD_DESCRIPTOR_HEADER); k++) {
-			OutputLogString(fpLog, _T("%02X"), pStructure[4+k]);
+			OutputLogString(fpLog, _T("%02x"), pStructure[4+k]);
 		}
 		OutputLogString(fpLog, _T("\n"));
 		break;
 	default:
-		OutputLogString(fpLog, _T("Unknown:[%02X]\n"), pFormat[i]);
+		OutputLogString(fpLog, _T("\tUnknown: %02x\n"), pFormat[i]);
 		break;
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputFeatureNumber(
 	CONST PUCHAR pConf,
 	ULONG ulAllLen,
 	size_t uiSize,
-	PBOOL bCanCDText,
-	PBOOL bC2ErrorData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	)
 {
@@ -426,8 +516,9 @@ void OutputFeatureNumber(
 		WORD nCode = MAKEWORD(pConf[uiSize+1+n], pConf[uiSize+0+n]);
 		switch(nCode) {
 		case FeatureProfileList:
-			OutputLogString(fpLog, _T("\tFeatureProfileList\n"));
-			OutputLogString(fpLog, _T("\t\t"));
+			OutputLogString(fpLog,
+				_T("\tFeatureProfileList\n")
+				_T("\t\t"));
 			while(n < pConf[uiSize+3]) {
 				OutputFeatureProfileType(fpLog, 
 					MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n]));
@@ -438,8 +529,9 @@ void OutputFeatureNumber(
 			n += sizeof(FEATURE_HEADER);
 			break;
 		case FeatureCore: {
-			OutputLogString(fpLog, _T("\tFeatureCore\n"));
-			OutputLogString(fpLog, _T("\t\tPhysicalInterface:"));
+			OutputLogString(fpLog,
+				_T("\tFeatureCore\n")
+				_T("\t\tPhysicalInterface: "));
 			lVal = MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
 				MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n]));
 			switch(lVal) {
@@ -474,37 +566,34 @@ void OutputFeatureNumber(
 				OutputLogString(fpLog, _T("Vendor Unique\n"));
 				break;
 			default:
-				OutputLogString(fpLog, _T("Reserved:[%08d]\n"), lVal);
+				OutputLogString(fpLog, _T("Reserved: %08d\n"), lVal);
 				break;
 			}
-			OutputLogString(fpLog, _T("\t\tDeviceBusyEvent:%s\n"), 
-				(pConf[uiSize+8+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tINQUIRY2:%s\n"), 
-				(pConf[uiSize+8+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog, 
+				_T("\t\t  DeviceBusyEvent: %s\n")
+				_T("\t\t         INQUIRY2: %s\n"), 
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+8+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+8+n] & 0x02));
 			break;
 		}
 		case FeatureMorphing:
-			OutputLogString(fpLog, _T("\tFeatureMorphing\n"));
-			OutputLogString(fpLog, _T("\t\tAsynchronous:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tOCEvent:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureMorphing\n")
+				_T("\t\tAsynchronous: %s\n")
+				_T("\t\t     OCEvent: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02));
 			break;
 		case FeatureRemovableMedium:
-			OutputLogString(fpLog, _T("\tFeatureRemovableMedium\n"));
-			OutputLogString(fpLog, _T("\t\tLockable:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDBML:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDefaultToPrevent:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tEject:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tLoad:%s\n"), 
-				(pConf[uiSize+4+n] & 0x10) == 0x10 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tLoadingMechanism:")); 
+			OutputLogString(fpLog,
+				_T("\tFeatureRemovableMedium\n")
+				_T("\t\t        Lockable: %s\n")
+				_T("\t\tDefaultToPrevent: %s\n")
+				_T("\t\t           Eject: %s\n")
+				_T("\t\tLoadingMechanism: "),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08));
 			switch(pConf[uiSize+4+n] >> 5 & 0x07) {
 			case 0:
 				OutputLogString(fpLog, _T("Caddy/Slot type loading mechanism\n"));
@@ -525,457 +614,430 @@ void OutputFeatureNumber(
 				break;
 			default:
 				OutputLogString(fpLog, 
-					_T("Reserved:[%08d]\n"), pConf[uiSize+4+n] >> 5 & 0x07);
+					_T("Reserved: %08d\n"), pConf[uiSize+4+n] >> 5 & 0x07);
 				break;
 			}
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureWriteProtect:
-			OutputLogString(fpLog, _T("\tFeatureWriteProtect\n"));
-			OutputLogString(fpLog, _T("\t\tSupportsSWPPBit:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSupportsPersistentWriteProtect:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tWriteInhibitDCB:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDiscWriteProtectPAC:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureWriteProtect\n")
+				_T("\t\t               SupportsSWPPBit: %s\n")
+				_T("\t\tSupportsPersistentWriteProtect: %s\n")
+				_T("\t\t               WriteInhibitDCB: %s\n")
+				_T("\t\t           DiscWriteProtectPAC: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08));
 			break;
 		case FeatureRandomReadable:
-			OutputLogString(fpLog, _T("\tFeatureRandomReadable\n"));
 			lVal = MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
 				MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n]));
-			OutputLogString(fpLog, _T("\t\tLogicalBlockSize:%d\n"), lVal);
 			wVal = MAKEWORD(pConf[uiSize+9+n], pConf[uiSize+8+n]);
-			OutputLogString(fpLog, _T("\t\tBlocking:%d\n"), wVal);
-			OutputLogString(fpLog, _T("\t\tErrorRecoveryPagePresent:%s\n"), 
-				(pConf[uiSize+10+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureRandomReadable\n")
+				_T("\t\t        LogicalBlockSize: %d\n")
+				_T("\t\t                Blocking: %d\n")
+				_T("\t\tErrorRecoveryPagePresent: %s\n"),
+				lVal,
+				wVal,
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+10+n] & 0x01));
 			break;
 		case FeatureMultiRead:
 			OutputLogString(fpLog, _T("\tFeatureMultiRead\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureCdRead:
-			OutputLogString(fpLog, _T("\tFeatureCdRead\n"));
-			OutputLogString(fpLog, _T("\t\tCDText:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			*bCanCDText = (BOOL)(pConf[uiSize+4+n] & 0x01);
-			OutputLogString(fpLog, _T("\t\tC2ErrorData:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			*bC2ErrorData = (BOOL)((pConf[uiSize+4+n] & 0x02) >> 1);
-			OutputLogString(fpLog, _T("\t\tDigitalAudioPlay:%s\n"), 
-				(pConf[uiSize+4+n] & 0x80) == 0x80 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureCdRead\n")
+				_T("\t\t          CDText: %s\n")
+				_T("\t\t     C2ErrorData: %s\n")
+				_T("\t\tDigitalAudioPlay: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x80));
+			pDiscData->bCanCDText = (BOOL)(pConf[uiSize+4+n] & 0x01);
+			pDiscData->bC2ErrorData = (BOOL)((pConf[uiSize+4+n] & 0x02) >> 1);
 			break;
 		case FeatureDvdRead:
-			OutputLogString(fpLog, _T("\tFeatureDvdRead\n"));
-			OutputLogString(fpLog, _T("\t\tMulti110:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDualDashR:%s\n"), 
-				(pConf[uiSize+6+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDualDashRW:%s\n"), 
-				(pConf[uiSize+6+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDvdRead\n")
+				_T("\t\t  Multi110: %s\n")
+				_T("\t\t DualDashR: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+6+n] & 0x01));
 			break;
 		case FeatureRandomWritable:
-			OutputLogString(fpLog, _T("\tFeatureRandomWritable\n"));
-			lVal = MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
-				MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n]));
-			OutputLogString(fpLog, _T("\t\tLastLBA:%d\n"), lVal);
-			lVal = MAKELONG(MAKEWORD(pConf[uiSize+11+n], pConf[uiSize+10+n]), 
-				MAKEWORD(pConf[uiSize+9+n], pConf[uiSize+8+n]));
-			OutputLogString(fpLog, _T("\t\tLogicalBlockSize:%d\n"), lVal);
-			wVal = MAKEWORD(pConf[uiSize+13+n], pConf[uiSize+12+n]);
-			OutputLogString(fpLog, _T("\t\tBlocking:%d\n"), wVal);
-			OutputLogString(fpLog, _T("\t\tErrorRecoveryPagePresent:%s\n"), 
-				(pConf[uiSize+14+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureRandomWritable\n")
+				_T("\t\t                 LastLBA: %d\n")
+				_T("\t\t        LogicalBlockSize: %d\n")
+				_T("\t\t                Blocking: %d\n")
+				_T("\t\tErrorRecoveryPagePresent: %s\n"),
+				MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
+					MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n])),
+				MAKELONG(MAKEWORD(pConf[uiSize+11+n], pConf[uiSize+10+n]), 
+					MAKEWORD(pConf[uiSize+9+n], pConf[uiSize+8+n])),
+				MAKEWORD(pConf[uiSize+13+n], pConf[uiSize+12+n]),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+14+n] & 0x01));
 			break;
 		case FeatureIncrementalStreamingWritable:
-			OutputLogString(fpLog, _T("\tFeatureIncrementalStreamingWritable\n"));
-			wVal = MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n]);
-			OutputLogString(fpLog, 
-				_T("\t\tDataTypeSupported:[%s]\n"), wVal >= 1 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tBufferUnderrunFree:%s\n"), 
-				(pConf[uiSize+6+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tAddressModeReservation:%s\n"), 
-				(pConf[uiSize+6+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tTrackRessourceInformation:%s\n"), 
-				(pConf[uiSize+6+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, 
-				_T("\t\tNumberOfLinkSizes:%d\n"), pConf[uiSize+7+n]);
+			OutputLogString(fpLog,
+				_T("\tFeatureIncrementalStreamingWritable\n")
+				_T("\t\t        DataTypeSupported: %s\n")
+				_T("\t\t       BufferUnderrunFree: %s\n")
+				_T("\t\t   AddressModeReservation: %s\n")
+				_T("\t\tTrackRessourceInformation: %s\n")
+				_T("\t\t        NumberOfLinkSizes: %d\n"),
+				BOOLEAN_TO_STRING_YES_NO(MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n])),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+6+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+6+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+6+n] & 0x04),
+				pConf[uiSize+7+n]
+				);
 			for(INT i = 1; i <= pConf[uiSize+7+n]; i++) {
 				OutputLogString(fpLog, 
-					_T("\t\tLinkSize%d:%d\n"), i, pConf[uiSize+7+i+n]);
+					_T("\t\tLinkSize%d: %d\n"), i, pConf[uiSize+7+i+n]);
 			}
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureSectorErasable:
 			OutputLogString(fpLog, _T("\tFeatureSectorErasable\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureFormattable:
-			OutputLogString(fpLog, _T("\tFeatureFormattable\n"));
-			OutputLogString(fpLog, _T("\t\tFullCertification:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tQuickCertification:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSpareAreaExpansion:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tRENoSpareAllocated:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tRRandomWritable:%s\n"), 
-				(pConf[uiSize+8+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureFormattable\n")
+				_T("\t\t FullCertification: %s\n")
+				_T("\t\tQuickCertification: %s\n")
+				_T("\t\tSpareAreaExpansion: %s\n")
+				_T("\t\tRENoSpareAllocated: %s\n")
+				_T("\t\t   RRandomWritable: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+8+n] & 0x01));
 			break;
 		case FeatureDefectManagement:
-			OutputLogString(fpLog, _T("\tFeatureDefectManagement\n"));
-			OutputLogString(fpLog, _T("\t\tSupplimentalSpareArea:%s\n"), 
-				(pConf[uiSize+4+n] & 0x80) == 0x80 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDefectManagement\n")
+				_T("\t\tSupplimentalSpareArea: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x80));
 			break;
 		case FeatureWriteOnce:
-			OutputLogString(fpLog, _T("\tFeatureWriteOnce\n"));
-			lVal = MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
-				MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n]));
-			OutputLogString(fpLog, _T("\t\tLogicalBlockSize:%d\n"), lVal);
-			wVal = MAKEWORD(pConf[uiSize+9+n], pConf[uiSize+8+n]);
-			OutputLogString(fpLog, _T("\t\tBlocking:%d\n"), wVal);
-			OutputLogString(fpLog, _T("\t\tErrorRecoveryPagePresent:%s\n"), 
-				(pConf[uiSize+10+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureWriteOnce\n")
+				_T("\t\t        LogicalBlockSize: %d\n")
+				_T("\t\t                Blocking: %d\n")
+				_T("\t\tErrorRecoveryPagePresent: %s\n"),
+				MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
+					MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n])),
+				MAKEWORD(pConf[uiSize+9+n], pConf[uiSize+8+n]),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+10+n] & 0x01));
 			break;
 		case FeatureRestrictedOverwrite:
 			OutputLogString(fpLog, _T("\tFeatureRestrictedOverwrite\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureCdrwCAVWrite:
 			OutputLogString(fpLog, _T("\tFeatureCdrwCAVWrite\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureMrw:
-			OutputLogString(fpLog, _T("\tFeatureMrw\n"));
-			OutputLogString(fpLog, _T("\t\tWrite:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDvdPlusRead:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDvdPlusWrite:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureMrw\n")
+				_T("\t\t       Write: %s\n")
+				_T("\t\t DvdPlusRead: %s\n")
+				_T("\t\tDvdPlusWrite: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04));
 			break;
 		case FeatureEnhancedDefectReporting:
-			OutputLogString(fpLog, _T("\tFeatureEnhancedDefectReporting\n"));
-			OutputLogString(fpLog, _T("\t\tDRTDMSupported:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, 
-				_T("\t\tNumberOfDBICacheZones:%d\n"), pConf[uiSize+5+n]);
-			wVal = MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]);
-			OutputLogString(fpLog, _T("\t\tNumberOfEntries:%d\n"), wVal);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureEnhancedDefectReporting\n")
+				_T("\t\t       DRTDMSupported: %s\n")
+				_T("\t\tNumberOfDBICacheZones: %d\n")
+				_T("\t\t      NumberOfEntries: %d\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				pConf[uiSize+5+n],
+				MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]));
 			break;
 		case FeatureDvdPlusRW:
-			OutputLogString(fpLog, _T("\tFeatureDvdPlusRW\n"));
-			OutputLogString(fpLog, _T("\t\tWrite:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tCloseOnly:%s\n"), 
-				(pConf[uiSize+5+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tQuickStart:%s\n"), 
-				(pConf[uiSize+5+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDvdPlusRW\n")
+				_T("\t\t     Write: %s\n")
+				_T("\t\t CloseOnly: %s\n")
+				_T("\t\tQuickStart: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+5+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+5+n] & 0x02));
 			break;
 		case FeatureDvdPlusR:
-			OutputLogString(fpLog, _T("\tFeatureDvdPlusR\n"));
-			OutputLogString(fpLog, _T("\t\tWrite:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDvdPlusR\n")
+				_T("\t\tWrite: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01));
 			break;
 		case FeatureRigidRestrictedOverwrite:
-			OutputLogString(fpLog, _T("\tFeatureRigidRestrictedOverwrite\n"));
-			OutputLogString(fpLog, _T("\t\tBlank:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tIntermediate:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDefectStatusDataRead:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tDefectStatusDataGenerate:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureRigidRestrictedOverwrite\n")
+				_T("\t\t                   Blank: %s\n")
+				_T("\t\t            Intermediate: %s\n")
+				_T("\t\t    DefectStatusDataRead: %s\n")
+				_T("\t\tDefectStatusDataGenerate: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08));
 			break;
 		case FeatureCdTrackAtOnce:
-			OutputLogString(fpLog, _T("\tFeatureCdTrackAtOnce\n"));
-			OutputLogString(fpLog, _T("\t\tRWSubchannelsRecordable:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tCdRewritable:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tTestWriteOk:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tRWSubchannelPackedOk:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tRWSubchannelRawOk:%s\n"), 
-				(pConf[uiSize+4+n] & 0x10) == 0x10 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tBufferUnderrunFree:%s\n"), 
-				(pConf[uiSize+4+n] & 0x40) == 0x40 ? _T("Yes") : _T("No"));
-			wVal = MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]);
-			OutputLogString(fpLog, _T("\t\tDataTypeSupported:[%s]\n"), 
-				wVal >= 1 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureCdTrackAtOnce\n")
+				_T("\t\tRWSubchannelsRecordable: %s\n")
+				_T("\t\t           CdRewritable: %s\n")
+				_T("\t\t            TestWriteOk: %s\n")
+				_T("\t\t   RWSubchannelPackedOk: %s\n")
+				_T("\t\t      RWSubchannelRawOk: %s\n")
+				_T("\t\t     BufferUnderrunFree: %s\n")
+				_T("\t\t      DataTypeSupported: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x10),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x40),
+				BOOLEAN_TO_STRING_YES_NO(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n])));
 			break;
 		case FeatureCdMastering:
-			OutputLogString(fpLog, _T("\tFeatureCdMastering\n"));
-			OutputLogString(fpLog, _T("\t\tRWSubchannelsRecordable:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tCdRewritable:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tTestWriteOk:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tRRawRecordingOk:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tRawMultiSessionOk:%s\n"), 
-				(pConf[uiSize+4+n] & 0x10) == 0x10 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSessionAtOnceOk:%s\n"), 
-				(pConf[uiSize+4+n] & 0x20) == 0x20 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tBufferUnderrunFree:%s\n"), 
-				(pConf[uiSize+4+n] & 0x40) == 0x40 ? _T("Yes") : _T("No"));
-			lVal = MAKELONG(MAKEWORD(0, pConf[uiSize+7+n]), 
-				MAKEWORD(pConf[uiSize+6+n], pConf[uiSize+5+n]));
-			OutputLogString(fpLog, _T("\t\tMaximumCueSheetLength:%d\n"), lVal);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureCdMastering\n")
+				_T("\t\tRWSubchannelsRecordable: %s\n")
+				_T("\t\t           CdRewritable: %s\n")
+				_T("\t\t            TestWriteOk: %s\n")
+				_T("\t\t        RRawRecordingOk: %s\n")
+				_T("\t\t      RawMultiSessionOk: %s\n")
+				_T("\t\t        SessionAtOnceOk: %s\n")
+				_T("\t\t     BufferUnderrunFree: %s\n")
+				_T("\t\t  MaximumCueSheetLength: %d\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x10),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x20),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x40),
+				MAKELONG(MAKEWORD(0, pConf[uiSize+7+n]), 
+					MAKEWORD(pConf[uiSize+6+n], pConf[uiSize+5+n]))
+				);
 			break;
 		case FeatureDvdRecordableWrite:
-			OutputLogString(fpLog, _T("\tFeatureDvdRecordableWrite\n"));
-			OutputLogString(fpLog, _T("\t\tDVD_RW:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tTestWrite:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tRDualLayer:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tBufferUnderrunFree:%s\n"), 
-				(pConf[uiSize+4+n] & 0x40) == 0x40 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDvdRecordableWrite\n")
+				_T("\t\t            DVD_RW: %s\n")
+				_T("\t\t         TestWrite: %s\n")
+				_T("\t\t        RDualLayer: %s\n")
+				_T("\t\tBufferUnderrunFree: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x40));
 			break;
 		case FeatureLayerJumpRecording:
-			OutputLogString(fpLog, _T("\tFeatureLayerJumpRecording\n"));
-			OutputLogString(fpLog, 
-				_T("\t\tNumberOfLinkSizes:%d\n"), pConf[uiSize+7+n]);
+			OutputLogString(fpLog,
+				_T("\tFeatureLayerJumpRecording\n")
+				_T("\t\tNumberOfLinkSizes: %d\n"),
+				pConf[uiSize+7+n]);
 			for(INT i = 1; i <= pConf[uiSize+7+n]; i++) {
 				OutputLogString(fpLog, 
-					_T("\t\tLinkSize%d:%d\n"), i, pConf[uiSize+7+i+n]);
+					_T("\t\tLinkSize%d: %d\n"), i, pConf[uiSize+7+i+n]);
 			}
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureCDRWMediaWriteSupport:
-			OutputLogString(fpLog, _T("\tFeatureCDRWMediaWriteSupport\n"));
-			OutputLogString(fpLog, _T("\t\tSubtype0:%s\n"), 
-				(pConf[uiSize+5+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSubtype1:%s\n"), 
-				(pConf[uiSize+5+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSubtype2:%s\n"), 
-				(pConf[uiSize+5+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSubtype3:%s\n"), 
-				(pConf[uiSize+5+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSubtype4:%s\n"), 
-				(pConf[uiSize+5+n] & 0x10) == 0x10 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSubtype5:%s\n"), 
-				(pConf[uiSize+5+n] & 0x20) == 0x20 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSubtype6:%s\n"), 
-				(pConf[uiSize+5+n] & 0x40) == 0x40 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSubtype7:%s\n"), 
-				(pConf[uiSize+5+n] & 0x80) == 0x80 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog, _T(
+				"\tFeatureCDRWMediaWriteSupport\n"));
+			for(UINT i = 1, a = 0; i < 0x100; i<<=1, a++) { 
+				OutputLogString(fpLog, _T(
+					"\t\tSubtype %d: %s\n"),
+				a, BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+5+n] & i));
+			}
 			break;
 		case FeatureBDRPseudoOverwrite:
 			OutputLogString(fpLog, _T("\tFeatureBDRPseudoOverwrite\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureDvdPlusRWDualLayer:
-			OutputLogString(fpLog, _T("\tFeatureDvdPlusRWDualLayer\n"));
-			OutputLogString(fpLog, _T("\t\tWrite:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tCloseOnly:%s\n"), 
-				(pConf[uiSize+5+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tQuickStart:%s\n"), 
-				(pConf[uiSize+5+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDvdPlusRWDualLayer\n")
+				_T("\t\t     Write: %s\n")
+				_T("\t\t CloseOnly: %s\n")
+				_T("\t\tQuickStart: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+5+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+5+n] & 0x02));
 			break;
 		case FeatureDvdPlusRDualLayer:
 			OutputLogString(fpLog, _T("\tFeatureDvdPlusRDualLayer\n"));
-			OutputLogString(fpLog, _T("\t\tWrite:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog, _T("\t\tWrite: %s\n"), 
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01));
 			break;
 		case FeatureBDRead:
+			// TODO
 			OutputLogString(fpLog, _T("\tFeatureBDRead\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureBDWrite:
+			// TODO
 			OutputLogString(fpLog, _T("\tFeatureBDWrite\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureTSR:
 			OutputLogString(fpLog, _T("\tFeatureTSR\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureHDDVDRead:
+			// TODO
 			OutputLogString(fpLog, _T("\tFeatureHDDVDRead\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureHDDVDWrite:
+			// TODO
 			OutputLogString(fpLog, _T("\tFeatureHDDVDWrite\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureHybridDisc:
-			OutputLogString(fpLog, _T("\tFeatureHybridDisc\n"));
-			OutputLogString(fpLog, _T("\t\tResetImmunity:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog, 
+				_T("\tFeatureHybridDisc\n")
+				_T("\t\tResetImmunity: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01));
 			break;
 		case FeaturePowerManagement:
 			OutputLogString(fpLog, _T("\tFeaturePowerManagement\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureSMART:
-			OutputLogString(fpLog, _T("\tFeatureSMART\n"));
-			OutputLogString(fpLog, 
-				_T("\t\tFaultFailureReportingPagePresent:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureSMART\n")
+				_T("\t\tFaultFailureReportingPagePresent: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01));
 			break;
 		case FeatureEmbeddedChanger:
-			OutputLogString(fpLog, _T("\tFeatureEmbeddedChanger\n"));
-			OutputLogString(fpLog, _T("\t\tSupportsDiscPresent:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSideChangeCapable:%s\n"), 
-				(pConf[uiSize+4+n] & 0x10) == 0x10 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tHighestSlotNumber [%d]\n"), 
+			OutputLogString(fpLog,
+				_T("\tFeatureEmbeddedChanger\n")
+				_T("\t\tSupportsDiscPresent: %s\n")
+				_T("\t\t  SideChangeCapable: %s\n")
+				_T("\t\t  HighestSlotNumber: %d\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x10),
 				pConf[uiSize+7+n] & 0x1F);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureCDAudioAnalogPlay:
-			OutputLogString(fpLog, _T("\tFeatureCDAudioAnalogPlay\n"));
-			OutputLogString(fpLog, _T("\t\tSeperateVolume:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSeperateChannelMute:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tScanSupported:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			wVal = MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]);
-			OutputLogString(fpLog, _T("\t\tNumerOfVolumeLevels:%d\n"), wVal);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureCDAudioAnalogPlay\n")
+				_T("\t\t     SeperateVolume: %s\n")
+				_T("\t\tSeperateChannelMute: %s\n")
+				_T("\t\t      ScanSupported: %s\n")
+				_T("\t\tNumerOfVolumeLevels: %d\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]));
 			break;
 		case FeatureMicrocodeUpgrade:
-			OutputLogString(fpLog, _T("\tFeatureMicrocodeUpgrade\n"));
-			OutputLogString(fpLog, _T("\t\tM5:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureMicrocodeUpgrade\n")
+				_T("\t\tM5: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01));
 			break;
 		case FeatureTimeout:
-			OutputLogString(fpLog, _T("\tFeatureTimeout\n"));
-			OutputLogString(fpLog, _T("\t\tGroup3:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			wVal = MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]);
-			OutputLogString(fpLog, _T("\t\tUnitLength:%d\n"), wVal);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureTimeout\n")
+				_T("\t\t    Group3: %s\n")
+				_T("\t\tUnitLength: %d\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]));
 			break;
 		case FeatureDvdCSS:
-			OutputLogString(fpLog, _T("\tFeatureDvdCSS\n"));
-			OutputLogString(fpLog, _T("\t\tCssVersion:%d\n"), pConf[uiSize+7+n]);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDvdCSS\n")
+				_T("\t\tCssVersion: %d\n"),
+				pConf[uiSize+7+n]);
 			break;
 		case FeatureRealTimeStreaming:
-			OutputLogString(fpLog, _T("\tFeatureRealTimeStreaming\n"));
-			OutputLogString(fpLog, _T("\t\tStreamRecording:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tWriteSpeedInGetPerf:%s\n"), 
-				(pConf[uiSize+4+n] & 0x02) == 0x02 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tWriteSpeedInMP2A:%s\n"), 
-				(pConf[uiSize+4+n] & 0x04) == 0x04 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSetCDSpeed:%s\n"), 
-				(pConf[uiSize+4+n] & 0x08) == 0x08 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tReadBufferCapacityBlock:%s\n"), 
-				(pConf[uiSize+4+n] & 0x10) == 0x10 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, _T("\t\tSetMinimumPerformance:%s\n"), 
-				(pConf[uiSize+4+n] & 0x20) == 0x20 ? _T("Yes") : _T("No"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureRealTimeStreaming\n")
+				_T("\t\t        StreamRecording: %s\n")
+				_T("\t\t    WriteSpeedInGetPerf: %s\n")
+				_T("\t\t       WriteSpeedInMP2A: %s\n")
+				_T("\t\t             SetCDSpeed: %s\n")
+				_T("\t\tReadBufferCapacityBlock: %s\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x04),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x08),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x10));
 			break;
 		case FeatureLogicalUnitSerialNumber:
-			OutputLogString(fpLog, _T("\tFeatureLogicalUnitSerialNumber\n"));
-			OutputLogString(fpLog, _T("\t\tSerialNumber:"));
+			OutputLogString(fpLog,
+				_T("\tFeatureLogicalUnitSerialNumber\n")
+				_T("\t\tSerialNumber: "));
 			for(INT i = 0; i < pConf[uiSize+3+n]; i++) {
 				OutputLogString(fpLog, _T("%c"), pConf[uiSize+4+i+n]);
 			}
 			OutputLogString(fpLog, _T("\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureMediaSerialNumber:
 			OutputLogString(fpLog, _T("\tFeatureMediaSerialNumber\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureDiscControlBlocks:
 			OutputLogString(fpLog, _T("\tFeatureDiscControlBlocks\n"));
 			for(INT i = 0; i < pConf[uiSize+3+n]; i+=4) {
-				OutputLogString(fpLog, _T("\t\tContentDescriptor %02d:"), i/4);
-				lVal = MAKELONG(MAKEWORD(pConf[uiSize+7+i+n], pConf[uiSize+6+i+n]), 
-					MAKEWORD(pConf[uiSize+5+i+n], pConf[uiSize+4+i+n]));
-				OutputLogString(fpLog, _T("%08d\n"), lVal);
+				OutputLogString(fpLog, _T(
+					"\t\tContentDescriptor %02d: %08d\n"), i / 4, 
+					MAKELONG(MAKEWORD(pConf[uiSize+7+i+n], pConf[uiSize+6+i+n]), 
+						MAKEWORD(pConf[uiSize+5+i+n], pConf[uiSize+4+i+n])));
 			}
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		case FeatureDvdCPRM:
-			OutputLogString(fpLog, _T("\tFeatureDvdCPRM\n"));
-			OutputLogString(fpLog, _T("\t\tCPRMVersion:%d\n"), pConf[uiSize+7+n]);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureDvdCPRM\n")
+				_T("\t\tCPRMVersion: %d\n"),
+				pConf[uiSize+7+n]);
 			break;
 		case FeatureFirmwareDate:
-			OutputLogString(fpLog, _T("\tFeatureFirmwareDate\n"));
-			lVal = MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
-				MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n]));
-			OutputLogString(fpLog, _T("\t\tYear:%d\n"), lVal);
-			wVal = MAKEWORD(pConf[uiSize+9+n], pConf[uiSize+8+n]);
-			OutputLogString(fpLog, _T("\t\tMonth:%d\n"), wVal);
-			wVal = MAKEWORD(pConf[uiSize+11+n], pConf[uiSize+10+n]);
-			OutputLogString(fpLog, _T("\t\tDay:%d\n"), wVal);
-			wVal = MAKEWORD(pConf[uiSize+13+n], pConf[uiSize+12+n]);
-			OutputLogString(fpLog, _T("\t\tHour:%d\n"), wVal);
-			wVal = MAKEWORD(pConf[uiSize+15+n], pConf[uiSize+14+n]);
-			OutputLogString(fpLog, _T("\t\tMinute:%d\n"), wVal);
-			wVal = MAKEWORD(pConf[uiSize+17+n], pConf[uiSize+16+n]);
-			OutputLogString(fpLog, _T("\t\tSeconds:%d\n"), wVal);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog, _T(
+				"\tFeatureFirmwareDate: %04d-%02d-%02d %02d:%02d:%02d\n"),
+				MAKELONG(MAKEWORD(pConf[uiSize+7+n], pConf[uiSize+6+n]), 
+					MAKEWORD(pConf[uiSize+5+n], pConf[uiSize+4+n])),
+				MAKEWORD(pConf[uiSize+9+n], pConf[uiSize+8+n]),
+				MAKEWORD(pConf[uiSize+11+n], pConf[uiSize+10+n]),
+				MAKEWORD(pConf[uiSize+13+n], pConf[uiSize+12+n]),
+				MAKEWORD(pConf[uiSize+15+n], pConf[uiSize+14+n]),
+				MAKEWORD(pConf[uiSize+17+n], pConf[uiSize+16+n]));
 			break;
 		case FeatureAACS:
-			OutputLogString(fpLog, _T("\tFeatureAACS\n"));
-			OutputLogString(fpLog, _T("\t\tBindingNonceGeneration:%s\n"), 
-				(pConf[uiSize+4+n] & 0x01) == 0x01 ? _T("Yes") : _T("No"));
-			OutputLogString(fpLog, 
-				_T("\t\tBindingNonceBlockCount:%d\n"), pConf[uiSize+5+n]);
-			OutputLogString(fpLog, 
-				_T("\t\tNumberOfAGIDs:%d\n"), pConf[uiSize+6+n] & 0x0F);
-			OutputLogString(fpLog, _T("\t\tAACSVersion:%d\n"), pConf[uiSize+7+n]);
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog,
+				_T("\tFeatureAACS\n")
+				_T("\t\tBindingNonceGeneration: %s\n")
+				_T("\t\tBindingNonceBlockCount: %d\n")
+				_T("\t\t         NumberOfAGIDs: %d\n")
+				_T("\t\t           AACSVersion: %d\n"),
+				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
+				pConf[uiSize+5+n],
+				pConf[uiSize+6+n] & 0x0F,
+				pConf[uiSize+7+n]);
 			break;
 		case FeatureVCPS:
 			OutputLogString(fpLog, _T("\tFeatureVCPS\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 			break;
 		default:
 			if(0xFF00 <= nCode && nCode <= 0xFFFF) {
-				OutputLogString(fpLog, 
-					_T("\tVendor Specific. FeatureCode[0x%04X]\n"), nCode);
-				OutputLogString(fpLog, _T("\t\tVendorSpecificData:["));
+				OutputLogString(fpLog,
+					_T("\tVendor Specific. FeatureCode[0x%04X]\n")
+					_T("\t\tVendorSpecificData: "), nCode);
 			}
 			else {
-				OutputLogString(fpLog, 
-					_T("\tReserved. FeatureCode[0x%04X]\n"), nCode);
-				OutputLogString(fpLog, _T("\t\tData:["));
+				OutputLogString(fpLog,
+					_T("\tReserved. FeatureCode[0x%04X]\n")
+					_T("\t\tData: "), nCode);
 			}
 			for(INT i = 0; i < pConf[uiSize+3+n]; i++) {
-				OutputLogString(fpLog, _T("%02X "), pConf[uiSize+4+i+n]);
+				OutputLogString(fpLog, _T("%02x"), pConf[uiSize+4+i+n]);
 			}
-			OutputLogString(fpLog, _T("]\n"));
-			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
+			OutputLogString(fpLog, _T("\n"));
 			break;
+		}
+		if(nCode != FeatureProfileList) {
+			n += pConf[uiSize+3+n] + sizeof(FEATURE_HEADER);
 		}
 	}
 }
@@ -1080,12 +1142,9 @@ void OutputFeatureProfileType(
 			OutputLogString(fpLog, _T("NonStandard"));
 			break;
 		default:
-			OutputLogString(fpLog, _T("Reserved [%X]"), usFeatureProfileType);
+			OutputLogString(fpLog, _T("Reserved [%x]"), usFeatureProfileType);
 			break;
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputParsingSubfile(
@@ -1095,14 +1154,14 @@ void OutputParsingSubfile(
 	FILE* fpSub = CreateOrOpenFileW(pszSubfile, NULL, NULL, NULL, _T(".sub"), _T("rb"), 0, 0);
 	FILE* fpParse = CreateOrOpenFileW(pszSubfile, NULL, NULL, NULL, _T(".sub.txt"), _T(WFLAG), 0, 0);
 	if (!fpSub || !fpParse) {
-		OutputErrorString(_T("Failed to open file .sub [F:%s][L:%d]"), 
+		OutputErrorString(_T("Failed to open file .sub [F:%s][L: %d]"), 
 			_T(__FUNCTION__), __LINE__);
 		return;
 	}
 	ULONG datasize = GetFilesize(fpSub, 0);
 	PUCHAR data = (PUCHAR)malloc(datasize);
 	if(!data) {
-		OutputErrorString(_T("Cannot alloc memory [F:%s][L:%d]\n"), 
+		OutputErrorString(_T("Cannot alloc memory [F:%s][L: %d]\n"), 
 			_T(__FUNCTION__), __LINE__);
 		return;
 	}
@@ -1158,7 +1217,7 @@ void OutputScsiStatus(
 			for(INT i = 0; i < sizeof(aScsiStatus) / sizeof(INT) / 2; i++) {
 				if(swb->ScsiPassThroughDirect.ScsiStatus == aScsiStatus[i][0]) {
 					OutputErrorString(
-						_T("\nSCSI bus status codes:%02X-%s [F:%s][L:%d]\n"), 
+						_T("\nSCSI bus status codes:%02x-%s [F:%s][L: %d]\n"), 
 						aScsiStatus[i][0], (_TCHAR*)aScsiStatus[i][1], 
 						pszFuncname, nLineNum);
 					OutputSense(key, ASC, ASCQ);
@@ -1529,7 +1588,7 @@ void OutputSense(
 		{0x74, 0x40, (_INT)_T("AUTHENTICATION FAILED")}, 
 		{0x74, 0x71, (_INT)_T("LOGICAL UNIT ACCESS NOT AUTHORIZED")} 
 	};
-	OutputErrorString(_T("Sense data, Key:Asc:Ascq: %02X:%02X:%02X"), byKey, byAsc, byAscq);
+	OutputErrorString(_T("Sense data, Key:Asc:Ascq:%02x:%02x:%02x"), byKey, byAsc, byAscq);
 
 	for(INT i = 0; i < sizeof(aSenseKey) / sizeof(INT) / 2; i++) {
 		if(byKey == aSenseKey[i][0]) {
@@ -1573,13 +1632,10 @@ void OutputAlignSub96(
 
 	for(INT i = 0, ch = 0x50; i < CD_RAW_READ_SUBCODE_SIZE; i += 12, ch++) {
 		OutputLogString(fpLog, 
-			_T("\t%c %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"), 
+			_T("\t%c %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n"), 
 			ch,	pBuf[i], pBuf[i+1], pBuf[i+2], pBuf[i+3], pBuf[i+4], pBuf[i+5],
 			pBuf[i+6], pBuf[i+7], pBuf[i+8], pBuf[i+9], pBuf[i+10], pBuf[i+11]);
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputRawSub96(
@@ -1593,14 +1649,11 @@ void OutputRawSub96(
 
 	for(INT i = 0; i < CD_RAW_READ_SUBCODE_SIZE; i += 16) {
 		OutputLogString(fpLog, 
-			_T("\t%3X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n"), 
+			_T("\t%3X %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n"), 
 			i, pBuf[i], pBuf[i+1], pBuf[i+2], pBuf[i+3], pBuf[i+4], pBuf[i+5],
 			pBuf[i+6], pBuf[i+7], pBuf[i+8], pBuf[i+9], pBuf[i+10], pBuf[i+11], 
 			pBuf[i+12], pBuf[i+13], pBuf[i+14], pBuf[i+15]);
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputSubcode(
@@ -1742,19 +1795,17 @@ void OutputTocFull(
 	CONST CDROM_TOC_FULL_TOC_DATA* fullToc,
 	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData,
 	size_t uiTocEntries,
-	PINT nLastLBAof1stSession,
-	PINT nStartLBAof2ndSession,
-	PINT aSessionNum,
+	PDISC_DATA pDiscData,
 	FILE* fpCcd,
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("FULL TOC on SCSIOP_READ_TOC\n"));
-	OutputLogString(fpLog, _T("\tFirstCompleteSession %d\n"), 
-		fullToc->FirstCompleteSession);
-	OutputLogString(fpLog, _T("\tLastCompleteSession %d\n"), 
+	OutputLogString(fpLog,
+		_T("FULL TOC on SCSIOP_READ_TOC\n")
+		_T("\tFirstCompleteSession: %d\n")
+		_T("\t LastCompleteSession: %d\n"),
+		fullToc->FirstCompleteSession,
 		fullToc->LastCompleteSession);
-
 	for(size_t a = 0; a < uiTocEntries; a++) {
 		WriteCcdFileForEntry(a, pTocData, fpCcd);
 		switch(pTocData[a].Point) {
@@ -1772,7 +1823,7 @@ void OutputTocFull(
 				pTocData[a].SessionNumber, pTocData[a].Msf[0], 
 				pTocData[a].Msf[1], pTocData[a].Msf[2]);
 			if(pTocData[a].SessionNumber == 1) {
-				*nLastLBAof1stSession = 
+				pDiscData->nLastLBAof1stSession = 
 					MSFtoLBA(pTocData[a].Msf[2], pTocData[a].Msf[1], pTocData[a].Msf[0]) - 150;
 			}
 			break;
@@ -1795,16 +1846,13 @@ void OutputTocFull(
 				pTocData[a].SessionNumber, pTocData[a].Point, pTocData[a].Msf[0], 
 				pTocData[a].Msf[1], pTocData[a].Msf[2]);
 			if(pTocData[a].SessionNumber == 2) {
-				*nStartLBAof2ndSession = MSFtoLBA(pTocData[a].Msf[2], 
+				pDiscData->nStartLBAof2ndSession = MSFtoLBA(pTocData[a].Msf[2], 
 					pTocData[a].Msf[1], pTocData[a].Msf[0]) - 150;
 			}
-			aSessionNum[pTocData[a].Point-1] = pTocData[a].SessionNumber;
+			pDiscData->aSessionNum[pTocData[a].Point-1] = pTocData[a].SessionNumber;
 			break;
 		}
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 // begin for CD
@@ -1814,22 +1862,27 @@ void OutputVolumeDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("Volume Descriptor\n"));
 	// 0 is Boot Record. 
 	// 1 is Primary Volume Descriptor. 
 	// 2 is Supplementary Volume Descriptor. 
 	// 3 is Volume Partition Descriptor. 
 	// 4-254 is reserved. 
 	// 255 is Volume Descriptor Set Terminator.
-	OutputLogString(fpLog, _T("\tVolume Descriptor Type		%d\n"), buf[idx]);
-	_TCHAR str[CD_RAW_READ+1] = {0};
+	OutputLogString(fpLog,
+		_T("Volume Descriptor\n")
+		_T("\t                              Volume Descriptor Type: %d\n"),
+		buf[idx]);
+	_TCHAR str[5] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
 #else
-	strncpy(str, (PCHAR)&buf[idx+1], 5); str[5] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 5);
 #endif
-	OutputLogString(fpLog, _T("\tStandard Identifier			[%s]\n"), str);
-	OutputLogString(fpLog, _T("\tVolume Descriptor Version	%d\n"), buf[idx+6]);
+	OutputLogString(fpLog,
+		_T("\t                                 Standard Identifier: %.5s\n")
+		_T("\t                           Volume Descriptor Version: %d\n"),
+		str,
+		buf[idx+6]);
 	
 	if(buf[idx] == 0) {
 		OutputBootRecord(idx, buf, fpLog);
@@ -1845,9 +1898,6 @@ void OutputVolumeDescriptor(
 	}
 	else if(buf[idx] == 255) {
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputBootRecord(
@@ -1856,24 +1906,24 @@ void OutputBootRecord(
 	FILE* fpLog
 	)
 {
-	_TCHAR str[2][32+1] = {0};
+	_TCHAR str[2][32] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+7], 32, str[0], sizeof(str));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+39], 32, str[1], sizeof(str));
 #else
-	strncpy(str[0], (PCHAR)&buf[idx+7], 32); str[0][32] = '\0';
-	strncpy(str[1], (PCHAR)&buf[idx+39], 32); str[1][32] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+7], 32);
+	strncpy(str[1], (PCHAR)&buf[idx+39], 32);
 #endif
-	OutputLogString(fpLog, _T("\tBoot System Identifier		[%s]\n"), str);
-	OutputLogString(fpLog, _T("\tBoot Identifier				[%s]\n"), str);
-	OutputLogString(fpLog, _T("\tBoot System Use	"));
+	OutputLogString(fpLog,
+		_T("\t                              Boot System Identifier: %s\n")
+		_T("\t                                     Boot Identifier: %s\n")
+		_T("\t                                     Boot System Use: "),
+		str[0],
+		str[1]);
 	for(INT i = 71; i <= 2047; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputPrimaryVolumeDescriptorForTime(
@@ -1882,13 +1932,13 @@ void OutputPrimaryVolumeDescriptorForTime(
 	FILE* fpLog
 	)
 {
-	_TCHAR year[4][4+1] = {0};
-	_TCHAR month[4][2+1] = {0};
-	_TCHAR day[4][2+1] = {0};
-	_TCHAR hour[4][2+1] = {0};
-	_TCHAR time[4][2+1] = {0};
-	_TCHAR second[4][2+1] = {0};
-	_TCHAR milisecond[4][2+1] = {0};
+	_TCHAR year[4][4] = {0};
+	_TCHAR month[4][2] = {0};
+	_TCHAR day[4][2] = {0};
+	_TCHAR hour[4][2] = {0};
+	_TCHAR time[4][2] = {0};
+	_TCHAR second[4][2] = {0};
+	_TCHAR milisecond[4][2] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+813], 4, year[0], sizeof(year[0]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+817], 2, month[0], sizeof(month[0]));
@@ -1919,57 +1969,133 @@ void OutputPrimaryVolumeDescriptorForTime(
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+876], 2, second[3], sizeof(second[3]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+878], 2, milisecond[3], sizeof(milisecond[3]));
 #else
-	strncpy(year[0], (PCHAR)&buf[idx+813], 4); year[0][4] = '\0';
-	strncpy(month[0], (PCHAR)&buf[idx+817], 2); month[0][2] = '\0';
-	strncpy(day[0], (PCHAR)&buf[idx+819], 2); day[0][2] = '\0';
-	strncpy(hour[0], (PCHAR)&buf[idx+821], 2); hour[0][2] = '\0';
-	strncpy(time[0], (PCHAR)&buf[idx+823], 2); time[0][2] = '\0';
-	strncpy(second[0], (PCHAR)&buf[idx+825], 2); second[0][2] = '\0';
-	strncpy(milisecond[0], (PCHAR)&buf[idx+827], 2); milisecond[0][2] = '\0';
-	strncpy(year[1], (PCHAR)&buf[idx+830], 4); year[1][4] = '\0';
-	strncpy(month[1], (PCHAR)&buf[idx+834], 2); month[1][2] = '\0';
-	strncpy(day[1], (PCHAR)&buf[idx+836], 2); day[1][2] = '\0';
-	strncpy(hour[1], (PCHAR)&buf[idx+838], 2); hour[1][2] = '\0';
-	strncpy(time[1], (PCHAR)&buf[idx+840], 2); time[1][2] = '\0';
-	strncpy(second[1], (PCHAR)&buf[idx+842], 2); second[1][2] = '\0';
-	strncpy(milisecond[1], (PCHAR)&buf[idx+844], 2); milisecond[1][2] = '\0';
-	strncpy(year[2], (PCHAR)&buf[idx+847], 4); year[2][4] = '\0';
-	strncpy(month[2], (PCHAR)&buf[idx+851], 2); month[2][2] = '\0';
-	strncpy(day[2], (PCHAR)&buf[idx+853], 2); day[2][2] = '\0';
-	strncpy(hour[2], (PCHAR)&buf[idx+855], 2); hour[2][2] = '\0';
-	strncpy(time[2], (PCHAR)&buf[idx+857], 2); time[2][2] = '\0';
-	strncpy(second[2], (PCHAR)&buf[idx+859], 2); second[2][2] = '\0';
-	strncpy(milisecond[2], (PCHAR)&buf[idx+861], 2); milisecond[2][2] = '\0';
-	strncpy(year[3], (PCHAR)&buf[idx+864], 4); year[3][4] = '\0';
-	strncpy(month[3], (PCHAR)&buf[idx+868], 2); month[3][2] = '\0';
-	strncpy(day[3], (PCHAR)&buf[idx+870], 2); day[3][2] = '\0';
-	strncpy(hour[3], (PCHAR)&buf[idx+872], 2); hour[3][2] = '\0';
-	strncpy(time[3], (PCHAR)&buf[idx+874], 2); time[3][2] = '\0';
-	strncpy(second[3], (PCHAR)&buf[idx+876], 2); second[3][2] = '\0';
-	strncpy(milisecond[3], (PCHAR)&buf[idx+878], 2); milisecond[3][2] = '\0';
+	strncpy(year[0], (PCHAR)&buf[idx+813], 4);
+	strncpy(month[0], (PCHAR)&buf[idx+817], 2);
+	strncpy(day[0], (PCHAR)&buf[idx+819], 2);
+	strncpy(hour[0], (PCHAR)&buf[idx+821], 2);
+	strncpy(time[0], (PCHAR)&buf[idx+823], 2);
+	strncpy(second[0], (PCHAR)&buf[idx+825], 2);
+	strncpy(milisecond[0], (PCHAR)&buf[idx+827], 2);
+	strncpy(year[1], (PCHAR)&buf[idx+830], 4);
+	strncpy(month[1], (PCHAR)&buf[idx+834], 2);
+	strncpy(day[1], (PCHAR)&buf[idx+836], 2);
+	strncpy(hour[1], (PCHAR)&buf[idx+838], 2);
+	strncpy(time[1], (PCHAR)&buf[idx+840], 2);
+	strncpy(second[1], (PCHAR)&buf[idx+842], 2);
+	strncpy(milisecond[1], (PCHAR)&buf[idx+844], 2);
+	strncpy(year[2], (PCHAR)&buf[idx+847], 4);
+	strncpy(month[2], (PCHAR)&buf[idx+851], 2);
+	strncpy(day[2], (PCHAR)&buf[idx+853], 2);
+	strncpy(hour[2], (PCHAR)&buf[idx+855], 2);
+	strncpy(time[2], (PCHAR)&buf[idx+857], 2);
+	strncpy(second[2], (PCHAR)&buf[idx+859], 2);
+	strncpy(milisecond[2], (PCHAR)&buf[idx+861], 2);
+	strncpy(year[3], (PCHAR)&buf[idx+864], 4);
+	strncpy(month[3], (PCHAR)&buf[idx+868], 2);
+	strncpy(day[3], (PCHAR)&buf[idx+870], 2);
+	strncpy(hour[3], (PCHAR)&buf[idx+872], 2);
+	strncpy(time[3], (PCHAR)&buf[idx+874], 2);
+	strncpy(second[3], (PCHAR)&buf[idx+876], 2);
+	strncpy(milisecond[3], (PCHAR)&buf[idx+878], 2);
 #endif
-	OutputLogString(fpLog, 
-		_T("\tVolume Creation Date and Time		%s-%s-%s %s:%s:%s.%s +%d\n"), 
-		year[0], month[0], day[0], hour[0], time[0], second[0], milisecond[0], buf[idx+829]);
-	OutputLogString(fpLog, 
-		_T("\tVolume Modification Date and Time	%s-%s-%s %s:%s:%s.%s +%d\n"), 
-		year[1], month[1], day[1], hour[1], time[1], second[1], milisecond[1], buf[idx+846]);
-	OutputLogString(fpLog, 
-		_T("\tVolume Expiration Date and Time		%s-%s-%s %s:%s:%s.%s +%d\n"), 
-		year[2], month[2], day[2], hour[2], time[2], second[2], milisecond[2], buf[idx+863]);
-	OutputLogString(fpLog, 
-		_T("\tVolume Effective Date and Time		%s-%s-%s %s:%s:%s.%s +%d\n"), 
-		year[3], month[3], day[3], hour[3], time[3], second[3], milisecond[3], buf[idx+880]);
-	OutputLogString(fpLog, 
-		_T("\tFile Structure Version				%d\n"), buf[idx+881]);
-	OutputLogString(fpLog, _T("\tApplication Use	"));
+	OutputLogString(fpLog,
+		_T("\t                       Volume Creation Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t                   Volume Modification Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t                     Volume Expiration Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t                      Volume Effective Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%d\n")
+		_T("\t                              File Structure Version: %d\n")
+		_T("\t                                     Application Use: "), 
+		year[0], month[0], day[0], hour[0], time[0], second[0], milisecond[0], buf[idx+829],
+		year[1], month[1], day[1], hour[1], time[1], second[1], milisecond[1], buf[idx+846],
+		year[2], month[2], day[2], hour[2], time[2], second[2], milisecond[2], buf[idx+863],
+		year[3], month[3], day[3], hour[3], time[3], second[3], milisecond[3], buf[idx+880],
+		buf[idx+881]);
 	for(INT i = 883; i <= 1394; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
+}
+
+void OutputPrimaryVolumeDescriptorFor1(
+	INT idx,
+	CONST PUCHAR buf,
+	_TCHAR str[][128],
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog,
+		_T("\t                                   System Identifier: %.32s\n")
+		_T("\t                                   Volume Identifier: %.32s\n")
+		_T("\t                                   Volume Space Size: %d\n"),
+		str[0],
+		str[1],
+		buf[idx+80]);
+}
+
+void OutputPrimaryVolumeDescriptorFor2(
+	INT idx,
+	CONST PUCHAR buf,
+	_TCHAR str[][128],
+	FILE* fpLog
+	)
+{
+	OutputLogString(fpLog, 
+		_T("\t                                     Volume Set Size: %d\n")
+		_T("\t                              Volume Sequence Number: %d\n")
+		_T("\t                                  Logical Block Size: %d\n")
+		_T("\t                                     Path Table Size: %d\n")
+		_T("\t         Location of Occurrence of Type L Path Table: %d\n")
+		_T("\tLocation of Optional Occurrence of Type L Path Table: %d\n")
+		_T("\t         Location of Occurrence of Type M Path Table: %d\n")
+		_T("\tLocation of Optional Occurrence of Type M Path Table: %d\n")
+		_T("\tDirectory Record\n")
+		_T("\t\t      Length of Directory Record: %d\n")
+		_T("\t\tExtended Attribute Record Length: %d\n")
+		_T("\t\t              Location of Extent: %d\n")
+		_T("\t\t                     Data Length: %d\n")
+		_T("\t\t         Recording Date and Time: %d-%02d-%02d %02d:%02d:%02d +%02d\n")
+		_T("\t\t                      File Flags: %d\n")
+		_T("\t\t                  File Unit Size: %d\n")
+		_T("\t\t             Interleave Gap Size: %d\n")
+		_T("\t\t          Volume Sequence Number: %d\n")
+		_T("\t\t       Length of File Identifier: %d\n")
+		_T("\t\t                 File Identifier: %d\n")
+		_T("\t                               Volume Set Identifier: %.128s\n")
+		_T("\t                                Publisher Identifier: %.128s\n")
+		_T("\t                            Data Preparer Identifier: %.128s\n")
+		_T("\t                              Application Identifier: %.128s\n")
+		_T("\t                           Copyright File Identifier: %.37s\n")
+		_T("\t                            Abstract File Identifier: %.37s\n")
+		_T("\t                       Bibliographic File Identifier: %.37s\n"), 
+		MAKEWORD(buf[idx+123], buf[idx+122]),
+		MAKEWORD(buf[idx+127], buf[idx+126]),
+		MAKEWORD(buf[idx+131], buf[idx+130]),
+		MAKELONG(MAKEWORD(buf[idx+139], buf[idx+138]), 
+			MAKEWORD(buf[idx+137], buf[idx+136])),
+		MAKEWORD(buf[idx+143], buf[idx+142]),
+		MAKEWORD(buf[idx+147], buf[idx+146]),
+		MAKEWORD(buf[idx+151], buf[idx+150]),
+		MAKEWORD(buf[idx+155], buf[idx+154]),
+		buf[idx+156],
+		buf[idx+157],
+		MAKELONG(MAKEWORD(buf[idx+165], buf[idx+164]), 
+			MAKEWORD(buf[idx+163], buf[idx+162])),
+		MAKELONG(MAKEWORD(buf[idx+173], buf[idx+172]), 
+			MAKEWORD(buf[idx+171], buf[idx+170])),
+		buf[idx+174] + 1900, buf[idx+175], buf[idx+176], buf[idx+177], buf[idx+178], buf[idx+179], buf[idx+180],
+		buf[idx+181],
+		buf[idx+182],
+		buf[idx+183],
+		MAKEWORD(buf[idx+187], buf[idx+186]),
+		buf[idx+188],
+		buf[idx+189],
+		str[2],
+		str[3],
+		str[4],
+		str[5],
+		str[6],
+		str[7],
+		str[8]);
 }
 
 void OutputPrimaryVolumeDescriptorForISO9660(
@@ -1978,7 +2104,7 @@ void OutputPrimaryVolumeDescriptorForISO9660(
 	FILE* fpLog
 	)
 {
-	_TCHAR str[10][CD_RAW_READ+1] = {0};
+	_TCHAR str[10][128] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]));
@@ -1990,87 +2116,28 @@ void OutputPrimaryVolumeDescriptorForISO9660(
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 37, str[7], sizeof(str[7]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 37, str[8], sizeof(str[8]));
 #else
-	strncpy(str[0], (PCHAR)&buf[idx+8], 32); str[0][32] = '\0';
-	strncpy(str[1], (PCHAR)&buf[idx+40], 32); str[1][32] = '\0';
-	strncpy(str[2], (PCHAR)&buf[idx+190], 128); str[2][128] = '\0';
-	strncpy(str[3], (PCHAR)&buf[idx+318], 128); str[3][128] = '\0';
-	strncpy(str[4], (PCHAR)&buf[idx+446], 128); str[4][128] = '\0';
-	strncpy(str[5], (PCHAR)&buf[idx+574], 128); str[5][128] = '\0';
-	strncpy(str[6], (PCHAR)&buf[idx+702], 37); str[6][37] = '\0';
-	strncpy(str[7], (PCHAR)&buf[idx+739], 37); str[7][37] = '\0';
-	strncpy(str[8], (PCHAR)&buf[idx+776], 37); str[8][37] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+8], 32);
+	strncpy(str[1], (PCHAR)&buf[idx+40], 32);
+	strncpy(str[2], (PCHAR)&buf[idx+190], 128);
+	strncpy(str[3], (PCHAR)&buf[idx+318], 128);
+	strncpy(str[4], (PCHAR)&buf[idx+446], 128);
+	strncpy(str[5], (PCHAR)&buf[idx+574], 128);
+	strncpy(str[6], (PCHAR)&buf[idx+702], 37);
+	strncpy(str[7], (PCHAR)&buf[idx+739], 37);
+	strncpy(str[8], (PCHAR)&buf[idx+776], 37);
 #endif
-	OutputLogString(fpLog, _T("\tSystem Identifier		[%s]\n"), str[0]);
-	OutputLogString(fpLog, _T("\tVolume Identifier		[%s]\n"), str[1]);
-	OutputLogString(fpLog, _T("\tVolume Space Size		%d\n"), buf[idx+80]);
+	OutputPrimaryVolumeDescriptorFor1(idx, buf, str, fpLog);
 	if(buf[idx+0] == 2) {
 #ifdef UNICODE
 		MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 32, str[9], sizeof(str[9]));
 #else
-		strncpy(str[9], (PCHAR)&buf[idx+88], 32); str[9][32] = '\0';
+		strncpy(str[9], (PCHAR)&buf[idx+88], 32);
 #endif
-		OutputLogString(fpLog, _T("\tEscape Sequences		[%s]\n"), str[9]);
+		OutputLogString(fpLog, _T(
+			"\t                                    Escape Sequences: %.32s\n"), str[9]);
 	}
-	OutputLogString(fpLog, _T("\tVolume Set Size			%d\n"), 
-		MAKEWORD(buf[idx+123], buf[idx+122]));
-	OutputLogString(fpLog, _T("\tVolume Sequence Number	%d\n"), 
-		MAKEWORD(buf[idx+127], buf[idx+126]));
-	OutputLogString(fpLog, _T("\tLogical Block Size		%d\n"), 
-		MAKEWORD(buf[idx+131], buf[idx+130]));
-	OutputLogString(fpLog, _T("\tPath Table Size			%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+139], buf[idx+138]), 
-		MAKEWORD(buf[idx+137], buf[idx+136])));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Occurrence of Type L Path Table				%d\n"), 
-		MAKEWORD(buf[idx+143], buf[idx+142]));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Optional Occurrence of Type L Path Table	%d\n"), 
-		MAKEWORD(buf[idx+147], buf[idx+146]));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Occurrence of Type M Path Table				%d\n"), 
-		MAKEWORD(buf[idx+151], buf[idx+150]));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Optional Occurrence of Type M Path Table	%d\n"), 
-		MAKEWORD(buf[idx+155], buf[idx+154]));
 
-	OutputLogString(fpLog, _T("\tDirectory Record\n"));
-	OutputLogString(fpLog, 
-		_T("\t\tLength of Directory Record			%d\n"), buf[idx+156]);
-	OutputLogString(fpLog, 
-		_T("\t\tExtended Attribute Record Length	%d\n"), buf[idx+157]);
-	OutputLogString(fpLog, 
-		_T("\t\tLocation of Extent					%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+165], buf[idx+164]), 
-		MAKEWORD(buf[idx+163], buf[idx+162])));
-	OutputLogString(fpLog, 
-		_T("\t\tData Length							%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+173], buf[idx+172]), 
-		MAKEWORD(buf[idx+171], buf[idx+170])));
-	OutputLogString(fpLog, 
-		_T("\t\tRecording Date and Time				%d-%02d-%02d %02d:%02d:%02d +%02d\n"), 
-		buf[idx+174] + 1900, buf[idx+175], buf[idx+176], 
-		buf[idx+177], buf[idx+178], buf[idx+179], buf[idx+180]);
-	OutputLogString(fpLog, 
-		_T("\t\tFile Flags							%d\n"), buf[idx+181]);
-	OutputLogString(fpLog, 
-		_T("\t\tFile Unit Size						%d\n"), buf[idx+182]);
-	OutputLogString(fpLog, 
-		_T("\t\tInterleave Gap Size					%d\n"), buf[idx+183]);
-	OutputLogString(fpLog, 
-		_T("\t\tVolume Sequence Number				%d\n"), 
-		MAKEWORD(buf[idx+187], buf[idx+186]));
-	OutputLogString(fpLog, 
-		_T("\t\tLength of File Identifier			%d\n"), buf[idx+188]);
-	OutputLogString(fpLog, 
-		_T("\t\tFile Identifier						%d\n"), buf[idx+189]);
-	OutputLogString(fpLog, _T("\tVolume Set Identifier		[%s]\n"), str[2]);
-	OutputLogString(fpLog, _T("\tPublisher Identifier		[%s]\n"), str[3]);
-	OutputLogString(fpLog, _T("\tData Preparer Identifier	[%s]\n"), str[4]);
-	OutputLogString(fpLog, _T("\tApplication Identifier		[%s]\n"), str[5]);
-	OutputLogString(fpLog, _T("\tCopyright File Identifier		[%s]\n"), str[6]);
-	OutputLogString(fpLog, _T("\tAbstract File Identifier		[%s]\n"), str[7]);
-	OutputLogString(fpLog, _T("\tBibliographic File Identifier	[%s]\n"), str[8]);
-
+	OutputPrimaryVolumeDescriptorFor2(idx, buf, str, fpLog);
 	OutputPrimaryVolumeDescriptorForTime(idx, buf, fpLog);
 }
 
@@ -2080,117 +2147,58 @@ void OutputPrimaryVolumeDescriptorForJoliet(
 	FILE* fpLog
 	)
 {
-	_TCHAR str[9][128+1] = {0};
+	_TCHAR str[9][128] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 16, str[0], sizeof(str[0]));
-	LittleToBig(str[0], (_TCHAR*)&buf[idx+8], 16); str[0][16] = '\0';
+	LittleToBig(str[0], (_TCHAR*)&buf[idx+8], 16);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 16, str[1], sizeof(str[1]));
-	LittleToBig(str[1], (_TCHAR*)&buf[idx+40], 16); str[1][16] = '\0';
+	LittleToBig(str[1], (_TCHAR*)&buf[idx+40], 16);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+190], 16, str[2], sizeof(str[2]));
-	LittleToBig(str[2], (_TCHAR*)&buf[idx+190], 64); str[2][64] = '\0';
+	LittleToBig(str[2], (_TCHAR*)&buf[idx+190], 64);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+318], 16, str[3], sizeof(str[3]));
-	LittleToBig(str[3], (_TCHAR*)&buf[idx+318], 64); str[3][64] = '\0';
+	LittleToBig(str[3], (_TCHAR*)&buf[idx+318], 64);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+446], 16, str[4], sizeof(str[4]));
-	LittleToBig(str[4], (_TCHAR*)&buf[idx+446], 64); str[4][64] = '\0';
+	LittleToBig(str[4], (_TCHAR*)&buf[idx+446], 64);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+574], 16, str[5], sizeof(str[5]));
-	LittleToBig(str[5], (_TCHAR*)&buf[idx+574], 64); str[5][64] = '\0';
+	LittleToBig(str[5], (_TCHAR*)&buf[idx+574], 64);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+702], 16, str[6], sizeof(str[6]));
-	LittleToBig(str[6], (_TCHAR*)&buf[idx+702], 18); str[6][18] = '\0';
+	LittleToBig(str[6], (_TCHAR*)&buf[idx+702], 18);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+739], 16, str[7], sizeof(str[7]));
-	LittleToBig(str[7], (_TCHAR*)&buf[idx+739], 18); str[7][18] = '\0';
+	LittleToBig(str[7], (_TCHAR*)&buf[idx+739], 18);
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+776], 16, str[8], sizeof(str[8]));
-	LittleToBig(str[8], (_TCHAR*)&buf[idx+776], 18); str[8][18] = '\0';
+	LittleToBig(str[8], (_TCHAR*)&buf[idx+776], 18);
 #else
 	_TCHAR str2[9][128+1] = {0};
-	LittleToBig(str2[0], (_TCHAR*)&buf[idx+8], 32); str2[0][32] = '\0';
+	LittleToBig(str2[0], (_TCHAR*)&buf[idx+8], 32);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[0], 32, str[0], sizeof(str[0]), NULL, NULL);
-	LittleToBig(str2[1], (_TCHAR*)&buf[idx+40], 32); str2[0][32] = '\0';
+	LittleToBig(str2[1], (_TCHAR*)&buf[idx+40], 32);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[1], 32, str[1], sizeof(str[1]), NULL, NULL);
-	LittleToBig(str2[2], (_TCHAR*)&buf[idx+190], 128); str2[0][128] = '\0';
+	LittleToBig(str2[2], (_TCHAR*)&buf[idx+190], 128);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[2], 128, str[2], sizeof(str[2]), NULL, NULL);
-	LittleToBig(str2[3], (_TCHAR*)&buf[idx+318], 128); str2[0][128] = '\0';
+	LittleToBig(str2[3], (_TCHAR*)&buf[idx+318], 128);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[3], 128, str[3], sizeof(str[3]), NULL, NULL);
-	LittleToBig(str2[4], (_TCHAR*)&buf[idx+446], 128); str2[0][128] = '\0';
+	LittleToBig(str2[4], (_TCHAR*)&buf[idx+446], 128);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[4], 128, str[4], sizeof(str[4]), NULL, NULL);
-	LittleToBig(str2[5], (_TCHAR*)&buf[idx+574], 128); str2[0][128] = '\0';
+	LittleToBig(str2[5], (_TCHAR*)&buf[idx+574], 128);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[5], 128, str[5], sizeof(str[5]), NULL, NULL);
-	LittleToBig(str2[6], (_TCHAR*)&buf[idx+702], 36); str2[0][36] = '\0';
+	LittleToBig(str2[6], (_TCHAR*)&buf[idx+702], 36);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[6], 36, str[6], sizeof(str[6]), NULL, NULL);
-	LittleToBig(str2[7], (_TCHAR*)&buf[idx+739], 36); str2[0][36] = '\0';
+	LittleToBig(str2[7], (_TCHAR*)&buf[idx+739], 36);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[7], 36, str[7], sizeof(str[7]), NULL, NULL);
-	LittleToBig(str2[8], (_TCHAR*)&buf[idx+776], 36); str2[0][36] = '\0';
+	LittleToBig(str2[8], (_TCHAR*)&buf[idx+776], 36);
 	WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)&str2[8], 36, str[8], sizeof(str[8]), NULL, NULL);
 #endif
-	OutputLogString(fpLog, _T("\tSystem Identifier		[%s]\n"), str[0]);
-	OutputLogString(fpLog, _T("\tVolume Identifier		[%s]\n"), str[1]);
-	OutputLogString(fpLog, _T("\tVolume Space Size		%d\n"), buf[idx+80]);
-	_TCHAR str3[64+1] = {0};
+	OutputPrimaryVolumeDescriptorFor1(idx, buf, str, fpLog);
+
+	_TCHAR str3[32] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+88], 16, str3, sizeof(str3));
 #else
-	_tcsncpy(str3, (_TCHAR*)&buf[idx+88], 32); str3[32] = '\0';
+	_tcsncpy(str3, (_TCHAR*)&buf[idx+88], 32);
 #endif
-	OutputLogString(fpLog, _T("\tEscape Sequences		[%s]\n"), str3);
-	OutputLogString(fpLog, _T("\tVolume Set Size			%d\n"), 
-		MAKEWORD(buf[idx+123], buf[idx+122]));
-	OutputLogString(fpLog, _T("\tVolume Sequence Number	%d\n"), 
-		MAKEWORD(buf[idx+127], buf[idx+126]));
-	OutputLogString(fpLog, _T("\tLogical Block Size		%d\n"), 
-		MAKEWORD(buf[idx+131], buf[idx+130]));
-	OutputLogString(fpLog, _T("\tPath Table Size			%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+139], buf[idx+138]), 
-		MAKEWORD(buf[idx+137], buf[idx+136])));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Occurrence of Type L Path Table				%d\n"), 
-		MAKEWORD(buf[idx+143], buf[idx+142]));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Optional Occurrence of Type L Path Table	%d\n"), 
-		MAKEWORD(buf[idx+147], buf[idx+146]));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Occurrence of Type M Path Table				%d\n"), 
-		MAKEWORD(buf[idx+151], buf[idx+150]));
-	OutputLogString(fpLog, 
-		_T("\tLocation of Optional Occurrence of Type M Path Table	%d\n"), 
-		MAKEWORD(buf[idx+155], buf[idx+154]));
-
-	OutputLogString(fpLog, _T("\tDirectory Record\n"));
-	OutputLogString(fpLog, 
-		_T("\t\tLength of Directory Record			%d\n"), buf[idx+156]);
-	OutputLogString(fpLog, 
-		_T("\t\tExtended Attribute Record Length	%d\n"), buf[idx+157]);
-	OutputLogString(fpLog, 
-		_T("\t\tLocation of Extent					%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+165], buf[idx+164]), 
-		MAKEWORD(buf[idx+163], buf[idx+162])));
-	OutputLogString(fpLog, 
-		_T("\t\tData Length							%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+173], buf[idx+172]), 
-		MAKEWORD(buf[idx+171], buf[idx+170])));
-	OutputLogString(fpLog, 
-		_T("\t\tRecording Date and Time				%d-%02d-%02d %02d:%02d:%02d +%02d\n"), 
-		buf[idx+174] + 1900, buf[idx+175], buf[idx+176], 
-		buf[idx+177], buf[idx+178], buf[idx+179], buf[idx+180]);
-	OutputLogString(fpLog, 
-		_T("\t\tFile Flags							%d\n"), buf[idx+181]);
-	OutputLogString(fpLog, 
-		_T("\t\tFile Unit Size						%d\n"), buf[idx+182]);
-	OutputLogString(fpLog, 
-		_T("\t\tInterleave Gap Size					%d\n"), buf[idx+183]);
-	OutputLogString(fpLog, 
-		_T("\t\tVolume Sequence Number				%d\n"), 
-		MAKEWORD(buf[idx+187], buf[idx+186]));
-	OutputLogString(fpLog, 
-		_T("\t\tLength of File Identifier			%d\n"), buf[idx+188]);
-	OutputLogString(fpLog, 
-		_T("\t\tFile Identifier						%d\n"), buf[idx+189]);
-	OutputLogString(fpLog, _T("\tVolume Set Identifier		[%s]\n"), str[2]);
-	OutputLogString(fpLog, _T("\tPublisher Identifier		[%s]\n"), str[3]);
-	OutputLogString(fpLog, _T("\tData Preparer Identifier	[%s]\n"), str[4]);
-	OutputLogString(fpLog, _T("\tApplication Identifier		[%s]\n"), str[5]);
-	OutputLogString(fpLog, _T("\tCopyright File Identifier		[%s]\n"), str[6]);
-	OutputLogString(fpLog, _T("\tAbstract File Identifier		[%s]\n"), str[7]);
-	OutputLogString(fpLog, _T("\tBibliographic File Identifier	[%s]\n"), str[8]);
-
+	OutputLogString(fpLog, _T(
+		"\t                                    Escape Sequences: %.32s\n"), str3);
+	OutputPrimaryVolumeDescriptorFor2(idx, buf, str, fpLog);
 	OutputPrimaryVolumeDescriptorForTime(idx, buf, fpLog);
 }
 
@@ -2200,30 +2208,30 @@ void OutputVolumePartitionDescriptor(
 	FILE* fpLog
 	)
 {
-	_TCHAR str[2][CD_RAW_READ+1] = {0};
+	_TCHAR str[2][32] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+8], 32, str[0], sizeof(str[0]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+40], 32, str[1], sizeof(str[1]));
 #else
-	strncpy(str[0], (PCHAR)&buf[idx+8], 32); str[0][32] = '\0';
-	strncpy(str[1], (PCHAR)&buf[idx+40], 32); str[1][32] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+8], 32);
+	strncpy(str[1], (PCHAR)&buf[idx+40], 32);
 #endif
-	OutputLogString(fpLog, _T("\tSystem Identifier				[%s]\n"), str[0]);
-	OutputLogString(fpLog, _T("\tVolume Partition Identifier	[%s]\n"), str[1]);
-	OutputLogString(fpLog, _T("\tVolume Partition Location		%d\n"), 
+	OutputLogString(fpLog,
+		_T("\t          System Identifier: %.32s\n")
+		_T("\tVolume Partition Identifier: %.32s\n")
+		_T("\t  Volume Partition Location: %d\n")
+		_T("\t      Volume Partition Size: %d\n")
+		_T("\t                 System Use: "),
+		str[0],
+		str[1], 
 		MAKELONG(MAKEWORD(buf[idx+79], buf[idx+78]), 
-		MAKEWORD(buf[idx+77], buf[idx+76])));
-	OutputLogString(fpLog, _T("\tVolume Partition Size			%d\n"), 
+			MAKEWORD(buf[idx+77], buf[idx+76])), 
 		MAKELONG(MAKEWORD(buf[idx+87], buf[idx+86]), 
-		MAKEWORD(buf[idx+85], buf[idx+84])));
-	OutputLogString(fpLog, _T("\tSystem Use	"));
+			MAKEWORD(buf[idx+85], buf[idx+84])));
 	for(INT i = 88; i <= 2047; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 // end for CD
 
@@ -2234,19 +2242,20 @@ void OutputVolumeStructureDescriptorFormat(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("Volume Recognition Sequence\n"));
-	OutputLogString(fpLog, _T("\tStructure Type		%d\n"), buf[idx]);
-	_TCHAR str[128+1] = {0};
+	_TCHAR str[5] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
 #else
-	strncpy(str, (PCHAR)&buf[idx+1], 5); str[5] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 5);
 #endif
-	OutputLogString(fpLog, _T("\tStandard Identifier	[%s]\n"), str);
-	OutputLogString(fpLog, _T("\tStructure Version	%d\n"), buf[idx+6]);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
+	OutputLogString(fpLog,
+		_T("Volume Recognition Sequence\n")
+		_T("\t                                      Structure Type: %d\n")
+		_T("\t                                 Standard Identifier: %.5s\n")
+		_T("\t                                   Structure Version: %d\n"),
+		buf[idx],
+		str,
+		buf[idx+6]);
 }
 
 void OutputVolumeRecognitionSequence(
@@ -2255,43 +2264,40 @@ void OutputVolumeRecognitionSequence(
 	FILE* fpLog
 	)
 {
-	_TCHAR str[128+1] = {0};
+	_TCHAR str[5] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 5, str, sizeof(str));
 #else
-	strncpy(str, (PCHAR)&buf[idx+1], 5); str[5] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 5);
 #endif
-	if(buf[idx] == 1 && !_tcscmp(str, _T("CD001"))) {
+	if(buf[idx] == 1 && !_tcsncmp(str, _T("CD001"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
 		OutputPrimaryVolumeDescriptorForISO9660(idx, buf, fpLog);
 	}
-	else if(buf[idx] == 2 && !_tcscmp(str, _T("CD001"))) {
+	else if(buf[idx] == 2 && !_tcsncmp(str, _T("CD001"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
-		OutputLogString(fpLog, _T("\tVolume Flags		%d\n"), buf[idx+7]);
+		OutputLogString(fpLog, _T("\tVolume Flags: %d\n"), buf[idx+7]);
 		OutputPrimaryVolumeDescriptorForJoliet(idx, buf, fpLog);
 	}
-	else if(buf[idx] == 255 && !_tcscmp(str, _T("CD001"))) {
+	else if(buf[idx] == 255 && !_tcsncmp(str, _T("CD001"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
 	}
-	else if(buf[idx] == 0 && !_tcscmp(str, _T("BOOT2"))) {
+	else if(buf[idx] == 0 && !_tcsncmp(str, _T("BOOT2"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
 		OutputBootDescriptor(idx, buf, fpLog);
 	}
-	else if(buf[idx] == 0 && !_tcscmp(str, _T("BEA01"))) {
+	else if(buf[idx] == 0 && !_tcsncmp(str, _T("BEA01"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
 	}
-	else if(buf[idx] == 0 && !_tcscmp(str, _T("NSR02"))) {
+	else if(buf[idx] == 0 && !_tcsncmp(str, _T("NSR02"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
 	}
-	else if(buf[idx] == 0 && !_tcscmp(str, _T("NSR03"))) {
+	else if(buf[idx] == 0 && !_tcsncmp(str, _T("NSR03"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
 	}
-	else if(buf[idx] == 0 && !_tcscmp(str, _T("TEA01"))) {
+	else if(buf[idx] == 0 && !_tcsncmp(str, _T("TEA01"), 5)) {
 		OutputVolumeStructureDescriptorFormat(idx, buf, fpLog);
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputRecordingDateAndTime(
@@ -2300,14 +2306,11 @@ void OutputRecordingDateAndTime(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tRecording Date and Time\n"));
-	OutputLogString(fpLog, _T("\t\t%x %d-%d-%d %d:%d:%d.%d.%d.%d\n"),
+	OutputLogString(fpLog, _T(
+		"\tRecording Date and Time: %x %d-%d-%d %d: %d: %d.%d.%d.%d\n"),
 		MAKEWORD(buf[idx], buf[idx+1]), MAKEWORD(buf[idx+2], buf[idx+3]),
 		buf[idx+4], buf[idx+5], buf[idx+6], buf[idx+7], buf[idx+8],
 		buf[idx+9], buf[idx+10], buf[idx+11]);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputBootDescriptor(
@@ -2316,55 +2319,60 @@ void OutputBootDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tArchitecture Type\n"));
-	OutputLogString(fpLog, _T("\t\tFlags	%d\n"), buf[idx+8]);
+	OutputLogString(fpLog,
+		_T("\tArchitecture Type\n")
+		_T("\t\tFlags: %d\n"), buf[idx+8]);
 
-	_TCHAR str[4][CD_RAW_READ+1] = {0};
+	_TCHAR str[4][23] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+9], 23, str[0], sizeof(str[0]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 8, str[1], sizeof(str[1]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+41], 23, str[2], sizeof(str[2]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+64], 8, str[3], sizeof(str[3]));
 #else
-	strncpy(str[0], (PCHAR)&buf[idx+9], 23); str[0][23] = '\0';
-	strncpy(str[1], (PCHAR)&buf[idx+24], 8); str[1][8] = '\0';
-	strncpy(str[2], (PCHAR)&buf[idx+41], 23); str[2][23] = '\0';
-	strncpy(str[3], (PCHAR)&buf[idx+64], 8); str[3][8] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+9], 23);
+	strncpy(str[1], (PCHAR)&buf[idx+24], 8);
+	strncpy(str[2], (PCHAR)&buf[idx+41], 23);
+	strncpy(str[3], (PCHAR)&buf[idx+64], 8);
 #endif
-	OutputLogString(fpLog, _T("\t\tIdentifier	[%s]\n"), str[0]);
-	OutputLogString(fpLog, _T("\t\tIdentifier Suffix	[%s]\n"), str[1]);
-
-	OutputLogString(fpLog, _T("\tBoot Identifier\n"));
-	OutputLogString(fpLog, _T("\t\tFlags	%d\n"), buf[idx+40]);
-	OutputLogString(fpLog, _T("\t\tIdentifier	[%s]\n"), str[2]);
-	OutputLogString(fpLog, _T("\t\tIdentifier Suffix	[%s]\n"), str[3]);
-
-	OutputLogString(fpLog, _T("\tBoot Extent Location	%d\n"),
+	OutputLogString(fpLog,
+		_T("\t\t       Identifier: %.23s\n")
+		_T("\t\tIdentifier Suffix: %.8s\n")
+		_T("\tBoot Identifier\n")
+		_T("\t\t            Flags: %d\n")
+		_T("\t\t       Identifier: %.23s\n")
+		_T("\t\tIdentifier Suffix: %.8s\n")
+		_T("\tBoot Extent Location: %d\n")
+		_T("\t  Boot Extent Length: %d\n")
+		_T("\t        Load Address: %d%d\n")
+		_T("\t       Start Address: %d%d\n"),
+		str[0],
+		str[1],
+		buf[idx+40],
+		str[2],
+		str[3],
 		MAKELONG(MAKEWORD(buf[idx+75], buf[idx+74]), 
-		MAKEWORD(buf[idx+73], buf[idx+72])));
-	OutputLogString(fpLog, _T("\tBoot Extent Length	%d\n"),
+			MAKEWORD(buf[idx+73], buf[idx+72])),
 		MAKELONG(MAKEWORD(buf[idx+79], buf[idx+78]), 
-		MAKEWORD(buf[idx+77], buf[idx+76])));
-	OutputLogString(fpLog, _T("\tLoad Address	%d%d\n"),
+			MAKEWORD(buf[idx+77], buf[idx+76])),
 		MAKELONG(MAKEWORD(buf[idx+87], buf[idx+86]), 
-		MAKEWORD(buf[idx+85], buf[idx+84])),
+			MAKEWORD(buf[idx+85], buf[idx+84])),
 		MAKELONG(MAKEWORD(buf[idx+83], buf[idx+82]), 
-		MAKEWORD(buf[idx+81], buf[idx+80])));
-	OutputLogString(fpLog, _T("\tStart Address	%d%d\n"),
+			MAKEWORD(buf[idx+81], buf[idx+80])),
 		MAKELONG(MAKEWORD(buf[idx+87], buf[idx+86]), 
-		MAKEWORD(buf[idx+85], buf[idx+84])),
+			MAKEWORD(buf[idx+85], buf[idx+84])),
 		MAKELONG(MAKEWORD(buf[idx+83], buf[idx+82]), 
-		MAKEWORD(buf[idx+81], buf[idx+80])));
+			MAKEWORD(buf[idx+81], buf[idx+80])));
+
 	OutputRecordingDateAndTime(idx + 96, buf, fpLog);
-	OutputLogString(fpLog, _T("\tFlags %d\n"), MAKEWORD(buf[idx+109], buf[idx+108]));
-	OutputLogString(fpLog, _T("\tBoot Use	"));
+	OutputLogString(fpLog,
+		_T("\t               Flags: %d\n")
+		_T("\t            Boot Use: "),
+		MAKEWORD(buf[idx+109], buf[idx+108]));
 	for(INT i = 142; i <= 2047; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputCharspec(
@@ -2373,17 +2381,16 @@ void OutputCharspec(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\t\tCharacter Set Type			%d\n"), buf[idx]);
-	_TCHAR str[23+1] = {0};
+	_TCHAR str[23] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str));
 #else
-	strncpy(str, (PCHAR)&buf[idx+1], 23); str[23] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+1], 23);
 #endif
-	OutputLogString(fpLog, _T("\t\tCharacter Set Information	[%s]\n"), str);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
+	OutputLogString(fpLog,
+		_T("\t\t       Character Set Type: %d\n")
+		_T("\t\tCharacter Set Information: %.23s\n"),
+		buf[idx], str);
 }
 
 void OutputExtentDescriptor(
@@ -2392,15 +2399,13 @@ void OutputExtentDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\t\tExtent Length	%d\n"),
+	OutputLogString(fpLog,
+		_T("\t\t  Extent Length: %d\n")
+		_T("\t\tExtent Location: %d\n"),
 		MAKELONG(MAKEWORD(buf[idx], buf[idx+1]), 
-		MAKEWORD(buf[idx+2], buf[idx+3])));
-	OutputLogString(fpLog, _T("\t\tExtent Location	%d\n"), 
+			MAKEWORD(buf[idx+2], buf[idx+3])), 
 		MAKELONG(MAKEWORD(buf[idx+4], buf[idx+5]), 
-		MAKEWORD(buf[idx+6], buf[idx+7])));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
+			MAKEWORD(buf[idx+6], buf[idx+7])));
 }
 
 void OutputRegid(
@@ -2409,22 +2414,22 @@ void OutputRegid(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\t\tFlags				%d\n"), buf[idx]);
 	_TCHAR str[23+1] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+1], 23, str, sizeof(str));
 #else
 	strncpy(str, (PCHAR)&buf[idx+1], 23); str[23] = '\0';
 #endif
-	OutputLogString(fpLog, _T("\t\tIdentifier			[%s]\n"), str);
-	OutputLogString(fpLog, _T("\t\tIdentifier Suffix	"));
+	OutputLogString(fpLog,
+		 _T("\t\t            Flags: %d\n")
+		 _T("\t\t       Identifier: %.23s\n")
+		 _T("\t\tIdentifier Suffix: "),
+		buf[idx],
+		str);
 	for(INT i = 24; i <= 31; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputPrimaryVolumeDescriptorForUDF(
@@ -2433,38 +2438,41 @@ void OutputPrimaryVolumeDescriptorForUDF(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tVolume Descriptor Sequence Number	%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
-		MAKEWORD(buf[idx+18], buf[idx+19])));
-	OutputLogString(fpLog, _T("\tPrimary Volume Descriptor Number	%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+20], buf[idx+21]), 
-		MAKEWORD(buf[idx+22], buf[idx+23])));
-
-	_TCHAR str[2][128+1] = {0};
+	_TCHAR str[2][128] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+24], 32, str[0], sizeof(str[0]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+72], 128, str[1], sizeof(str[1]));
 #else
-	strncpy(str[0], (PCHAR)&buf[idx+24], 32); str[0][32] = '\0';
-	strncpy(str[1], (PCHAR)&buf[idx+72], 128); str[1][128] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+24], 32);
+	strncpy(str[1], (PCHAR)&buf[idx+72], 128);
 #endif
-	OutputLogString(fpLog, _T("\tVolume Identifier				[%s]\n"), str[0]);
-	OutputLogString(fpLog, _T("\tVolume Sequence Number			%d\n"), 
-		MAKEWORD(buf[idx+56], buf[idx+57]));
-	OutputLogString(fpLog, _T("\tMaximum Volume Sequence Number	%d\n"), 
-		MAKEWORD(buf[idx+58], buf[idx+59]));
-	OutputLogString(fpLog, _T("\tInterchange Level				%d\n"), 
-		MAKEWORD(buf[idx+60], buf[idx+61]));
-	OutputLogString(fpLog, _T("\tMaximum Interchange Level		%d\n"), 
-		MAKEWORD(buf[idx+62], buf[idx+63]));
-	OutputLogString(fpLog, _T("\tCharacter Set List				%d\n"), 
+	OutputLogString(fpLog,
+		_T("\tVolume Descriptor Sequence Number: %d\n")
+		_T("\t Primary Volume Descriptor Number: %d\n")
+		_T("\t                Volume Identifier: %.32s\n")
+		_T("\t           Volume Sequence Number: %d\n")
+		_T("\t   Maximum Volume Sequence Number: %d\n")
+		_T("\t                Interchange Level: %d\n")
+		_T("\t        Maximum Interchange Level: %d\n")
+		_T("\t               Character Set List: %d\n")
+		_T("\t       Maximum Character Set List: %d\n")
+		_T("\t            Volume Set Identifier: %.128s\n")
+		_T("\tDescriptor Character Set\n"), 
+		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
+			MAKEWORD(buf[idx+18], buf[idx+19])), 
+		MAKELONG(MAKEWORD(buf[idx+20], buf[idx+21]), 
+			MAKEWORD(buf[idx+22], buf[idx+23])),
+		str[0], 
+		MAKEWORD(buf[idx+56], buf[idx+57]), 
+		MAKEWORD(buf[idx+58], buf[idx+59]), 
+		MAKEWORD(buf[idx+60], buf[idx+61]), 
+		MAKEWORD(buf[idx+62], buf[idx+63]), 
 		MAKELONG(MAKEWORD(buf[idx+65], buf[idx+64]), 
-		MAKEWORD(buf[idx+67], buf[idx+66])));
-	OutputLogString(fpLog, _T("\tMaximum Character Set List		%d\n"), 
+			MAKEWORD(buf[idx+67], buf[idx+66])), 
 		MAKELONG(MAKEWORD(buf[idx+68], buf[idx+69]), 
-		MAKEWORD(buf[idx+70], buf[idx+71])));
-	OutputLogString(fpLog, _T("\tVolume Set Identifier			[%s]\n"), str[1]);
-	OutputLogString(fpLog, _T("\tDescriptor Character Set\n"));
+			MAKEWORD(buf[idx+70], buf[idx+71])),
+		str[1]);
+
 	OutputCharspec(idx + 200, buf, fpLog);
 
 	OutputLogString(fpLog, _T("\tExplanatory Character Set\n"));
@@ -2483,20 +2491,19 @@ void OutputPrimaryVolumeDescriptorForUDF(
 
 	OutputLogString(fpLog, _T("\tImplementation Identifier\n"));
 	OutputRegid(idx + 388, buf, fpLog);
-	OutputLogString(fpLog, _T("\tImplementation Use		"));
+	OutputLogString(fpLog, _T("\tImplementation Use: "));
 	for(INT i = 420; i <= 483; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
 
-	OutputLogString(fpLog, _T("\tPredecessor Volume Descriptor Sequence Location	%d\n"), 
+	OutputLogString(fpLog, _T(
+		"\tPredecessor Volume Descriptor Sequence Location: %d\n"), 
 		MAKELONG(MAKEWORD(buf[idx+484], buf[idx+485]), 
-		MAKEWORD(buf[idx+486], buf[idx+487])));
-	OutputLogString(fpLog, _T("\tFlags											%d\n"), 
+			MAKEWORD(buf[idx+486], buf[idx+487])));
+	OutputLogString(fpLog, _T(
+		"\t                                          Flags: %d\n"), 
 		MAKEWORD(buf[idx+488], buf[idx+489]));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputAnchorVolumeDescriptorPointer(
@@ -2509,9 +2516,6 @@ void OutputAnchorVolumeDescriptorPointer(
 	OutputExtentDescriptor(idx + 16, buf, fpLog);
 	OutputLogString(fpLog, _T("\tReserve Volume Descriptor Sequence Extent\n"));
 	OutputExtentDescriptor(idx + 24, buf, fpLog);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputVolumeDescriptorPointer(
@@ -2520,14 +2524,12 @@ void OutputVolumeDescriptorPointer(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tVolume Descriptor Sequence Number	%d\n"), 
+	OutputLogString(fpLog, 
+		_T("\t     Volume Descriptor Sequence Number: %d\n")
+		_T("\tNext Volume Descriptor Sequence Extent\n"), 
 		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
-		MAKEWORD(buf[idx+18], buf[idx+19])));
-	OutputLogString(fpLog, _T("\tNext Volume Descriptor Sequence Extent\n"));
+			MAKEWORD(buf[idx+18], buf[idx+19])));
 	OutputExtentDescriptor(idx + 20, buf, fpLog);
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputImplementationUseVolumeDescriptor(
@@ -2536,42 +2538,40 @@ void OutputImplementationUseVolumeDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tVolume Descriptor Sequence Number	%d\n"), 
+	OutputLogString(fpLog,
+		_T("\tVolume Descriptor Sequence Number: %d\n")
+		_T("\tImplementation Identifier\n"), 
 		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
 		MAKEWORD(buf[idx+18], buf[idx+19])));
 
-	OutputLogString(fpLog, _T("\tImplementation Identifier\n"));
 	OutputRegid(idx + 20, buf, fpLog);
 
 	OutputLogString(fpLog, _T("\tLVI Charset\n"));
 	OutputCharspec(idx + 52, buf, fpLog);
 
-	_TCHAR str[4][128+1] = {0};
+	_TCHAR str[4][128] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+116], 128, str[0], sizeof(str[0]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+244], 36, str[1], sizeof(str[1]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+280], 36, str[2], sizeof(str[2]));
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+316], 36, str[3], sizeof(str[3]));
 #else
-	strncpy(str[0], (PCHAR)&buf[idx+116], 128); str[0][128] = '\0';
-	strncpy(str[1], (PCHAR)&buf[idx+244], 36); str[1][36] = '\0';
-	strncpy(str[2], (PCHAR)&buf[idx+280], 36); str[2][36] = '\0';
-	strncpy(str[3], (PCHAR)&buf[idx+316], 36); str[3][36] = '\0';
+	strncpy(str[0], (PCHAR)&buf[idx+116], 128);
+	strncpy(str[1], (PCHAR)&buf[idx+244], 36);
+	strncpy(str[2], (PCHAR)&buf[idx+280], 36);
+	strncpy(str[3], (PCHAR)&buf[idx+316], 36);
 #endif
-	OutputLogString(fpLog, _T("\tLogical Volume Identifier		[%s]\n"), str[0]);
-	OutputLogString(fpLog, _T("\tLV Info 1			[%s]\n"), str[1]);
-	OutputLogString(fpLog, _T("\tLV Info 2			[%s]\n"), str[2]);
-	OutputLogString(fpLog, _T("\tLV Info 3			[%s]\n"), str[3]);
+	OutputLogString(fpLog, _T("\tLogical Volume Identifier: %.128s\n"), str[0]);
+	for(INT i = 1; i < 4; i++) {
+		OutputLogString(fpLog, _T("\t               LV Info %d: %.36s\n"), i, str[1]);
+	}
 	OutputLogString(fpLog, _T("\tImplemention ID\n"));
 	OutputRegid(idx + 352, buf, fpLog);
-	OutputLogString(fpLog, _T("\tImplementation Use		"));
+	OutputLogString(fpLog, _T("\tImplementation Use: "));
 	for(INT i = 384; i <= 511; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputPartitionDescriptor(
@@ -2580,40 +2580,41 @@ void OutputPartitionDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tVolume Descriptor Sequence Number	%d\n"), 
+	OutputLogString(fpLog,
+		_T("\tVolume Descriptor Sequence Number: %d\n")
+		_T("\t                  Partition Flags: %d\n")
+		_T("\t                 Partition Number: %d\n")
+		_T("\tPartition Contents\n"), 
 		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
-		MAKEWORD(buf[idx+18], buf[idx+19])));
-	OutputLogString(fpLog, _T("\tPartition Flags						%d\n"), 
-		MAKEWORD(buf[idx+20], buf[idx+21]));
-	OutputLogString(fpLog, _T("\tPartition Number					%d\n"), 
+			MAKEWORD(buf[idx+18], buf[idx+19])), 
+		MAKEWORD(buf[idx+20], buf[idx+21]), 
 		MAKEWORD(buf[idx+22], buf[idx+23]));
-	OutputLogString(fpLog, _T("\tPartition Contents\n"));
+	
 	OutputRegid(idx + 24, buf, fpLog);
 
-	OutputLogString(fpLog, _T("\tPartition Contents Use	"));
+	OutputLogString(fpLog, _T("\tPartition Contents Use: "));
 	for(INT i = 56; i <= 183; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-	OutputLogString(fpLog, _T("\tAccess Type					%d\n"), 
+	OutputLogString(fpLog,
+		_T("\t                Access Type: %d\n")
+		_T("\tPartition Starting Location: %d\n")
+		_T("\t           Partition Length: %d\n")
+		_T("\tImplementation Identifier\n"), 
 		MAKELONG(MAKEWORD(buf[idx+184], buf[idx+185]), 
-		MAKEWORD(buf[idx+186], buf[idx+187])));
-	OutputLogString(fpLog, _T("\tPartition Starting Location	%d\n"), 
+			MAKEWORD(buf[idx+186], buf[idx+187])), 
 		MAKELONG(MAKEWORD(buf[idx+188], buf[idx+189]), 
-		MAKEWORD(buf[idx+190], buf[idx+191])));
-	OutputLogString(fpLog, _T("\tPartition Length			%d\n"), 
+			MAKEWORD(buf[idx+190], buf[idx+191])), 
 		MAKELONG(MAKEWORD(buf[idx+192], buf[idx+193]), 
-		MAKEWORD(buf[idx+194], buf[idx+195])));
-	OutputLogString(fpLog, _T("\tImplementation Identifier\n"));
+			MAKEWORD(buf[idx+194], buf[idx+195])));
+	
 	OutputRegid(idx + 196, buf, fpLog);
-	OutputLogString(fpLog, _T("\tImplementation Use		"));
+	OutputLogString(fpLog, _T("\tImplementation Use: "));
 	for(INT i = 228; i <= 355; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputLongAllocationDescriptor(
@@ -2622,18 +2623,16 @@ void OutputLongAllocationDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tLongAllocationDescriptor\n"));
-	OutputLogString(fpLog, _T("\t\tExtent Length				%d\n"), 
+	OutputLogString(fpLog,
+		_T("\tLongAllocationDescriptor\n")
+		_T("\t\t             Extent Length: %d\n")
+		_T("\t\t      Logical Block Number: %d\n")
+		_T("\t\tPartition Reference Number: %d\n"), 
 		MAKELONG(MAKEWORD(buf[idx], buf[idx+1]), 
-		MAKEWORD(buf[idx+2], buf[idx+3])));
-	OutputLogString(fpLog, _T("\t\tLogical Block Number		%d\n"), 
+			MAKEWORD(buf[idx+2], buf[idx+3])), 
 		MAKELONG(MAKEWORD(buf[idx+4], buf[idx+5]), 
-		MAKEWORD(buf[idx+6], buf[idx+7])));
-	OutputLogString(fpLog, _T("\t\tPartition Reference Number	%d\n"), 
+			MAKEWORD(buf[idx+6], buf[idx+7])), 
 		MAKEWORD(buf[idx+8], buf[idx+9]));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputLogicalVolumeDescriptor(
@@ -2642,36 +2641,44 @@ void OutputLogicalVolumeDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tVolume Descriptor Sequence Number	%d\n"), 
+	OutputLogString(fpLog,
+		_T("\tVolume Descriptor Sequence Number: %d\n")
+		_T("\tDescriptor Character Set\n"), 
 		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
-		MAKEWORD(buf[idx+18], buf[idx+19])));
-	OutputLogString(fpLog, _T("\tDescriptor Character Set\n"));
+			MAKEWORD(buf[idx+18], buf[idx+19])));
+	
 	OutputCharspec(idx + 20, buf, fpLog);
 
-	_TCHAR str[128+1] = {0};
+	_TCHAR str[128] = {0};
 #ifdef UNICODE
 	MultiByteToWideChar(CP_ACP, 0, (PCHAR)&buf[idx+84], 128, str, sizeof(str));
 #else
-	strncpy(str, (PCHAR)&buf[idx+84], 128); str[128] = '\0';
+	strncpy(str, (PCHAR)&buf[idx+84], 128);
 #endif
-	OutputLogString(fpLog, _T("\tLogical Volume Identifier		[%s]\n"), str);
-	OutputLogString(fpLog, _T("\tLogical Block Size				%d\n"), 
+	OutputLogString(fpLog, 
+		_T("\tLogical Volume Identifier: %.128s\n")
+		_T("\t      Logical Block Size : %d\n")
+		_T("\tDomain Identifier\n"),
+		str, 
 		MAKELONG(MAKEWORD(buf[idx+212], buf[idx+213]), 
-		MAKEWORD(buf[idx+214], buf[idx+215])));
-	OutputLogString(fpLog, _T("\tDomain Identifier\n"));
+			MAKEWORD(buf[idx+214], buf[idx+215])));
+	
 	OutputCharspec(idx + 216, buf, fpLog);
 	OutputLongAllocationDescriptor(idx + 248, buf, fpLog);
 
 	LONG MT_L = MAKELONG(MAKEWORD(buf[idx+264], buf[idx+265]), 
 		MAKEWORD(buf[idx+266], buf[idx+267]));
-	OutputLogString(fpLog, _T("\tMap Table Length				%d\n"), MT_L);
-	OutputLogString(fpLog, _T("\tNumber of Partition Maps		%d\n"), 
+	OutputLogString(fpLog,
+		_T("\t        Map Table Length: %d\n")
+		_T("\tNumber of Partition Maps: %d\n")
+		_T("\tImplementation Identifier\n"),
+		MT_L, 
 		MAKELONG(MAKEWORD(buf[idx+268], buf[idx+269]), 
 		MAKEWORD(buf[idx+270], buf[idx+271])));
-	OutputLogString(fpLog, _T("\tImplementation Identifier\n"));
+	
 	OutputRegid(idx + 272, buf, fpLog);
 
-	OutputLogString(fpLog, _T("\tImplementation Use		"));
+	OutputLogString(fpLog, _T("\tImplementation Use: "));
 	for(INT i = 304; i <= 431; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+i]);
 	}
@@ -2679,14 +2686,11 @@ void OutputLogicalVolumeDescriptor(
 	OutputLogString(fpLog, _T("\tIntegrity Sequence Extent\n"));
 	OutputExtentDescriptor(idx + 432, buf, fpLog);
 
-	OutputLogString(fpLog, _T("\tPartition Maps		"));
+	OutputLogString(fpLog, _T("\tPartition Maps: "));
 	for(INT i = 0; i < MT_L; i++) {
 		OutputLogString(fpLog, _T("%x"), buf[idx+440+i]);
 	}
 	OutputLogString(fpLog, _T("\n"));
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void OutputUnallocatedSpaceDescriptor(
@@ -2695,22 +2699,21 @@ void OutputUnallocatedSpaceDescriptor(
 	FILE* fpLog
 	)
 {
-	OutputLogString(fpLog, _T("\tVolume Descriptor Sequence Number	%d\n"), 
-		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
-		MAKEWORD(buf[idx+18], buf[idx+19])));
 	LONG N_AD = MAKELONG(MAKEWORD(buf[idx+20], buf[idx+21]), 
 		MAKEWORD(buf[idx+22], buf[idx+23]));
-	OutputLogString(fpLog, _T("\tNumber of Allocation Descriptors	%d\n"), N_AD);
-	OutputLogString(fpLog, _T("\tAllocation Descriptors\n"));
+	OutputLogString(fpLog, 
+		_T("\tVolume Descriptor Sequence Number: %d\n")
+		_T("\t Number of Allocation Descriptors: %d\n")
+		_T("\tAllocation Descriptors\n"), 
+		MAKELONG(MAKEWORD(buf[idx+16], buf[idx+17]), 
+			MAKEWORD(buf[idx+18], buf[idx+19])),
+		N_AD);
 	for(INT i = 0; i < N_AD * 8; i+=8) {
 		OutputExtentDescriptor(idx + 24 + i, buf, fpLog);
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
-bool OutputVolumeDescriptorSequence(
+void OutputVolumeDescriptorSequence(
 	INT idx,
 	CONST PUCHAR buf,
 	FILE* fpLog
@@ -2718,7 +2721,7 @@ bool OutputVolumeDescriptorSequence(
 {
 	USHORT usTagId = MAKEWORD(buf[idx], buf[idx+1]);
 	if(usTagId == 0 || (10 <= usTagId && usTagId <= 255) || 267 <= usTagId) {
-		return false;
+		return;
 	}
 	switch(usTagId) {
 	case 1:
@@ -2783,18 +2786,21 @@ bool OutputVolumeDescriptorSequence(
 		break;
 	}
 
-	OutputLogString(fpLog, _T("\t\tDescriptor Version		%d\n"), 
-		MAKEWORD(buf[idx+2], buf[idx+3]));
-	OutputLogString(fpLog, _T("\t\tTag Checksum			%d\n"), buf[idx+4]);
-	OutputLogString(fpLog, _T("\t\tTag Serial Number		%d\n"), 
-		MAKEWORD(buf[idx+6], buf[idx+7]));
-	OutputLogString(fpLog, _T("\t\tDescriptor CRC			%x\n"), 
-		MAKEWORD(buf[idx+8], buf[idx+9]));
-	OutputLogString(fpLog, _T("\t\tDescriptor CRC Length	%d\n"), 
-		MAKEWORD(buf[idx+10], buf[idx+11]));
-	OutputLogString(fpLog, _T("\t\tTag Location			%d\n"),
+	OutputLogString(fpLog,
+		_T("\t\t           Descriptor Version: %d\n")
+		_T("\t\t                 Tag Checksum: %d\n")
+		_T("\t\t            Tag Serial Number: %d\n")
+		_T("\t\t               Descriptor CRC: %x\n")
+		_T("\t\t        Descriptor CRC Length: %d\n")
+		_T("\t\t                 Tag Location: %d\n"), 
+		MAKEWORD(buf[idx+2], buf[idx+3]),
+		buf[idx+4], 
+		MAKEWORD(buf[idx+6], buf[idx+7]), 
+		MAKEWORD(buf[idx+8], buf[idx+9]), 
+		MAKEWORD(buf[idx+10], buf[idx+11]),
 		MAKELONG(MAKEWORD(buf[idx+12], buf[idx+13]), 
-		MAKEWORD(buf[idx+14], buf[idx+15])));
+			MAKEWORD(buf[idx+14], buf[idx+15])));
+	
 	switch(usTagId) {
 	case 1:
 		OutputPrimaryVolumeDescriptorForUDF(idx, buf, fpLog);
@@ -2818,7 +2824,7 @@ bool OutputVolumeDescriptorSequence(
 		OutputUnallocatedSpaceDescriptor(idx, buf, fpLog);
 		break;
 	}
-	return true;
+	return;
 }
 // end for DVD
 
@@ -2865,9 +2871,6 @@ void OutputCopyrightManagementInformation(
 			OutputLogString(fpLog, _T("\n"));
 		}
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 }
 
 void SetAlbumTitle(
@@ -2993,12 +2996,16 @@ void WriteCcdFileForDisc(
 	FILE* fpCcd
 	)
 {
-	_ftprintf(fpCcd, _T("[CloneCD]\n"));
-	_ftprintf(fpCcd, _T("Version=3\n"));
-	_ftprintf(fpCcd, _T("[Disc]\n"));
-	_ftprintf(fpCcd, _T("TocEntries=%d\n"), tocEntries);
-	_ftprintf(fpCcd, _T("Sessions=%d\n"), LastCompleteSession);
-	_ftprintf(fpCcd, _T("DataTracksScrambled=%d\n"), 0); // TODO
+	_ftprintf(fpCcd,
+		_T("[CloneCD]\n")
+		_T("Version=3\n")
+		_T("[Disc]\n")
+		_T("TocEntries=%d\n")
+		_T("Sessions=%d\n")
+		_T("DataTracksScrambled=%d\n"),
+		tocEntries,
+		LastCompleteSession,
+		0); // TODO
 }
 
 void WriteCcdFileForDiscCDTextLength(
@@ -3021,8 +3028,10 @@ void WriteCcdFileForCDText(
 	FILE* fpCcd
 	)
 {
-	_ftprintf(fpCcd, _T("[CDText]\n"));
-	_ftprintf(fpCcd, _T("Entries=%d\n"), cdTextSize);
+	_ftprintf(fpCcd,
+		_T("[CDText]\n")
+		_T("Entries=%d\n"),
+		cdTextSize);
 }
 
 void WriteCcdFileForCDTextEntry(
@@ -3053,8 +3062,11 @@ void WriteCcdFileForSessionPregap(
 	FILE* fpCcd
 	)
 {
-	_ftprintf(fpCcd, _T("PreGapMode=%d\n"), mode);
-	_ftprintf(fpCcd, _T("PreGapSubC=%d\n"), 0);	// TODO
+	_ftprintf(fpCcd,
+		_T("PreGapMode=%d\n")
+		_T("PreGapSubC=%d\n"),
+		mode,
+		0);	// TODO
 }
 
 void WriteCcdFileForEntry(
@@ -3063,22 +3075,36 @@ void WriteCcdFileForEntry(
 	FILE* fpCcd
 	)
 {
-	_ftprintf(fpCcd, _T("[Entry %d]\n"), a);
-	_ftprintf(fpCcd, _T("Session=%d\n"), toc[a].SessionNumber);
-	_ftprintf(fpCcd, _T("Point=0x%02x\n"), toc[a].Point);
-	_ftprintf(fpCcd, _T("ADR=0x%02x\n"), toc[a].Adr);
-	_ftprintf(fpCcd, _T("Control=0x%02x\n"), toc[a].Control);
-	_ftprintf(fpCcd, _T("TrackNo=%d\n"), toc[a].Reserved1);
-	_ftprintf(fpCcd, _T("AMin=%d\n"), toc[a].MsfExtra[0]);
-	_ftprintf(fpCcd, _T("ASec=%d\n"), toc[a].MsfExtra[1]);
-	_ftprintf(fpCcd, _T("AFrame=%d\n"), toc[a].MsfExtra[2]);
-	_ftprintf(fpCcd, _T("ALBA=%d\n"), MSFtoLBA(toc[a].MsfExtra[2], 
-		toc[a].MsfExtra[1], toc[a].MsfExtra[0]) - 150);
-	_ftprintf(fpCcd, _T("Zero=%d\n"), toc[a].Zero);
-	_ftprintf(fpCcd, _T("PMin=%d\n"), toc[a].Msf[0]);
-	_ftprintf(fpCcd, _T("PSec=%d\n"), toc[a].Msf[1]);
-	_ftprintf(fpCcd, _T("PFrame=%d\n"), toc[a].Msf[2]);
-	_ftprintf(fpCcd, _T("PLBA=%d\n"), 
+	_ftprintf(fpCcd,
+		_T("[Entry %d]\n")
+		_T("Session=%d\n")
+		_T("Point=0x%02x\n")
+		_T("ADR=0x%02x\n")
+		_T("Control=0x%02x\n")
+		_T("TrackNo=%d\n")
+		_T("AMin=%d\n")
+		_T("ASec=%d\n")
+		_T("AFrame=%d\n")
+		_T("ALBA=%d\n")
+		_T("Zero=%d\n")
+		_T("PMin=%d\n")
+		_T("PSec=%d\n")
+		_T("PFrame=%d\n")
+		_T("PLBA=%d\n"),
+		a,
+		toc[a].SessionNumber,
+		toc[a].Point,
+		toc[a].Adr,
+		toc[a].Control,
+		toc[a].Reserved1,
+		toc[a].MsfExtra[0],
+		toc[a].MsfExtra[1],
+		toc[a].MsfExtra[2],
+		MSFtoLBA(toc[a].MsfExtra[2], toc[a].MsfExtra[1], toc[a].MsfExtra[0]) - 150,
+		toc[a].Zero,
+		toc[a].Msf[0],
+		toc[a].Msf[1],
+		toc[a].Msf[2], 
 		MSFtoLBA(toc[a].Msf[2], toc[a].Msf[1], toc[a].Msf[0]) - 150);
 }
 
@@ -3089,8 +3115,11 @@ void WriteCcdFileForTrack(
 	FILE* fpCcd
 	)
 {
-	_ftprintf(fpCcd, _T("[TRACK %d]\n"), nTrackNum);
-	_ftprintf(fpCcd, _T("MODE=%d\n"), byModeNum);
+	_ftprintf(fpCcd,
+		_T("[TRACK %d]\n")
+		_T("MODE=%d\n"),
+		nTrackNum,
+		byModeNum);
 	if(bISRC) {
 		_ftprintf(fpCcd, _T("ISRC=%s\n"), szISRC[nTrackNum-1]);
 	}

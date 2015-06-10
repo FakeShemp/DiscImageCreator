@@ -64,13 +64,27 @@ int exec(_TCHAR* argv[], ExecType execType)
 	ULONG ulReturned = 0;
 	bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
 		sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
-	OutputLogString(fpLog, _T("IOCTL_SCSI_GET_ADDRESS\n"));
-	OutputLogString(fpLog, _T("\tLength %d\n"), devData.adress.Length);
-	OutputLogString(fpLog, _T("\tPortNumber %d\n"), devData.adress.PortNumber);
-	OutputLogString(fpLog, _T("\tPathId %d\n"), devData.adress.PathId);
-	OutputLogString(fpLog, _T("\tTargetId %d\n"), devData.adress.TargetId);
-	OutputLogString(fpLog, _T("\tLun %d\n"), devData.adress.Lun);
+	OutputScsiAdress(&devData, fpLog);
 
+    STORAGE_DESCRIPTOR_HEADER header = {0};
+	STORAGE_PROPERTY_QUERY query;
+	query.QueryType = PropertyStandardQuery;
+	query.PropertyId = StorageAdapterProperty;
+
+	bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
+		sizeof(STORAGE_PROPERTY_QUERY), &header, sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
+
+	devData.adapterDescriptor = (PSTORAGE_ADAPTER_DESCRIPTOR)malloc(header.Size);
+	if (devData.adapterDescriptor == NULL) {
+		return 0;
+	}
+    ZeroMemory(devData.adapterDescriptor, header.Size);
+	bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
+		sizeof(STORAGE_PROPERTY_QUERY), devData.adapterDescriptor, header.Size, &ulReturned, FALSE);
+	OutputStorageAdaptorDescriptor(&devData, fpLog);
+#ifdef WIN64
+	devData.AlignmentMask64 = (ULONG64)(devData.adapterDescriptor->AlignmentMask) & 0x00000000FFFFFFFF;
+#endif
 	if(execType == c) {
 		return StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
 	}
@@ -263,30 +277,28 @@ int _tmain(int argc, _TCHAR* argv[])
 	OutputString(_T("DiscImageCreator BuildDate:[%s %s]\n"), _T(__DATE__), _T(__TIME__));
 	ExecType execType;
 	if(!checkArg(argc, argv, &execType)) {
-		OutputString(_T("Usage\n"));
-#if 0
-		OutputString(_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi/raw>\n"));
-#endif
-		OutputString(_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi>\n"));
-		OutputString(_T("\t\tRipping CD or DVD from a to z\n"));
-		OutputString(_T("\t\tcmi:Log Copyright Management Information (Only DVD)(Very slow)\n"));
-#if 0
-		OutputString(_T("\t\traw:Ripping Raw mode (Only DVD)\n"));
-#endif
-		OutputString(_T("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n"));
-		OutputString(_T("\t\tRipping CD from start to end (data) (Only CD)\n"));
-		OutputString(_T("\t-ra [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n"));
-		OutputString(_T("\t\tRipping CD from start to end (audio) (Only CD)\n"));
-		OutputString(_T("\t-c [DriveLetter]\n"));
-		OutputString(_T("\t\tClose tray\n"));
-		OutputString(_T("\t-s [DriveLetter]\n"));
-		OutputString(_T("\t\tStop spin disc\n"));
-		OutputString(_T("\t-dec [filename] [LBA]\n"));
-		OutputString(_T("\t\tDescramble data sector (for GD-ROM Image)\n"));
-		OutputString(_T("\t-split [filename]\n"));
-		OutputString(_T("\t\tSplit descrambled File (for GD-ROM Image)\n"));
-		OutputString(_T("\t-sub [subfile]\n"));
-		OutputString(_T("\t\tParse CloneCD sub file\n"));
+		OutputString(
+			_T("Usage\n")
+//			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi/raw>\n")
+			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi>\n")
+			_T("\t\tRipping CD or DVD from a to z\n")
+			_T("\t\tcmi:Log Copyright Management Information (Only DVD)(Very slow)\n")
+//			_T("\t\traw:Ripping Raw mode (Only DVD)\n")
+			_T("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n")
+			_T("\t\tRipping CD from start to end (data) (Only CD)\n")
+			_T("\t-ra [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n")
+			_T("\t\tRipping CD from start to end (audio) (Only CD)\n")
+			_T("\t-c [DriveLetter]\n")
+			_T("\t\tClose tray\n")
+			_T("\t-s [DriveLetter]\n")
+			_T("\t\tStop spin disc\n")
+			_T("\t-dec [filename] [LBA]\n")
+			_T("\t\tDescramble data sector (for GD-ROM Image)\n")
+			_T("\t-split [filename]\n")
+			_T("\t\tSplit descrambled File (for GD-ROM Image)\n")
+			_T("\t-sub [subfile]\n")
+			_T("\t\tParse CloneCD sub file\n")
+			);
 	}
 	else {
 		time_t now;

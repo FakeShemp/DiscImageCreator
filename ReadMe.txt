@@ -14,6 +14,7 @@ In case of GD-ROM, refer to "tested drive".
 *Development Tool
 Visual Studio 2010
 Windows Driver Kit(WDK)
+	Sample code path:C:\WinDDK\7600.16385.1\src\storage\tools\spti
 
 *License
 See License.txt.
@@ -173,3 +174,8 @@ fix checking & data of subchannel
 **2012-01-05
 refactoring
 improved subchannel data
+
+**2012-01-07
+refactoring
+add STORAGE ADAPTER DESCRIPTOR log
+=> for getting alignmentMask of drive

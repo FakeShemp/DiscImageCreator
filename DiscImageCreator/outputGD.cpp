@@ -109,9 +109,11 @@ BOOL SplitDescrambledFile(
 {
 	_TCHAR pszFileNameWithoutPathAndExt[_MAX_PATH] = {0};
 	ZeroMemory(pszFileNameWithoutPathAndExt, sizeof(pszFileNameWithoutPathAndExt));
-	FILE* fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, pszFileNameWithoutPathAndExt, _T(".dec"), _T("rb"), 0, 0);
+	FILE* fpDescr = CreateOrOpenFileW(pszInFilename, 
+		NULL, NULL, pszFileNameWithoutPathAndExt, _T(".dec"), _T("rb"), 0, 0);
 	if(!fpDescr) {
-	OutputErrorString(_T("Failed to open file .dec [F:%s][L:%d]\n"), _T(__FUNCTION__), __LINE__);
+		OutputErrorString(
+			_T("Failed to open file .dec [F:%s][L:%d]\n"), _T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
 	FILE* fptxt = NULL;
@@ -124,14 +126,17 @@ BOOL SplitDescrambledFile(
 	PUCHAR pBuf = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T("_dc.log.txt"), _T(AFLAG), 0, 0))) {
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename,
+			NULL, NULL, NULL, _T("_dc.log.txt"), _T(AFLAG), 0, 0))) {
 			throw _T("Failed to open .log.txt\n");
 		}
-		if(NULL == (fpGdi = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".gdi"), _T(WFLAG), 0, 0))) {
+		if(NULL == (fpGdi = CreateOrOpenFileW(pszInFilename,
+			NULL, NULL, NULL, _T(".gdi"), _T(WFLAG), 0, 0))) {
 			throw _T("Failed to open .gdi\n");
 		}
 #if 0
-		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0))) {
+		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename,
+			NULL, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0))) {
 			throw _T("Failed to open .ccd\n");
 		}
 #endif
@@ -209,27 +214,40 @@ BOOL SplitDescrambledFile(
 		LONG lMaxLba = 0;
 		for(INT i = 0; i < nMaxToc; i += 4) {
 			if(byToc[7+i] == 0xFF) {
-				lMaxLba = MAKELONG(MAKEWORD(byToc[4+i-4], byToc[5+i-4]), MAKEWORD(byToc[6+i-4], 0));
+				lMaxLba = 
+					MAKELONG(MAKEWORD(byToc[4+i-4], byToc[5+i-4]), MAKEWORD(byToc[6+i-4], 0));
 				break;
 			}
 		}
 
 		_ftprintf(fpGdi, _T("%d\n"), nMaxTrackNum);
 		if(nMaxTrackNum <= 9 && lMaxLba <= 99999) {
-			_ftprintf(fpGdi, _T("1 %5d 4 2352 \"%s (Track %d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
-			_ftprintf(fpGdi, _T("2 [fix] 0 2352 \"%s (Track %d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
+			_ftprintf(fpGdi,
+				_T("1 %5d 4 2352 \"%s (Track %d).bin\" 0\n")
+				_T("2 [fix] 0 2352 \"%s (Track %d).bin\" 0\n"),
+				0, pszFileNameWithoutPathAndExt, 1,
+				pszFileNameWithoutPathAndExt, 2);
 		}
 		else if(10 <= nMaxTrackNum && lMaxLba <= 99999) {
-			_ftprintf(fpGdi, _T(" 1 %5d 4 2352 \"%s (Track %02d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
-			_ftprintf(fpGdi, _T(" 2 [fix] 0 2352 \"%s (Track %02d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
+			_ftprintf(fpGdi,
+				_T(" 1 %5d 4 2352 \"%s (Track %02d).bin\" 0\n")
+				_T(" 2 [fix] 0 2352 \"%s (Track %02d).bin\" 0\n"),
+				0, pszFileNameWithoutPathAndExt, 1,
+				pszFileNameWithoutPathAndExt, 2);
 		}
 		else if(nMaxTrackNum <= 9 && 100000 <= lMaxLba) {
-			_ftprintf(fpGdi, _T("1 %6d 4 2352 \"%s (Track %d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
-			_ftprintf(fpGdi, _T("2  [fix] 0 2352 \"%s (Track %d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
+			_ftprintf(fpGdi,
+				_T("1 %6d 4 2352 \"%s (Track %d).bin\" 0\n")
+				_T("2  [fix] 0 2352 \"%s (Track %d).bin\" 0\n"),
+				0, pszFileNameWithoutPathAndExt, 1,
+				pszFileNameWithoutPathAndExt, 2);
 		}
 		else if(10 <= nMaxTrackNum && 100000 <= lMaxLba) {
-			_ftprintf(fpGdi, _T(" 1 %6d 4 2352 \"%s (Track %02d).bin\" 0\n"), 0, pszFileNameWithoutPathAndExt, 1);
-			_ftprintf(fpGdi, _T(" 2  [fix] 0 2352 \"%s (Track %02d).bin\" 0\n"), pszFileNameWithoutPathAndExt, 2);
+			_ftprintf(fpGdi,
+				_T(" 1 %6d 4 2352 \"%s (Track %02d).bin\" 0\n")
+				_T(" 2  [fix] 0 2352 \"%s (Track %02d).bin\" 0\n"),
+				0, pszFileNameWithoutPathAndExt, 1,
+				pszFileNameWithoutPathAndExt, 2);
 		}
 
 		for(INT i = 0; i < nMaxToc; i += 4, nTrackNum++) {
@@ -299,11 +317,13 @@ BOOL SplitDescrambledFile(
 					nTrackNum, pToc[nTrackNum-3], byCtl, pszFileNameWithoutPathAndExt, nTrackNum);
 			}
 		}
-		OutputLogString(fptxt, _T("MaxTrackNum %2d\n"), nMaxTrackNum);
 		LONG lToc = 
 			MAKELONG(MAKEWORD(byToc[nMaxToc+4*2], byToc[nMaxToc+4*2+1]), 
 			MAKEWORD(byToc[nMaxToc+4*2+2], 0)) - 150;
-		OutputLogString(fptxt, _T("Leadout, LBA %6d\n"), lToc);
+		OutputLogString(fptxt,
+			_T("MaxTrackNum %2d\n")
+			_T("Leadout, LBA %6d\n"),
+			nMaxTrackNum, lToc);
 		pToc[nTrackNum-3] = lToc;
 
 		rewind(fpDescr);

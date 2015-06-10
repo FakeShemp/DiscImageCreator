@@ -65,6 +65,12 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 
 // TODO: プログラムに必要な追加ヘッダーをここで参照してください。
 
+#define BOOLEAN_TO_STRING_TRUE_FALSE(_b_) \
+	( (_b_) ? _T("True") : _T("False") )
+
+#define BOOLEAN_TO_STRING_YES_NO(_b_) \
+	( (_b_) ? _T("Yes") : _T("No") )
+
 #ifdef WIN64
 	typedef INT64 _INT;
 #else
@@ -81,6 +87,10 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 typedef struct _DEVICE_DATA {
 	HANDLE hDevice;
 	SCSI_ADDRESS adress;
+	PSTORAGE_ADAPTER_DESCRIPTOR adapterDescriptor;
+#ifdef WIN64
+	ULONG64 AlignmentMask64;
+#endif
 } DEVICE_DATA, *PDEVICE_DATA;
 
 typedef struct _DISC_DATA {

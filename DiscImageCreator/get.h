@@ -23,6 +23,5 @@ UCHAR GetMode(
 
 BOOL GetWriteOffset(
 	CONST PUCHAR pBuf,
-	INT nLBA,
-	PINT nCombinedOffset
+	PDISC_DATA pDiscData
 	);

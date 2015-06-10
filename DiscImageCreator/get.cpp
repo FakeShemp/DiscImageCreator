@@ -124,8 +124,7 @@ UCHAR GetMode(
 
 BOOL GetWriteOffset(
 	CONST PUCHAR pBuf,
-	INT nLBA,
-	PINT nCombinedOffset
+	PDISC_DATA pDiscData
 	)
 {
 	BOOL bRet = FALSE;
@@ -135,7 +134,8 @@ BOOL GetWriteOffset(
 			UCHAR ss = BcdToDec((UCHAR)(pBuf[i+13] ^ 0x80));
 			UCHAR sf = BcdToDec((UCHAR)(pBuf[i+14]));
 			INT tmpLBA = MSFtoLBA(sf, ss, sm) - 150;
-			*nCombinedOffset = CD_RAW_SECTOR_SIZE * -(tmpLBA - nLBA) + i;
+			pDiscData->nCombinedOffset = 
+				CD_RAW_SECTOR_SIZE * -(tmpLBA - pDiscData->nFirstDataLBA) + i;
 			bRet = TRUE;
 			break;
 		}

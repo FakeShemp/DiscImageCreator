@@ -599,17 +599,14 @@ BOOL CheckAndFixSubchannel(
 	UCHAR tmp1 = (UCHAR)(crc16 >> 8 & 0xFF);
 	UCHAR tmp2 = (UCHAR)(crc16 & 0xFF);
 	if(Subcode[22] != tmp1) {
-		OutputLogString(fpLog, _T("LBA %6d, Crc high[%02X], correct[%02X]\n"),
+		OutputLogString(fpLog, _T("LBA %6d, Crc high[%02x], correct[%02x]\n"),
 			nLBA, Subcode[22], tmp1);
 		Subcode[22] = tmp1;
 	}
 	if(Subcode[23] != tmp2) {
-		OutputLogString(fpLog, _T("LBA %6d, Crc low[%02X], correct[%02X]\n"),
+		OutputLogString(fpLog, _T("LBA %6d, Crc low[%02x], correct[%02x]\n"),
 			nLBA, Subcode[23], tmp2);
 		Subcode[23] = tmp2;
 	}
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(fpLog);
-#endif
 	return TRUE;
 }

@@ -9,13 +9,14 @@
 #ifdef _DEBUG
 #define OutputErrorString(str, ...) \
 		{ \
-			_TCHAR c[256]; \
+			_TCHAR c[1024]; \
 			_stprintf(c, str, __VA_ARGS__); \
 			OutputDebugString(c); \
 		}
 #define OutputLogString(fp, str, ...) \
 		{ \
-			_TCHAR c[256]; \
+			UNREFERENCED_PARAMETER(fp); \
+			_TCHAR c[1024]; \
 			_stprintf(c, str, __VA_ARGS__); \
 			OutputDebugString(c); \
 		}
@@ -84,10 +85,24 @@ void OutputMain2352(
 	FILE* fpLog
 	);
 
+void OutputDriveSpeed(
+	PCDROM_SET_SPEED pSetspeed,
+	FILE* fpLog
+	);
+
+void OutputScsiAdress(
+	PDEVICE_DATA pDevData,
+	FILE* fpLog
+	);
+
+void OutputStorageAdaptorDescriptor(
+	PDEVICE_DATA pDevData,
+	FILE* fpLog
+	);
+
 void OutputInquiryData(
 	PINQUIRYDATA pInquiry,
-	LPSTR pszVendorId,
-	LPSTR pszProductId,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
@@ -104,8 +119,7 @@ void OutputFeatureNumber(
 	CONST PUCHAR pConf,
 	ULONG ulAllLen,
 	size_t uiSize,
-	PBOOL bCanCDText,
-	PBOOL bC2ErrorData,
+	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
@@ -155,9 +169,7 @@ void OutputTocFull(
 	CONST CDROM_TOC_FULL_TOC_DATA* fullToc,
 	CONST CDROM_TOC_FULL_TOC_DATA_BLOCK* pTocData,
 	size_t uiTocEntries,
-	PINT nLastLBAof1stSession,
-	PINT nStartLBAof2ndSession,
-	PINT aSessionNum,
+	PDISC_DATA pDiscData,
 	FILE* fpCcd,
 	FILE* fpLog
 	);
@@ -258,7 +270,7 @@ void OutputVolumeDescriptorPointer(
 	FILE* fpLog
 	);
 
-bool OutputVolumeDescriptorSequence(
+void OutputVolumeDescriptorSequence(
 	INT idx,
 	CONST PUCHAR buf,
 	FILE* fpLog
