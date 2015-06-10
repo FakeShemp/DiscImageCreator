@@ -2,26 +2,25 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 
-VOID OutputIoctlSenseData(
+VOID OutputSenseData(
 	PSENSE_DATA pSenseData
 	);
 
-VOID OutputIoctlScsiStatus(
+VOID OutputScsiStatus(
 	BYTE byScsiStatus
 	);
 
-VOID OutputIoctlScsiAddress(
+VOID OutputScsiAddress(
 	PDEVICE pDevice
 	);
 
-VOID OutputIoctlStorageAdaptorDescriptor(
+VOID OutputStorageAdaptorDescriptor(
 	PSTORAGE_ADAPTER_DESCRIPTOR pAdapterDescriptor,
-	PBOOL pBusTypeUSB
+	LPBOOL lpBusTypeUSB
 	);
 
-VOID OutputIoctlFloppyInfo(
+VOID OutputFloppyInfo(
 	PDISK_GEOMETRY pGeom,
 	DWORD dwGeomNum
 	);

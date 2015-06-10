@@ -2,7 +2,6 @@
  * This code is using source code below (algo.lzh\src\crc16.c).
  * homepage: http://oku.edu.mie-u.ac.jp/~okumura/algo/
  */
-#include "stdafx.h"
 #include "crc16ccitt.h"
 #pragma warning(push)
 #pragma warning(disable:4018)

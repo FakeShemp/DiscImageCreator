@@ -30,9 +30,6 @@
     <ClInclude Include="convert.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="execMMC.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="get.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -53,15 +50,6 @@
     </ClInclude>
     <ClInclude Include="_external\sha1.h">
       <Filter>_external</Filter>
-    </ClInclude>
-    <ClInclude Include="execMMCforDVD.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="execMMCforCD.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="outputMMCLog.h">
-      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="outputIoctlLog.h">
       <Filter>ヘッダー ファイル</Filter>
@@ -84,20 +72,26 @@
     <ClInclude Include="ForwardDeclaration.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="outputMMCLogforDVD.h">
+    <ClInclude Include="outputScsiCmdLog.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="outputMMCLogforCD.h">
+    <ClInclude Include="outputScsiCmdLogforCD.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="_external\3do.h">
-      <Filter>_external</Filter>
+    <ClInclude Include="outputScsiCmdLogforDVD.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="execScsiCmd.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="execScsiCmdforCD.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="execScsiCmdforDVD.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="DiscImageCreator.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -105,9 +99,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="convert.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="execMMC.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="get.cpp">
@@ -134,15 +125,6 @@
     <ClCompile Include="calcHash.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="execMMCforDVD.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="execMMCforCD.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="outputMMCLog.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="outputIoctlLog.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -152,14 +134,26 @@
     <ClCompile Include="set.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="outputMMCLogforDVD.cpp">
+    <ClCompile Include="stdafx.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="outputMMCLogforCD.cpp">
+    <ClCompile Include="execScsiCmd.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="_external\3do.cpp">
-      <Filter>_external</Filter>
+    <ClCompile Include="execScsiCmdforCD.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="execScsiCmdforDVD.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="outputScsiCmdLog.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="outputScsiCmdLogforCD.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="outputScsiCmdLogforDVD.cpp">
+      <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

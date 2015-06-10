@@ -37,10 +37,12 @@ typedef struct _EXT_ARG {
 	BOOL bLibCrypt;
 	BOOL bPre;
 	BOOL bReverse;
+	BOOL bReadContinue;
 	INT nAudioCDOffsetNum;
 	DWORD dwMaxRereadNum;
 	DWORD dwMaxC2ErrorNum;
 	DWORD dwRereadSpeedNum;
+	DWORD dwTimeoutNum;
 } EXT_ARG, *PEXT_ARG;
 
 typedef struct _DEVICE {
@@ -50,11 +52,12 @@ typedef struct _DEVICE {
 	UINT uiMaxTransferLength;
 	CHAR szVendorId[DRIVE_VENDER_ID_SIZE];
 	CHAR szProductId[DRIVE_PRODUCT_ID_SIZE];
+	BYTE byPlexType;
 	WORD wDriveBufSize;
 	BOOL bCanCDText;
 	BOOL bC2ErrorData;
 	BOOL bSuccessReadToc;
-	BYTE byPlexType;
+	DWORD dwTimeOutValue;
 	struct _TRANSFER {
 		UINT uiTransferLen;
 		DWORD dwBufLen;
@@ -64,6 +67,15 @@ typedef struct _DEVICE {
 		DWORD dwBufSubOffset;
 	} TRANSFER, *PTRANSFER;
 } DEVICE, *PDEVICE;
+
+typedef struct _GDROM_TRACK_DATA {
+	UCHAR Reserved;
+	UCHAR Control : 4;
+	UCHAR Adr : 4;
+	UCHAR TrackNumber;
+	UCHAR Reserved1;
+	LONG Address;
+} GDROM_TRACK_DATA, *PGDROM_TRACK_DATA;
 
 // Don't define value of BYTE(1byte) or SHOUT(2byte) before CDROM_TOC structure
 // Because Paragraph Boundary (under 4bit of start address of buffer must 0)
@@ -89,10 +101,29 @@ typedef struct _DISC {
 		LPSTR* pszPerformer;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
 		LPSTR* pszSongWriter;		// get at CDROM_READ_TOC_EX_FORMAT_CDTEXT
 	} SCSI;
+	struct _MAIN {
+		INT nAdjustSectorNum;
+		INT nCombinedOffset;
+		UINT uiMainDataSlideSize;
+		INT nOffsetStart;
+		INT nOffsetEnd;
+		INT nFixStartLBA;
+		INT nFixEndLBA;
+		INT nFixFirstLBAofLeadout;		// for sliding offset
+		INT nFixFirstLBAof2ndSession;	// for sliding offset
+		// 0 origin, max is last track num.
+		LPBYTE lpModeList;
+	} MAIN;
 	struct _SUB {
 		BOOL bDesync;
 		BOOL bIndex0InTrack1;
 		CHAR szCatalog[META_CATALOG_SIZE];
+		BOOL bCatalog;
+		INT nFirstLBAForMCN;
+		INT nRangeLBAForMCN;
+		BOOL bISRC;
+		INT nFirstLBAForISRC;
+		INT nRangeLBAForISRC;
 		// 0 origin, max is last track num.
 		LPSTR* pszISRC;
 		// 0 origin, max is last track num.
@@ -110,32 +141,40 @@ typedef struct _DISC {
 		// 0 origin, max is last track num.
 		LPBYTE lpEndCtlList;
 		// 0 origin, max is last track num.
-		LPBYTE lpModeList;
-		// 0 origin, max is last track num.
 		LPBOOL lpISRCList;
 		// 0 origin, max is last track num.
 		LPBYTE lpRtoWList;
 	} SUB;
-	struct _MAIN {
-		INT nAdjustSectorNum;
-		INT nCombinedOffset;
-		UINT uiMainDataSlideSize;
-		INT nOffsetStart;
-		INT nOffsetEnd;
-		INT nFixStartLBA;
-		INT nFixEndLBA;
-		INT nFixFirstLBAofLeadout;		// for sliding offset
-		INT nFixFirstLBAof2ndSession;	// for sliding offset
-	} MAIN;
+	struct _GDROM_TOC {
+		UCHAR FirstTrack;
+		UCHAR LastTrack;
+		GDROM_TRACK_DATA TrackData[MAXIMUM_NUMBER_TRACKS];
+		LONG Length;
+	} GDROM_TOC;
+	struct _PROTECT {
+		BOOL bExist;
+		BOOL bTmpForSafeDisc;
+		CHAR name[12 + 1];
+		// for skipping unreadable file
+		struct _ERROR_SECTOR {
+			INT nExtentPos;
+			INT nNextExtentPos;
+			INT nSectorSize;
+		} ERROR_SECTOR;
+	} PROTECT;
 } DISC, *PDISC;
+
+typedef struct _MAIN_HEADER {
+	BYTE header[SYNC_SIZE + HEADER_SIZE];
+	BYTE byMode;		// 16th byte
+} MAIN_HEADER, *PMAIN_HEADER;
 
 typedef struct _SUB_Q {
 	BYTE byCtl : 4;		// 13th byte
 	BYTE byAdr : 4;		// 13th byte
 	BYTE byTrackNum;	// 14th byte
 	BYTE byIndex;		// 15th byte
-	BYTE byMode;		// 16th byte
-	INT nRelativeTime;	// 17th - 19th byte
+	INT nRelativeTime;	// 16th - 18th byte
 	INT nAbsoluteTime;	// 20th - 22nd byte
 } SUB_Q, *PSUB_Q;
 
@@ -150,7 +189,9 @@ typedef struct _SUB_R_TO_W {
 
 typedef struct _C2_ERROR {
 	SHORT sC2Offset;
+#if 0
 	CHAR cSlideSectorNum;
+#endif
 } C2_ERROR, *PC2_ERROR;
 
 typedef struct _C2_ERROR_PER_SECTOR {

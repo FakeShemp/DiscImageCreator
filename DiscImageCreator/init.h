@@ -2,7 +2,6 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 #include "enum.h"
 
 BOOL InitC2ErrorData(
@@ -20,7 +19,21 @@ BOOL InitLBAPerTrack(
 
 BOOL InitTocFullData(
 	PEXEC_TYPE pExecType,
+	PDISC* pDisc
+	);
+
+BOOL InitTocTextData(
+	PEXEC_TYPE pExecType,
 	PDEVICE pDevice,
+	PDISC* pDisc
+	);
+
+VOID InitMainDataHeader(
+	PMAIN_HEADER pMainHeader
+	);
+
+BOOL InitSubData(
+	PEXEC_TYPE pExecType,
 	PDISC* pDisc
 	);
 
@@ -31,9 +44,9 @@ BOOL InitLogFile(
 	);
 #endif
 
-VOID Terminatec2ErrorDataPerSector(
-	PDEVICE pDevice,
+VOID TerminateC2ErrorDataPerSector(
 	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
 	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector
 	);
 
@@ -42,8 +55,17 @@ VOID TerminateLBAPerTrack(
 	);
 
 VOID TerminateTocFullData(
+	PDISC* pDisc
+	);
+
+VOID TerminateTocTextData(
 	PEXEC_TYPE pExecType,
 	PDEVICE pDevice,
+	PDISC* pDisc
+	);
+
+VOID TerminateSubData(
+	PEXEC_TYPE pExecType,
 	PDISC* pDisc
 	);
 

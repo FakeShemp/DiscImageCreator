@@ -189,6 +189,7 @@ rewrote many code
 - fixed: check CD+G per track (for [MCD]WonderMega Collection)
 
 *2014-10-17
+http://www.mediafire.com/?yoejwfgut0p7xeh/
 - added: eject command (eject the tray)
 - added: start command (spin up the disc)
 - added: /f option of cd command (But I don't know whether or not a cache is clear.)
@@ -202,3 +203,20 @@ rewrote many code
 - fixed: c2 file size
 - fixed: C2 rereading doesn't work
 - fixed: /m option
+
+*2015-02-27
+- added: fix subchannel for GD
+- added: padding to 0x55 for unreadable sector
+- added: path table record and directory record for CD to _infolog.txt
+  => for searching specific file to protect (RingPROTECH => PROTECT.PRO, SafeDisc => 00000001.LT1, 00000001.TMP)
+- added: /rc option for CD
+  => I don't test it enough because I have a bit of RingPROTECH disc and SafeDisc.
+- added: If any of R-W area is padded with 0xff, detect it.
+- changed: beep sound
+- changed: _disclog.txt for GD
+- changed: output a list of file in 3DO code
+- fixed: /r option
+- fixed: if ModeSense10 is error, exec continuous.
+- fixed: SubQ Track
+- fixed: Cue file for CDTEXT
+- improved: detecting MCN sector

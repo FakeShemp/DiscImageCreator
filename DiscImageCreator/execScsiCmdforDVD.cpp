@@ -1,20 +1,19 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
-#include "stdafx.h"
 #include "struct.h"
 #include "check.h"
 #include "convert.h"
 #include "execIoctl.h"
-#include "execMMCforDVD.h"
+#include "execScsiCmdforDVD.h"
 #include "output.h"
-#include "outputMMCLog.h"
-#include "outputMMCLogforDVD.h"
+#include "outputScsiCmdLog.h"
+#include "outputScsiCmdLogforDVD.h"
 
 BOOL ReadDVD(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	PEXT_ARG pExtArg,
 	LPCTSTR pszPath
 	)
 {
@@ -67,7 +66,7 @@ BOOL ReadDVD(
 		INT nVal1 = DISC_RAW_READ * 16;
 		INT nVal2 = DISC_RAW_READ * 21;
 		for (INT i = nVal1; i <= nVal2; i += DISC_RAW_READ) {
-			OutputFsVolumeRecognitionSequence(lpBuf, i);
+			OutputFsVolumeRecognitionSequence(pExtArg, pDisc, lpBuf + i);
 		}
 
 		cdb.LogicalBlock[3] = 32;
@@ -79,7 +78,7 @@ BOOL ReadDVD(
 		if (lpBuf[20] == 0 && lpBuf[21] == 0 && lpBuf[22] == 0 && lpBuf[23] == 0) {
 			INT nVal3 = DISC_RAW_READ * 5;
 			for (INT i = 0; i <= nVal3; i += DISC_RAW_READ) {
-				OutputFsVolumeDescriptorSequence(lpBuf, i);
+				OutputFsVolumeDescriptorSequence(lpBuf + i);
 			}
 		}
 
@@ -90,7 +89,7 @@ BOOL ReadDVD(
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
 		}
-		OutputFsVolumeDescriptorSequence(lpBuf, 0);
+		OutputFsVolumeDescriptorSequence(lpBuf);
 
 		for (INT nLBA = 0; nLBA < pDisc->SCSI.nAllLength; nLBA += uiTransferLen) {
 			if (pDisc->SCSI.nAllLength - nLBA < (INT)uiTransferLen) {
@@ -244,7 +243,7 @@ BOOL ReadDVDForCMI(
 	)
 {
 	CONST WORD wSize = 
-		sizeof(DVD_DESCRIPTOR_HEADER) +	sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR);
+		sizeof(DVD_DESCRIPTOR_HEADER) + sizeof(DVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR);
 	_declspec(align(4)) BYTE pBuf[wSize] = { 0 };
 
 	CDB::_READ_DVD_STRUCTURE cdb = { 0 };
@@ -268,7 +267,7 @@ BOOL ReadDVDForCMI(
 			bRet = FALSE;
 			break;
 		}
-		OutputMmcDVDCopyrightManagementInformation(
+		OutputDVDCopyrightManagementInformation(
 			(PDVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR)(pBuf + sizeof(DVD_DESCRIPTOR_HEADER)), nLBA);
 		OutputString(
 			_T("\rOutputting CMI log(LBA) %8u/%8u"), nLBA, pDisc->SCSI.nAllLength - 1);
@@ -305,9 +304,9 @@ BOOL ReadDVDStructure(
 	WORD wEntrySize = wDataSize / sizeof(DVD_STRUCTURE_LIST_ENTRY);
 
 	BYTE byLayerNum = 0;
-	OutputDiscLogA("DVDStructure\n");
+	OutputInfoLogA("================================ DVDStructure =================================\n");
 	OutputDriveLogA(
-		"DVDStructure\n"
+		"================================ DVDStructure =================================\n"
 		"\tDVDStructureList\n");
 	for (WORD i = 0; i < wEntrySize; i++) {
 		PDVD_STRUCTURE_LIST_ENTRY pEntry = 
@@ -339,7 +338,7 @@ BOOL ReadDVDStructure(
 			pDisc->SCSI.wCurrentMedia != ProfileDvdDashRDualLayer) {
 			continue;
 		}
-		else if ((pEntry->FormatCode == 0xC0) &&
+		else if ((pEntry->FormatCode == 0xc0) &&
 			pDisc->SCSI.wCurrentMedia != ProfileDvdRewritable) {
 			continue;
 		}
@@ -360,7 +359,7 @@ BOOL ReadDVDStructure(
 			OutputErrorString(_T("Failure - Format %02x\n"), pEntry->FormatCode);
 		}
 		else {
-			OutputMmcDVDStructureFormat(pDisc, pEntry->FormatCode, 
+			OutputDVDStructureFormat(pDisc, pEntry->FormatCode, 
 				wFormatLen - sizeof(DVD_DESCRIPTOR_HEADER), 
 				lpFormat + sizeof(DVD_DESCRIPTOR_HEADER), &byLayerNum, 0,
 				pDevice->bSuccessReadToc);
@@ -376,7 +375,7 @@ BOOL ReadDVDStructure(
 					OutputErrorString(_T("Failure - Format %02x\n"), pEntry->FormatCode);
 				}
 				else {
-					OutputMmcDVDStructureFormat(pDisc, pEntry->FormatCode,
+					OutputDVDStructureFormat(pDisc, pEntry->FormatCode,
 						wFormatLen - sizeof(DVD_DESCRIPTOR_HEADER), 
 						lpFormat + sizeof(DVD_DESCRIPTOR_HEADER), &byLayerNum,
 						1, pDevice->bSuccessReadToc);

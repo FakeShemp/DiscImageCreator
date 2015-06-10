@@ -1,7 +1,6 @@
 /*
  * This code is using "RFC 1952 GZIP File Format Specification."
  */
-#include "stdafx.h"
 #include "crc32.h"
 
 void make_crc_table(

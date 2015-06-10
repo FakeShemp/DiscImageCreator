@@ -2,7 +2,6 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 
 BOOL AlignRowSubcode(
 	LPBYTE lpColumnSubcode,
@@ -36,8 +35,8 @@ VOID LBAtoMSF(
 	);
 
 VOID LittleToBig(
-	_TCHAR* pOut,
-	_TCHAR* pIn,
+	wchar_t* pOut,
+	wchar_t* pIn,
 	INT nCnt
 	);
 

@@ -127,6 +127,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_ANSI|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(IncludePath);C:\WinDDK\7600.16385.1\src\storage\tools\spti;C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk</IncludePath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -143,6 +144,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_ANSI|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(IncludePath);C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk</IncludePath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -160,6 +162,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <SmallerTypeCheck>false</SmallerTypeCheck>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -175,6 +178,8 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <SmallerTypeCheck>false</SmallerTypeCheck>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -218,6 +223,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -235,6 +241,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -284,22 +292,21 @@
     <ClInclude Include="convert.h" />
     <ClInclude Include="enum.h" />
     <ClInclude Include="execIoctl.h" />
-    <ClInclude Include="execMMC.h" />
-    <ClInclude Include="execMMCforCD.h" />
-    <ClInclude Include="execMMCforDVD.h" />
+    <ClInclude Include="execScsiCmd.h" />
+    <ClInclude Include="execScsiCmdforCD.h" />
+    <ClInclude Include="execScsiCmdforDVD.h" />
     <ClInclude Include="forwardDeclaration.h" />
     <ClInclude Include="get.h" />
     <ClInclude Include="init.h" />
     <ClInclude Include="output.h" />
     <ClInclude Include="outputIoctlLog.h" />
-    <ClInclude Include="outputMMCLog.h" />
-    <ClInclude Include="outputMMCLogforCD.h" />
-    <ClInclude Include="outputMMCLogforDVD.h" />
+    <ClInclude Include="outputScsiCmdLog.h" />
+    <ClInclude Include="outputScsiCmdLogforCD.h" />
+    <ClInclude Include="outputScsiCmdLogforDVD.h" />
     <ClInclude Include="set.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="struct.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="_external\3do.h" />
     <ClInclude Include="_external\crc16ccitt.h" />
     <ClInclude Include="_external\crc32.h" />
     <ClInclude Include="_external\md5.h" />
@@ -311,16 +318,16 @@
     <ClCompile Include="convert.cpp" />
     <ClCompile Include="DiscImageCreator.cpp" />
     <ClCompile Include="execIoctl.cpp" />
-    <ClCompile Include="execMMC.cpp" />
-    <ClCompile Include="execMMCforCD.cpp" />
-    <ClCompile Include="execMMCforDVD.cpp" />
+    <ClCompile Include="execScsiCmd.cpp" />
+    <ClCompile Include="execScsiCmdforCD.cpp" />
+    <ClCompile Include="execScsiCmdforDVD.cpp" />
     <ClCompile Include="get.cpp" />
     <ClCompile Include="init.cpp" />
     <ClCompile Include="output.cpp" />
     <ClCompile Include="outputIoctlLog.cpp" />
-    <ClCompile Include="outputMMCLog.cpp" />
-    <ClCompile Include="outputMMCLogforCD.cpp" />
-    <ClCompile Include="outputMMCLogforDVD.cpp" />
+    <ClCompile Include="outputScsiCmdLog.cpp" />
+    <ClCompile Include="outputScsiCmdLogforCD.cpp" />
+    <ClCompile Include="outputScsiCmdLogforDVD.cpp" />
     <ClCompile Include="set.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -332,7 +339,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_ANSI|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="_external\3do.cpp" />
     <ClCompile Include="_external\crc16ccitt.cpp" />
     <ClCompile Include="_external\crc32.cpp" />
     <ClCompile Include="_external\md5c.cpp" />

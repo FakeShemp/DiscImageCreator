@@ -20,7 +20,6 @@
    documentation and/or software.
  */
 
-#include "stdafx.h"
 #include "md5.h"
 
 /* Constants for MD5Transform routine. */
@@ -138,7 +137,7 @@ void MD5Update (
 {
 	unsigned int i, index, partLen;
 	/* Compute number of bytes mod 64 */
-	index = (unsigned int)((context->count[0] >> 3) & 0x3F);
+	index = (unsigned int)((context->count[0] >> 3) & 0x3f);
 	/* Update number of bits */
 	if ((context->count[0] += ((UINT4)inputLen << 3)) < ((UINT4)inputLen << 3))
 		context->count[1]++;

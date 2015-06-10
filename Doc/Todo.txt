@@ -4,12 +4,7 @@
   in each sector and to take the good bytes from each rereading, instead of
   trying to reread the entire sector without errors.
 
-. Ripping the protected disc.
-  Corrupted sectors, replace everything except the sync and header fields with 0x55 bytes.
-
 . cue file for multisession disc
   SESSION directives
-
-. fix subcode in gd-rom in high density area.
 
 . dat file (Still not sorting correctly.)

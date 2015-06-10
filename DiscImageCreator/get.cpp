@@ -1,7 +1,6 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
-#include "stdafx.h"
 #include "struct.h"
 #include "check.h"
 #include "convert.h"
@@ -12,6 +11,24 @@
 extern _TCHAR g_szCurrentdir[_MAX_PATH];
 extern _TCHAR g_drive[_MAX_DRIVE];
 extern _TCHAR g_dir[_MAX_DIR];
+
+BOOL GetAlignedAllocatedBuffer(
+	PDEVICE pDevice,
+	LPBYTE* ppSrcBuf,
+	DWORD dwSize,
+	LPBYTE* ppOutBuf,
+	LPCTSTR pszFuncName,
+	LONG lLineNum
+	)
+{
+	*ppSrcBuf = (LPBYTE)calloc(dwSize + pDevice->AlignmentMask, sizeof(BYTE));
+	if (!*ppSrcBuf) {
+		OutputLastErrorNumAndString(pszFuncName, lLineNum);
+		return FALSE;
+	}
+	*ppOutBuf = (LPBYTE)ConvParagraphBoundary(pDevice, *ppSrcBuf);
+	return TRUE;
+}
 
 BOOL GetCreatedFileList(
 	PHANDLE h,
@@ -156,7 +173,7 @@ BYTE GetMode(
 {
 	BYTE byMode = DATA_BLOCK_MODE0;
 	if ((byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-		IsValidDataHeader(lpBuf)) {
+		IsValidMainDataHeader(lpBuf)) {
 		if ((lpBuf[15] & 0x60) == 0x60) {
 			byMode = BcdToDec((BYTE)(lpBuf[15] ^ 0x60));
 		}
@@ -174,7 +191,7 @@ BOOL GetWriteOffset(
 {
 	BOOL bRet = FALSE;
 	for (INT i = 0; i < CD_RAW_SECTOR_SIZE * 2; i++) {
-		if (IsValidDataHeader(lpBuf + i)) {
+		if (IsValidMainDataHeader(lpBuf + i)) {
 			BYTE sm = BcdToDec((BYTE)(lpBuf[i + 12] ^ 0x01));
 			BYTE ss = BcdToDec((BYTE)(lpBuf[i + 13] ^ 0x80));
 			BYTE sf = BcdToDec((BYTE)(lpBuf[i + 14]));
@@ -188,9 +205,10 @@ BOOL GetWriteOffset(
 	return bRet;
 }
 
-BOOL GetEccEdcCheckCmd(
-	LPTSTR pszCmd,
+BOOL GetEccEdcCmd(
+	LPTSTR pszStr,
 	size_t cmdSize,
+	LPCTSTR pszCmd,
 	LPCTSTR pszImgPath
 	)
 {
@@ -205,8 +223,8 @@ BOOL GetEccEdcCheckCmd(
 	_tsplitpath(path, drive, dir, NULL, NULL);
 	_tmakepath(path, drive, dir, _T("EccEdc"), _T("exe"));
 	if (PathFileExists(path)) {
-		_sntprintf(pszCmd, cmdSize, 
-			_T("\"\"%s\" check \"%s\"\""), path, pszImgPath);
+		_sntprintf(pszStr, cmdSize, 
+			_T("\"\"%s\" %s \"%s\"\""), path, pszCmd, pszImgPath);
 		bRet = TRUE;
 	}
 	return bRet;

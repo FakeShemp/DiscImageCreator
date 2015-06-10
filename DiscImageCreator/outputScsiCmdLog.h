@@ -2,36 +2,42 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 
-VOID OutputMmcBufferCapacity(
+VOID OutputBufferCapacity(
 	PREAD_BUFFER_CAPACITY_DATA pReadBufCapaData
 	);
 
-VOID OutputMmcDiscInformation(
+VOID OutputDiscInformation(
 	PDISC_INFORMATION pDiscInformation
 	);
 
-VOID OutputMmcDriveSpeed(
+VOID OutputDriveSpeed(
 	PCDROM_SET_SPEED pSetspeed
 	);
 
-VOID OutputMmcFeatureNumber(
+VOID OutputFeatureNumber(
 	PDEVICE pDevice,
 	LPBYTE lpConf,
 	DWORD dwAllLen
 	);
 
-VOID OutputMmcFeatureProfileType(
+VOID OutputFeatureProfileType(
 	WORD wFeatureProfileType
 	);
 
-VOID OutputMmcInquiryData(
+VOID OutputInquiry(
 	PDEVICE pDevice,
 	PINQUIRYDATA pInquiry
 	);
 
-VOID OutputMmcModeSense10(
+VOID OutputModeSense10(
 	PDEVICE pDevice,
 	PSENSE pModesense
+	);
+
+VOID OutputEeprom(
+	LPBYTE pBuf,
+	DWORD tLen,
+	INT nRoop,
+	INT nLife
 	);

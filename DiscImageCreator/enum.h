@@ -19,10 +19,12 @@ typedef enum _EXEC_TYPE {
 } EXEC_TYPE, *PEXEC_TYPE;
 
 typedef enum _LOG_TYPE {
-	disc,
-	drive,
-	error,
-	info
+	standardOut = 1,
+	standardErr = 1 << 1,
+	fileDisc = 1 << 2,
+	fileDrive = 1 << 3,
+	fileError = 1 << 4,
+	fileInfo = 1 << 5
 } LOG_TYPE, *PLOG_TYPE;
 
 typedef enum _PLEX_DRIVE_TYPE {
@@ -91,9 +93,15 @@ typedef enum _DRIVE_DATA_ORDER {
 } DRIVE_DATA_ORDER, *PDRIVE_DATA_ORDER;
 
 typedef enum _SUB_RTOW_TYPE {
-	Zero,
-	CDG,
-	Fill
+	Zero = 0,
+	CDG = 1,
+	RFull = 1 << 1,
+	SFull = 1 << 2,
+	TFull = 1 << 3,
+	UFull = 1 << 4,
+	VFull = 1 << 5,
+	WFull = 1 << 6,
+	Full = RFull | SFull | TFull | UFull | VFull | WFull
 } SUB_RTOW_TYPE, *PSUB_RTOW_TYPE;
 
 typedef struct _READ_D8_FLAG {

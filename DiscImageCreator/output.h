@@ -2,86 +2,87 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 
-#ifdef UNICODE
-#define WFLAG "w, ccs=UTF-8"
-#define AFLAG "a, ccs=UTF-8"
-#else
-#define WFLAG "w"
-#define AFLAG "a"
-#endif
-
-#define BOOLEAN_TO_STRING_TRUE_FALSE(_b_) \
+#define BOOLEAN_TO_STRING_TRUE_FALSE_W(_b_) \
 	((_b_) ? _T("True") : _T("False"))
 
 #define BOOLEAN_TO_STRING_TRUE_FALSE_A(_b_) \
 	((_b_) ? "True" : "False")
 
-#define BOOLEAN_TO_STRING_YES_NO(_b_) \
+#define BOOLEAN_TO_STRING_YES_NO_W(_b_) \
 	((_b_) ? _T("Yes") : _T("No"))
 
 #define BOOLEAN_TO_STRING_YES_NO_A(_b_) \
 	((_b_) ? "Yes" : "No")
 
-#define OutputString(str, ...) \
+#define OutputStringW(str, ...) \
 { \
 	_tprintf(str, __VA_ARGS__); \
 }
-#ifdef _DEBUG
-extern _TCHAR logBuffer[2048];
-extern CHAR logBufferA[2048];
-#define OutputDebugStringEx(str, ...) \
+#define OutputStringA(str, ...) \
 { \
-	_sntprintf(logBuffer, 2048, str, __VA_ARGS__); \
-	logBuffer[2047] = 0; \
-	OutputDebugString(logBuffer); \
+	printf(str, __VA_ARGS__); \
+}
+
+#ifdef _DEBUG
+extern _TCHAR logBufferW[DISC_RAW_READ];
+extern CHAR logBufferA[DISC_RAW_READ];
+#define OutputDebugStringExW(str, ...) \
+{ \
+	_sntprintf(logBufferW, DISC_RAW_READ, str, __VA_ARGS__); \
+	logBufferW[2047] = 0; \
+	OutputDebugString(logBufferW); \
 }
 #define OutputDebugStringExA(str, ...) \
 { \
-	_snprintf(logBufferA, 2048, str, __VA_ARGS__); \
+	_snprintf(logBufferA, DISC_RAW_READ, str, __VA_ARGS__); \
 	logBufferA[2047] = 0; \
 	OutputDebugStringA(logBufferA); \
 }
-#define OutputErrorString(str, ...) \
+
+#define OutputErrorStringW(str, ...) \
 { \
-	OutputDebugStringEx(str, __VA_ARGS__); \
+	OutputDebugStringExW(str, __VA_ARGS__); \
 }
-#define OutputDiscLog(str, ...) \
+#define OutputErrorStringA(str, ...) \
 { \
-	OutputDebugStringEx(str, __VA_ARGS__); \
+	OutputDebugStringExA(str, __VA_ARGS__); \
+}
+#define OutputDiscLogW(str, ...) \
+{ \
+	OutputDebugStringExW(str, __VA_ARGS__); \
 }
 #define OutputDiscLogA(str, ...) \
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
-#define OutputDriveLog(str, ...) \
+#define OutputDriveLogW(str, ...) \
 { \
-	OutputDebugStringEx(str, __VA_ARGS__); \
+	OutputDebugStringExW(str, __VA_ARGS__); \
 }
 #define OutputDriveLogA(str, ...) \
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
-#define OutputErrorLog(str, ...) \
+#define OutputErrorLogW(str, ...) \
 { \
-	OutputDebugStringEx(str, __VA_ARGS__); \
+	OutputDebugStringExW(str, __VA_ARGS__); \
 }
 #define OutputErrorLogA(str, ...) \
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
-#define OutputInfoLog(str, ...) \
+#define OutputInfoLogW(str, ...) \
 { \
-	OutputDebugStringEx(str, __VA_ARGS__); \
+	OutputDebugStringExW(str, __VA_ARGS__); \
 }
 #define OutputInfoLogA(str, ...) \
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
-#define OutputLog(type, str, ...) \
+#define OutputLogW(type, str, ...) \
 { \
-	OutputDebugStringEx(str, __VA_ARGS__); \
+	OutputDebugStringExW(str, __VA_ARGS__); \
 }
 #define OutputLogA(type, str, ...) \
 { \
@@ -90,72 +91,6 @@ extern CHAR logBufferA[2048];
 #else
 // If it uses g_LogFile, call InitLogFile()
 extern _LOG_FILE g_LogFile;
-#define OutputErrorString(str, ...) \
-{ \
-	_ftprintf(stderr, str, __VA_ARGS__); \
-}
-#define OutputDiscLog(str, ...) \
-{ \
-	_ftprintf(g_LogFile.fpDisc, str, __VA_ARGS__); \
-}
-#define OutputDiscLogA(str, ...) \
-{ \
-	fprintf(g_LogFile.fpDisc, str, __VA_ARGS__); \
-}
-#define OutputDriveLog(str, ...) \
-{ \
-	_ftprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
-}
-#define OutputDriveLogA(str, ...) \
-{ \
-	fprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
-}
-#define OutputErrorLog(str, ...) \
-{ \
-	_ftprintf(g_LogFile.fpError, str, __VA_ARGS__); \
-}
-#define OutputErrorLogA(str, ...) \
-{ \
-	fprintf(g_LogFile.fpError, str, __VA_ARGS__); \
-}
-#define OutputInfoLog(str, ...) \
-{ \
-	_ftprintf(g_LogFile.fpInfo, str, __VA_ARGS__); \
-}
-#define OutputInfoLogA(str, ...) \
-{ \
-	fprintf(g_LogFile.fpInfo, str, __VA_ARGS__); \
-}
-#define OutputLog(type, str, ...) \
-{ \
-	if (type == disc) { \
-		OutputDiscLog(str, __VA_ARGS__); \
-	} \
-	else if (type == drive) { \
-		OutputDriveLog(str, __VA_ARGS__); \
-	} \
-	else if (type == error) { \
-		OutputErrorLog(str, __VA_ARGS__); \
-	} \
-	else if (type == info) { \
-		OutputInfoLog(str, __VA_ARGS__); \
-	} \
-}
-#define OutputLogA(type, str, ...) \
-{ \
-	if (type == disc) { \
-		OutputDiscLogA(str, __VA_ARGS__); \
-	} \
-	else if (type == drive) { \
-		OutputDriveLogA(str, __VA_ARGS__); \
-	} \
-	else if (type == error) { \
-		OutputErrorLogA(str, __VA_ARGS__); \
-	} \
-	else if (type == info) { \
-		OutputInfoLogA(str, __VA_ARGS__); \
-	} \
-}
 #define FlushLog() \
 { \
 	fflush(g_LogFile.fpDisc); \
@@ -163,6 +98,115 @@ extern _LOG_FILE g_LogFile;
 	fflush(g_LogFile.fpError); \
 	fflush(g_LogFile.fpInfo); \
 }
+
+#define OutputErrorStringW(str, ...) \
+{ \
+	_ftprintf(stderr, str, __VA_ARGS__); \
+}
+#define OutputErrorStringA(str, ...) \
+{ \
+	fprintf(stderr, str, __VA_ARGS__); \
+}
+#define OutputDiscLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpDisc, str, __VA_ARGS__); \
+}
+#define OutputDiscLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpDisc, str, __VA_ARGS__); \
+}
+#define OutputDriveLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
+}
+#define OutputDriveLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
+}
+#define OutputErrorLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpError, str, __VA_ARGS__); \
+}
+#define OutputErrorLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpError, str, __VA_ARGS__); \
+}
+#define OutputInfoLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpInfo, str, __VA_ARGS__); \
+}
+#define OutputInfoLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpInfo, str, __VA_ARGS__); \
+}
+#define OutputLogW(type, str, ...) \
+{ \
+	INT t = type; \
+	if ((t & standardOut) == standardOut) { \
+		OutputStringW(str, __VA_ARGS__); \
+	} \
+	if ((t & standardErr) == standardErr) { \
+		OutputErrorStringW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileDisc) == fileDisc) { \
+		OutputDiscLogW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileDrive) == fileDrive) { \
+		OutputDriveLogW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileError) == fileError) { \
+		OutputErrorLogW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileInfo) == fileInfo) { \
+		OutputInfoLogW(str, __VA_ARGS__); \
+	} \
+}
+#define OutputLogA(type, str, ...) \
+{ \
+	INT t = type; \
+	if ((t & standardOut) == standardOut) { \
+		OutputStringA(str, __VA_ARGS__); \
+	} \
+	if ((t & standardErr) == standardErr) { \
+		OutputErrorStringA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileDisc) == fileDisc) { \
+		OutputDiscLogA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileDrive) == fileDrive) { \
+		OutputDriveLogA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileError) == fileError) { \
+		OutputErrorLogA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileInfo) == fileInfo) { \
+		OutputInfoLogA(str, __VA_ARGS__); \
+	} \
+}
+#endif
+
+#ifdef UNICODE
+#define WFLAG "w, ccs=UTF-8"
+#define AFLAG "a, ccs=UTF-8"
+#define BOOLEAN_TO_STRING_TRUE_FALSE BOOLEAN_TO_STRING_TRUE_FALSE_W
+#define BOOLEAN_TO_STRING_YES_NO BOOLEAN_TO_STRING_YES_NO_W
+#define OutputString OutputStringW
+#define OutputErrorString OutputErrorStringW
+#define OutputDiscLog OutputDiscLogW
+#define OutputDriveLog OutputDriveLogW
+#define OutputErrorLog OutputErrorLogW
+#define OutputInfoLog OutputInfoLogW
+#else
+#define WFLAG "w"
+#define AFLAG "a"
+#define BOOLEAN_TO_STRING_TRUE_FALSE BOOLEAN_TO_STRING_TRUE_FALSE_A
+#define BOOLEAN_TO_STRING_YES_NO BOOLEAN_TO_STRING_YES_NO_A
+#define OutputString OutputStringA
+#define OutputErrorString OutputErrorStringA
+#define OutputDiscLog OutputDiscLogA
+#define OutputDriveLog OutputDriveLogA
+#define OutputErrorLog OutputErrorLogA
+#define OutputInfoLog OutputInfoLogA
 #endif
 
 #define FcloseAndNull(fp) \
@@ -274,6 +318,20 @@ VOID WriteSubChannel(
 	FILE* fpParse
 	);
 
+VOID WriteErrorBuffer(
+	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
+	PDISC pDisc,
+	PMAIN_HEADER pMainHeader,
+	LPBYTE lpBuf,
+	LPBYTE lpScrambledBuf,
+	LPBYTE lpSubcode,
+	INT nLBA,
+	FILE* fpImg,
+	FILE* fpSub,
+	FILE* fpC2
+	);
+
 BOOL WriteParsingSubfile(
 	LPCTSTR pszSubfile
 	);
@@ -289,7 +347,7 @@ BOOL SplitFileForGD(
 VOID DescrambleMainChannel(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,
-	FILE* fpTbl,
+	LPBYTE lpScrambledBuf,
 	FILE* fpImg
 	);
 
@@ -297,7 +355,6 @@ BOOL CreateBinCueCcd(
 	PDISC pDisc,
 	LPCTSTR pszPath,
 	LPCTSTR pszImgName,
-	BOOL lpCatalog,
 	FILE* fpImg,
 	FILE* fpCue,
 	FILE* fpCueForImg,
@@ -319,11 +376,4 @@ VOID OutputLastErrorNumAndString(
 	);
 
 BOOL OutputWindowsVer(
-	);
-
-VOID OutputEeprom(
-	LPBYTE pBuf,
-	DWORD tLen,
-	INT nRoop,
-	INT nLife
 	);

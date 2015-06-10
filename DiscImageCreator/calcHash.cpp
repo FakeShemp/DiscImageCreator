@@ -1,7 +1,6 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
-#include "stdafx.h"
 #include "calcHash.h"
 
 VOID CalcInit(

@@ -1,10 +1,12 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
-#include "stdafx.h"
 #include "struct.h"
 #include "init.h"
 #include "output.h"
+
+// These global variable is set at DiscImageCreator.cpp
+extern BYTE g_aSyncHeader[SYNC_SIZE];
 
 BOOL InitC2ErrorData(
 	PEXT_ARG pExtArg,
@@ -22,6 +24,7 @@ BOOL InitC2ErrorData(
 	}
 	pC2Error->sC2Offset =
 		(SHORT)((pDisc->MAIN.nCombinedOffset - CD_RAW_READ_SUBCODE_SIZE) / CHAR_BIT);
+#if 0
 	if (pDisc->MAIN.nCombinedOffset > 0) {
 		//	Nonomura Byouin no Hitobito
 		//	 Combined Offset(Byte)   1680, (Samples)   420
@@ -60,6 +63,7 @@ BOOL InitC2ErrorData(
 			pC2Error->cSlideSectorNum = (CHAR)(nSlideNum);
 		}
 	}
+#endif
 	try {
 		for (UINT n = 0; n < pExtArg->dwMaxC2ErrorNum; n++) {
 			OutputString(_T("\rAllocating memory for C2 errors: %u/%u"), 
@@ -88,7 +92,7 @@ BOOL InitC2ErrorData(
 				OutputString(_T("\n"));
 				throw FALSE;
 			}
-			(*pC2ErrorPerSector)[n].bErrorFlag = RETURNED_C2_ERROR_NO_1ST;
+			(*pC2ErrorPerSector)[n].bErrorFlag = RETURNED_NO_C2_ERROR_1ST;
 		}
 		OutputString(_T("\n"));
 	}
@@ -120,18 +124,28 @@ BOOL InitLBAPerTrack(
 
 BOOL InitTocFullData(
 	PEXEC_TYPE pExecType,
+	PDISC* pDisc
+	)
+{
+	size_t dwTrackAllocSize =
+		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
+	if (NULL == ((*pDisc)->SCSI.lpSessionNumList =
+		(LPBYTE)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL InitTocTextData(
+	PEXEC_TYPE pExecType,
 	PDEVICE pDevice,
 	PDISC* pDisc
 	)
 {
 	BOOL bRet = TRUE;
-	size_t dwTrackAllocSize = 
+	size_t dwTrackAllocSize =
 		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
-	if (NULL == ((*pDisc)->SCSI.lpSessionNumList = 
-		(LPBYTE)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
-		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-		return FALSE;
-	}
 	try {
 		if (pDevice->bCanCDText || *pExecType == gd) {
 			if (NULL == ((*pDisc)->SUB.pszISRC = 
@@ -179,6 +193,99 @@ BOOL InitTocFullData(
 					throw FALSE;
 				}
 			}
+		}
+	}
+	catch (BOOL bErr) {
+		bRet = bErr;
+	}
+	return bRet;
+}
+
+VOID InitMainDataHeader(
+	PMAIN_HEADER pMainHeader
+	)
+{
+	memcpy(pMainHeader->header, g_aSyncHeader, sizeof(g_aSyncHeader));
+	pMainHeader->header[12] = 0x01;
+	pMainHeader->header[13] = 0x82;
+	pMainHeader->header[14] = (BYTE)-1;
+}
+
+BOOL InitSubData(
+	PEXEC_TYPE pExecType,
+	PDISC* pDisc
+	)
+{
+	BOOL bRet = TRUE;
+	size_t dwTrackAllocSize =
+		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
+	(*pDisc)->SUB.bCatalog = FALSE;
+	(*pDisc)->SUB.nFirstLBAForMCN = -1;
+	(*pDisc)->SUB.nRangeLBAForMCN = -1;
+	(*pDisc)->SUB.bISRC = FALSE;
+	(*pDisc)->SUB.nFirstLBAForISRC = -1;
+	(*pDisc)->SUB.nRangeLBAForISRC = -1;
+	try {
+		if (NULL == ((*pDisc)->SUB.lpRtoWList =
+			(LPBYTE)calloc(dwTrackAllocSize, sizeof(BYTE)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->SUB.lpFirstLBAListOnSub =
+			(LPINT*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->SUB.lpFirstLBAListOnSubSync = 
+			(LPINT*)calloc(dwTrackAllocSize, sizeof(UINT_PTR)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->SUB.lpFirstLBAListOfDataTrackOnSub = 
+			(LPINT)calloc(dwTrackAllocSize, sizeof(INT)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->SUB.lpLastLBAListOfDataTrackOnSub = 
+			(LPINT)calloc(dwTrackAllocSize, sizeof(INT)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->SUB.lpISRCList = 
+			(LPBOOL)calloc(dwTrackAllocSize, sizeof(BOOL)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->SUB.lpCtlList = 
+			(LPBYTE)calloc(dwTrackAllocSize, sizeof(BYTE)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->MAIN.lpModeList = 
+			(LPBYTE)calloc(dwTrackAllocSize, sizeof(BYTE)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+		if (NULL == ((*pDisc)->SUB.lpEndCtlList = 
+			(LPBYTE)calloc(dwTrackAllocSize, sizeof(BYTE)))) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			throw FALSE;
+		}
+
+		size_t dwIndexAllocSize = (size_t)MAXIMUM_NUMBER_INDEXES * sizeof(UINT_PTR);
+		for (size_t h = 0; h < dwTrackAllocSize; h++) {
+			if (NULL == ((*pDisc)->SUB.lpFirstLBAListOnSub[h] = (LPINT)malloc(dwIndexAllocSize))) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				throw FALSE;
+			}
+			FillMemory((*pDisc)->SUB.lpFirstLBAListOnSub[h], dwIndexAllocSize, -1);
+			if (NULL == ((*pDisc)->SUB.lpFirstLBAListOnSubSync[h] = (LPINT)malloc(dwIndexAllocSize))) {
+				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+				throw FALSE;
+			}
+			FillMemory((*pDisc)->SUB.lpFirstLBAListOnSubSync[h], dwIndexAllocSize, -1);
+			(*pDisc)->SUB.lpFirstLBAListOfDataTrackOnSub[h] = -1;
+			(*pDisc)->SUB.lpLastLBAListOfDataTrackOnSub[h] = -1;
 		}
 	}
 	catch (BOOL bErr) {
@@ -258,13 +365,13 @@ BOOL InitLogFile(
 }
 #endif
 
-VOID Terminatec2ErrorDataPerSector(
-	PDEVICE pDevice,
+VOID TerminateC2ErrorDataPerSector(
 	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
 	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector
 	)
 {
-	if (*pC2ErrorPerSector && pDevice->bC2ErrorData && pExtArg->bC2) {
+	if (*pC2ErrorPerSector && pExtArg->bC2 && pDevice->bC2ErrorData) {
 		for (UINT i = 0; i < pExtArg->dwMaxC2ErrorNum; i++) {
 			OutputString(_T("\rFreeing allocated memory for C2 errors: %u/%u"), 
 				i + 1, pExtArg->dwMaxC2ErrorNum);
@@ -287,15 +394,21 @@ VOID TerminateLBAPerTrack(
 }
 
 VOID TerminateTocFullData(
+	PDISC* pDisc
+	)
+{
+	FreeAndNull((*pDisc)->SCSI.lpSessionNumList);
+}
+
+VOID TerminateTocTextData(
 	PEXEC_TYPE pExecType,
 	PDEVICE pDevice,
 	PDISC* pDisc
 	)
 {
-	size_t dwTrackAllocSize = 
+	size_t dwTrackAllocSize =
 		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
-	FreeAndNull((*pDisc)->SCSI.lpSessionNumList);
-	if (pDevice->bCanCDText || *pExecType == gd) {
+	if (pDevice->bCanCDText) {
 		for (size_t i = 0; i < dwTrackAllocSize; i++) {
 			FreeAndNull((*pDisc)->SUB.pszISRC[i]);
 			FreeAndNull((*pDisc)->SCSI.pszTitle[i]);
@@ -307,6 +420,32 @@ VOID TerminateTocFullData(
 		FreeAndNull((*pDisc)->SCSI.pszPerformer);
 		FreeAndNull((*pDisc)->SCSI.pszSongWriter);
 	}
+}
+
+VOID TerminateSubData(
+	PEXEC_TYPE pExecType,
+	PDISC* pDisc
+	)
+{
+	size_t dwTrackAllocSize =
+		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
+	for (size_t h = 0; h < dwTrackAllocSize; h++) {
+		if ((*pDisc)->SUB.lpFirstLBAListOnSub) {
+			FreeAndNull((*pDisc)->SUB.lpFirstLBAListOnSub[h]);
+		}
+		if ((*pDisc)->SUB.lpFirstLBAListOnSubSync) {
+			FreeAndNull((*pDisc)->SUB.lpFirstLBAListOnSubSync[h]);
+		}
+	}
+	FreeAndNull((*pDisc)->SUB.lpRtoWList);
+	FreeAndNull((*pDisc)->SUB.lpFirstLBAListOnSub);
+	FreeAndNull((*pDisc)->SUB.lpFirstLBAListOnSubSync);
+	FreeAndNull((*pDisc)->SUB.lpFirstLBAListOfDataTrackOnSub);
+	FreeAndNull((*pDisc)->SUB.lpLastLBAListOfDataTrackOnSub);
+	FreeAndNull((*pDisc)->SUB.lpCtlList);
+	FreeAndNull((*pDisc)->SUB.lpEndCtlList);
+	FreeAndNull((*pDisc)->SUB.lpISRCList);
+	FreeAndNull((*pDisc)->MAIN.lpModeList);
 }
 
 #ifndef _DEBUG

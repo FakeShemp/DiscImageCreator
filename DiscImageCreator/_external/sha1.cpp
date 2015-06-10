@@ -28,7 +28,6 @@
  *      a multiple of the size of an 8-bit character.
  *
  */
-#include "stdafx.h"
 #include "sha1.h"
 #pragma warning(push)
 #pragma warning(disable:4242 4244 4365 6386)

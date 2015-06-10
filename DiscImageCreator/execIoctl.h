@@ -2,7 +2,6 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 
 BOOL DiskGetMediaTypes(
 	PDEVICE pDevice,
@@ -15,9 +14,9 @@ BOOL ScsiGetAddress(
 
 BOOL ScsiPassThroughDirect(
 	PDEVICE pDevice,
-	PVOID lpCdbCmd,
+	LPVOID lpCdbCmd,
 	BYTE byCdbCmdLength,
-	PVOID pvBuffer,
+	LPVOID pvBuffer,
 	DWORD dwBufferLength,
 	LPBYTE byScsiStatus,
 	LPCTSTR pszFuncName,
@@ -26,5 +25,5 @@ BOOL ScsiPassThroughDirect(
 
 BOOL StorageQueryProperty(
 	PDEVICE pDevice,
-	PBOOL pBusTypeUSB
+	LPBOOL lpBusTypeUSB
 	);

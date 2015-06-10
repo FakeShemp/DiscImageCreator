@@ -2,8 +2,6 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
-#include "enum.h"
 
 #define DRIVE_MAX_SPEED	(72)
 

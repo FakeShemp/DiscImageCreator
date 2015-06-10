@@ -2,7 +2,6 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 #include "enum.h"
 
 BOOL PreserveTrackAttribution(
@@ -10,12 +9,15 @@ BOOL PreserveTrackAttribution(
 	PDISC pDisc,
 	INT nLBA,
 	LPBYTE lpCurrentTrackNum,
+	PMAIN_HEADER pMainHeader,
 	PSUB_Q pSubQ,
 	PSUB_Q pPrevSubQ
 	);
 
-VOID SetAndOutputc2ErrorDataPerSector(
+VOID SetAndOutputC2ErrorDataPerSector(
+#if 0
 	PC2_ERROR pC2Error,
+#endif
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
 	INT nLBA,
 	DWORD dwAllBufLen,
@@ -44,12 +46,12 @@ VOID SetC2ErrorBackup(
 	DWORD dwAllBufLen
 	);
 
-VOID SetAndOutputMmcToc(
+VOID SetAndOutputToc(
 	PEXEC_TYPE pExecType,
 	PDISC pDisc
 	);
 
-VOID SetAndOutputMmcTocFull(
+VOID SetAndOutputTocFull(
 	PDISC pDisc,
 	PCDROM_TOC_FULL_TOC_DATA fullToc,
 	PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData,
@@ -57,7 +59,7 @@ VOID SetAndOutputMmcTocFull(
 	FILE* fpCcd
 	);
 
-VOID SetAndOutputMmcTocCDText(
+VOID SetAndOutputTocCDText(
 	PDISC pDisc,
 	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	PCHAR pTmpText,
@@ -65,7 +67,7 @@ VOID SetAndOutputMmcTocCDText(
 	WORD wAllTextSize
 	);
 
-VOID SetAndOutputMmcTocCDWText(
+VOID SetAndOutputTocCDWText(
 	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
 	PCHAR pTmpText,
 	WORD wFirstEntries,
@@ -73,18 +75,18 @@ VOID SetAndOutputMmcTocCDWText(
 	WORD wAllTextSize
 	);
 
-VOID SetMmcFeatureCdRead(
+VOID SetFeatureCdRead(
 	PFEATURE_DATA_CD_READ pCDRead,
 	PDEVICE pDevice
 	);
 
-VOID SetCDOffsetData(
+VOID SetCDOffset(
 	PDISC pDisc,
 	INT nStartLBA,
 	INT nEndLBA
 	);
 
-VOID SetCDTransferData(
+VOID SetCDTransfer(
 	PDEVICE pDevice,
 	DRIVE_DATA_ORDER order
 	);
@@ -105,8 +107,8 @@ VOID SetMCNToString(
 	);
 
 VOID SetReadCDCommand(
-	PDEVICE pDevice,
 	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
 	CDB::_READ_CD* cdb,
 	READ_CD_FLAG::EXPECTED_SECTOR_TYPE type,
 	UINT uiTransferLen,
@@ -115,8 +117,8 @@ VOID SetReadCDCommand(
 	);
 
 VOID SetReadD8Command(
-	PDEVICE pDevice,
 	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
 	CDB::_PLXTR_READ_CDDA* cdb,
 	UINT uiTransferLen,
 	BOOL bSub,
@@ -124,7 +126,9 @@ VOID SetReadD8Command(
 	);
 
 VOID SetSubQDataFromReadCD(
-	PDISC pDisc,
+	WORD wDriveBufSize,
+	UINT uiMainDataSlideSize,
+	PMAIN_HEADER pMainHeader,
 	PSUB_Q pSubQ,
 	LPBYTE lpBuf,
 	LPBYTE lpSubcode
@@ -135,4 +139,8 @@ BOOL UpdateSubQData(
 	PSUB_Q pPrevSubQ,
 	PSUB_Q pPrevPrevSubQ,
 	BOOL bLibCrypt
+	);
+
+VOID UpdateTmpMainHeader(
+	PMAIN_HEADER pMainHeader
 	);

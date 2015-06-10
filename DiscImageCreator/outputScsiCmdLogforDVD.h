@@ -4,16 +4,16 @@
 #pragma once
 
 VOID OutputFsVolumeDescriptorSequence(
-	LPBYTE lpBuf,
-	INT nIdx
+	LPBYTE lpBuf
 	);
 
 VOID OutputFsVolumeRecognitionSequence(
-	LPBYTE lpBuf,
-	INT nIdx
+	PEXT_ARG pExtArg,
+	PDISC pDisc,
+	LPBYTE lpBuf
 	);
 
-VOID OutputMmcDVDStructureFormat(
+VOID OutputDVDStructureFormat(
 	PDISC pDisc,
 	BYTE byFormatCode,
 	WORD wFormatLength,
@@ -23,7 +23,7 @@ VOID OutputMmcDVDStructureFormat(
 	BOOL bSuccesssReadToc
 	);
 
-VOID OutputMmcDVDCopyrightManagementInformation(
+VOID OutputDVDCopyrightManagementInformation(
 	PDVD_COPYRIGHT_MANAGEMENT_DESCRIPTOR dvdCopyright,
 	INT nLBA
 	);

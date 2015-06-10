@@ -3,14 +3,13 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
-#include "stdafx.h"
 #include "struct.h"
 #include "calcHash.h"
 #include "check.h"
 #include "execIoctl.h"
-#include "execMMC.h"
-#include "execMMCforCD.h"
-#include "execMMCforDVD.h"
+#include "execScsiCmd.h"
+#include "execScsiCmdforCD.h"
+#include "execScsiCmdforDVD.h"
 #include "get.h"
 #include "init.h"
 #include "output.h"
@@ -18,6 +17,7 @@
 #define DEFAULT_REREAD_VAL			(1024)
 #define DEFAULT_MAX_C2_ERROR_VAL	(4096)
 #define DEFAULT_REREAD_SPEED_VAL	(4)
+#define DEFAULT_SPTD_TIMEOUT_VAL	(60)
 
 // These global variable is set at printAndSetPath().
 _TCHAR g_szCurrentdir[_MAX_PATH];
@@ -26,80 +26,102 @@ _TCHAR g_dir[_MAX_DIR];
 _TCHAR g_fname[_MAX_FNAME];
 _TCHAR g_ext[_MAX_EXT];
 
+BYTE g_aSyncHeader[SYNC_SIZE] = {
+	0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0x00
+};
+
 // These static variable is set at checkArg().
 static DWORD s_dwSpeed = 0;
 static INT s_nStartLBA = 0;
 static INT s_nEndLBA = 0;
 
+#define playtime (200)
+#define c4 (262)
+#define d4 (294)
+#define e4 (330)
+#define f4 (349)
+#define g4 (392)
+#define a4 (440)
+#define b4 (494)
+#define c5 (523)
+#define d5 (587)
+#define e5 (659)
+#define f5 (698)
+#define g5 (784)
+#define a5 (880)
+#define b5 (988)
+#define c6 (1047)
+
 int soundBeep(int nRet)
 {
 	if (nRet) {
-		if (!Beep(440, 200)) {
+		if (!Beep(c4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // do
-		if (!Beep(494, 200)) {
+		};
+		if (!Beep(d4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // re
-		if (!Beep(554, 200)) {
+		};
+		if (!Beep(e4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // mi
-		if (!Beep(587, 200)) {
+		};
+		if (!Beep(f4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // fa
-		if (!Beep(659, 200)) {
+		};
+		if (!Beep(g4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // so
-		if (!Beep(740, 200)) {
+		};
+		if (!Beep(a4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // la
-		if (!Beep(830, 200)) {
+		};
+		if (!Beep(b4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // ti
-		if (!Beep(880, 200)) {
+		};
+		if (!Beep(c5, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // do
+		};
 	}
 	else {
-		if (!Beep(880, 200)) {
+		if (!Beep(c5, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // do
-		if (!Beep(830, 200)) {
+		};
+		if (!Beep(b4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // ti
-		if (!Beep(740, 200)) {
+		};
+		if (!Beep(a4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // la
-		if (!Beep(659, 200)) {
+		};
+		if (!Beep(g4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // so
-		if (!Beep(587, 200)) {
+		};
+		if (!Beep(f4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // fa
-		if (!Beep(554, 200)) {
+		};
+		if (!Beep(e4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // mi
-		if (!Beep(494, 200)) {
+		};
+		if (!Beep(d4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // re
-		if (!Beep(440, 200)) {
+		};
+		if (!Beep(c4, playtime)) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			return FALSE;
-		};   // do
+		};
 	}
 	return TRUE;
 }
@@ -128,12 +150,12 @@ int processOutputHash(_TCHAR* szFullPath)
 	_TCHAR szDstPath[_MAX_PATH] = { 0 };
 	_TCHAR ext[_MAX_EXT] = { 0 };
 	// http://msdn.microsoft.com/en-us/library/aa364428%28v=vs.85%29.aspx
-	// The order in which the search returns the files, such as alphabetical order, is not guaranteed, and is dependent on the file system. 
-	// If the data must be sorted, the application must do the ordering after obtaining all the results.
-	// The order in which this function returns the file names is dependent on the file system type. 
-	// With the NTFS file system and CDFS file systems, the names are usually returned in alphabetical order. 
-	// With FAT file systems, the names are usually returned in the order the files were written to the disk, which may or may not be in alphabetical order.
-	// However, as stated previously, these behaviors are not guaranteed.
+	//  The order in which the search returns the files, such as alphabetical order, is not guaranteed, and is dependent on the file system. 
+	//  If the data must be sorted, the application must do the ordering after obtaining all the results.
+	//  The order in which this function returns the file names is dependent on the file system type. 
+	//  With the NTFS file system and CDFS file systems, the names are usually returned in alphabetical order. 
+	//  With FAT file systems, the names are usually returned in the order the files were written to the disk, which may or may not be in alphabetical order.
+	//  However, as stated previously, these behaviors are not guaranteed.
 	do {
 		if ((lp.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
 			_tsplitpath(lp.cFileName, NULL, NULL, NULL, ext);
@@ -180,7 +202,8 @@ int processOutputHash(_TCHAR* szFullPath)
 					CalcEnd(&context, &sha, digest, Message_Digest);
 					if (!_tcscmp(ext, _T(".img"))) {
 #ifndef _DEBUG
-						OutputDiscLogA("Hash (entire image)\n");
+						OutputDiscLogA(
+							"============================= Hash (entire image) =============================\n");
 						OutputHashData(g_LogFile.fpDisc, lp.cFileName,
 							ui64FileSize, crc32, digest, Message_Digest);
 #endif
@@ -269,7 +292,15 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 		else {
 			DISC discData = { '\0' };
 			PDISC pDisc = &discData;
+			MAIN_HEADER mainHeader = { 0 };
 			FILE* fpCcd = NULL;
+			if (pExtArg->bReadContinue) {
+				devData.dwTimeOutValue = pExtArg->dwTimeoutNum;
+			}
+			else {
+				devData.dwTimeOutValue = DEFAULT_SPTD_TIMEOUT_VAL;
+			}
+
 			try {
 				if (!TestUnitReady(&devData)) {
 					throw FALSE;
@@ -327,68 +358,27 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 						(discData.SCSI.wCurrentMedia == ProfileInvalid && (*pExecType == gd))) {
 						_TCHAR out[_MAX_PATH] = { 0 };
 						if (*pExecType == cd && !pExtArg->bReverse) {
-							fpCcd = CreateOrOpenFileW(argv[3], NULL, out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
+							fpCcd = CreateOrOpenFileW(argv[3], NULL, 
+								out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
 							if (!fpCcd) {
 								OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 								throw FALSE;
 							}
 						}
-						if (!InitTocFullData(pExecType, &devData, &pDisc)) {
+						InitMainDataHeader(&mainHeader);
+						if (!InitSubData(pExecType, &pDisc)) {
+							throw FALSE;
+						}
+						if (!InitTocFullData(pExecType, &pDisc)) {
+							throw FALSE;
+						}
+						if (!InitTocTextData(pExecType, &devData, &pDisc)) {
 							throw FALSE;
 						}
 						if (!ReadTOCFull(&devData, &discData, fpCcd)) {
 							throw FALSE;
 						}
-						bRet = ReadCDForSearchingOffset(pExecType, pExtArg, &devData, &discData);
-						if (bRet) {
-							if (!ReadCDForCheckingSubPtoW(&devData, pExecType)) {
-								throw FALSE;
-							}
-							if (*pExecType == cd) {
-								if (!ReadCDForCheckingReadInOut(pExecType, pExtArg, 
-									&devData, pDisc, argv[3], READ_CD_FLAG::CDDA)) {
-									throw FALSE;
-								}
-								if (!pExtArg->bReverse) {
-									if (pExtArg->bPre) {
-										if (!ReadCDForCheckingIndex0InTrack1(pExtArg, &devData, pDisc)) {
-											throw FALSE;
-										}
-									}
-									// Basically, CD+G data exists an audio only disc
-									// But exceptionally, WonderMega Collection (SCD)(mixed disc) exists CD+G data.
-									size_t dwTrackAllocSize = (size_t)pDisc->SCSI.toc.LastTrack + 1;
-									if (NULL == (pDisc->SUB.lpRtoWList =
-										(LPBYTE)calloc(dwTrackAllocSize, sizeof(BYTE)))) {
-										OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
-										throw FALSE;
-									}
-									if (!ReadCDForCheckingCDG(&devData, pDisc)) {
-										throw FALSE;
-									}
-									else {
-										if (!ReadCDForVolumeDescriptor(&devData, 
-											&pDisc->SCSI.toc, pDisc->SCSI.nFirstLBAofDataTrack)) {
-											throw FALSE;
-										}
-									}
-								}
-								bRet = ReadCDAll(pExecType, pExtArg, &devData, &discData, argv[3], fpCcd);
-							}
-							else if (*pExecType == gd) {
-								bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData, argv[3],
-									45000, 549149 + 1, READ_CD_FLAG::CDDA, FALSE);
-							}
-							else if (*pExecType == data) {
-								bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData, argv[3],
-									s_nStartLBA, s_nEndLBA, READ_CD_FLAG::All, FALSE);
-							}
-							else if (*pExecType == audio) {
-								bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData, argv[3],
-									s_nStartLBA, s_nEndLBA, READ_CD_FLAG::CDDA, FALSE);
-							}
-						}
-						else {
+						if (!ReadCDForSearchingOffset(pExecType, pExtArg, &devData, &discData)) {
 							// check only for drive info
 							OutputString(_T("read in/out test\n"));
 							OutputString(_T("======== start ========\n"));
@@ -402,7 +392,7 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 							}
 							pDisc->MAIN.nCombinedOffset = -1;
 							ReadCDForCheckingReadInOut(pExecType,
-								pExtArg, &devData, pDisc, argv[3], flgFirst);
+								pExtArg, &devData, pDisc, &mainHeader, argv[3], flgFirst);
 
 							READ_CD_FLAG::_EXPECTED_SECTOR_TYPE flgLast = READ_CD_FLAG::All;
 							if ((pDisc->SCSI.toc.TrackData[pDisc->SCSI.toc.LastTrack - 1].Control & AUDIO_DATA_TRACK) == 0) {
@@ -414,8 +404,54 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 							}
 							pDisc->MAIN.nCombinedOffset = 1;
 							ReadCDForCheckingReadInOut(pExecType,
-								pExtArg, &devData, pDisc, argv[3], flgLast);
+								pExtArg, &devData, pDisc, &mainHeader, argv[3], flgLast);
 							OutputString(_T("========= end =========\n"));
+							throw FALSE;
+						}
+						if (*pExecType == gd) {
+							if (!ReadCDForGDTOC(&devData, &discData)) {
+								throw FALSE;
+							}
+						}
+						if (*pExecType == cd) {
+							if (!ReadCDForCheckingSubPtoW(&devData)) {
+								throw FALSE;
+							}
+							if (!ReadCDForCheckingReadInOut(pExecType, pExtArg,
+								&devData, pDisc, &mainHeader, argv[3], READ_CD_FLAG::CDDA)) {
+								throw FALSE;
+							}
+							if (!pExtArg->bReverse) {
+								if (pExtArg->bPre) {
+									if (!ReadCDForCheckingIndex0InTrack1(pExtArg, &devData, pDisc)) {
+										throw FALSE;
+									}
+								}
+								// Basically, CD+G data exists an audio only disc
+								// But exceptionally, WonderMega Collection (SCD)(mixed disc) exists CD+G data.
+								if (!ReadCDForCheckingCDG(&devData, pDisc)) {
+									throw FALSE;
+								}
+								if(!pDisc->SCSI.bAudioOnly) {
+									if (!ReadCDForFileSystem(pExtArg, &devData, pDisc)) {
+										throw FALSE;
+									}
+								}
+							}
+							bRet = ReadCDAll(pExecType, pExtArg,
+								&devData, &discData, &mainHeader, argv[3], fpCcd);
+						}
+						else if (*pExecType == gd) {
+							bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData,
+								&mainHeader, argv[3], FIRST_LBA_FOR_GD, 549149 + 1, READ_CD_FLAG::CDDA, FALSE);
+						}
+						else if (*pExecType == data) {
+							bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData,
+								&mainHeader, argv[3], s_nStartLBA, s_nEndLBA, READ_CD_FLAG::All, FALSE);
+						}
+						else if (*pExecType == audio) {
+							bRet = ReadCDPartial(pExecType, pExtArg, &devData, &discData,
+								&mainHeader, argv[3], s_nStartLBA, s_nEndLBA, READ_CD_FLAG::CDDA, FALSE);
 						}
 					}
 					else if (discData.SCSI.wCurrentMedia == ProfileDvdRom || 
@@ -442,7 +478,7 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 #endif
 							}
 							else {
-								bRet = ReadDVD(&devData, &discData, pExtArg, argv[3]);
+								bRet = ReadDVD(pExtArg, &devData, &discData, argv[3]);
 							}
 						}
 					}
@@ -454,10 +490,11 @@ int exec(_TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 			catch (BOOL bErr) {
 				bRet = bErr;
 			}
-			FreeAndNull(pDisc->SUB.lpRtoWList);
 			TerminateLBAPerTrack(&pDisc);
+			TerminateSubData(pExecType, &pDisc);
+			TerminateTocFullData(&pDisc);
 			if (devData.bSuccessReadToc) {
-				TerminateTocFullData(pExecType, &devData, &pDisc);
+				TerminateTocTextData(pExecType, &devData, &pDisc);
 			}
 			FcloseAndNull(fpCcd);
 #ifndef _DEBUG
@@ -504,7 +541,7 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 	if (argc >= 5 && (!_tcscmp(argv[1], _T("cd")) || !_tcscmp(argv[1], _T("gd")))) {
 		s_dwSpeed = _tcstoul(argv[4], &endptr, 10);
 		if (*endptr) {
-			OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+			OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 			return FALSE;
 		}
 		for (INT i = 6; i <= argc; i++) {
@@ -513,7 +550,7 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 				if (argc > i) {
 					pExtArg->nAudioCDOffsetNum = _tcstol(argv[i], &endptr, 10);
 					if (*endptr) {
-						OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+						OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 						return FALSE;
 					}
 				}
@@ -523,35 +560,47 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 				if (argc > i && _tcsncmp(argv[i], _T("/"), 1)) {
 					pExtArg->dwMaxRereadNum = _tcstoul(argv[i], &endptr, 10);
 					if (*endptr) {
-						OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+						OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 						return FALSE;
+					}
+					if (argc > i + 1 && _tcsncmp(argv[i + 1], _T("/"), 1)) {
+						pExtArg->dwMaxC2ErrorNum = _tcstoul(argv[i + 1], &endptr, 10);
+						if (*endptr) {
+							OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
+							return FALSE;
+						}
+						if (argc > i + 2 && _tcsncmp(argv[i + 2], _T("/"), 1)) {
+							pExtArg->dwRereadSpeedNum = _tcstoul(argv[i + 2], &endptr, 10);
+							if (*endptr) {
+								OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
+								return FALSE;
+							}
+						}
+						else {
+							pExtArg->dwRereadSpeedNum = DEFAULT_REREAD_SPEED_VAL;
+							OutputString(
+								_T("/c2 val3 is omitted. set [%d]\n"), DEFAULT_REREAD_SPEED_VAL);
+						}
+					}
+					else {
+						pExtArg->dwMaxC2ErrorNum = DEFAULT_MAX_C2_ERROR_VAL;
+						OutputString(
+							_T("/c2 val2 is omitted. set [%d]\n"), DEFAULT_MAX_C2_ERROR_VAL);
+						pExtArg->dwRereadSpeedNum = DEFAULT_REREAD_SPEED_VAL;
+						OutputString(
+							_T("/c2 val3 is omitted. set [%d]\n"), DEFAULT_REREAD_SPEED_VAL);
 					}
 				}
 				else {
 					pExtArg->dwMaxRereadNum = DEFAULT_REREAD_VAL;
-					OutputString(_T("/c2 opt val1 is omitted. set %d\n"), DEFAULT_REREAD_VAL);
-				}
-				if (argc > i + 1 && _tcsncmp(argv[i + 1], _T("/"), 1)) {
-					pExtArg->dwMaxC2ErrorNum = _tcstoul(argv[i + 1], &endptr, 10);
-					if (*endptr) {
-						OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
-						return FALSE;
-					}
-				}
-				else {
+					OutputString(
+						_T("/c2 val1 is omitted. set [%d]\n"), DEFAULT_REREAD_VAL);
 					pExtArg->dwMaxC2ErrorNum = DEFAULT_MAX_C2_ERROR_VAL;
-					OutputString(_T("/c2 opt val2 is omitted. set %d\n"), DEFAULT_MAX_C2_ERROR_VAL);
-				}
-				if (argc > i + 2 && _tcsncmp(argv[i + 2], _T("/"), 1)) {
-					pExtArg->dwRereadSpeedNum = _tcstoul(argv[i + 2], &endptr, 10);
-					if (*endptr) {
-						OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
-						return FALSE;
-					}
-				}
-				else {
+					OutputString(
+						_T("/c2 val2 is omitted. set [%d]\n"), DEFAULT_MAX_C2_ERROR_VAL);
 					pExtArg->dwRereadSpeedNum = DEFAULT_REREAD_SPEED_VAL;
-					OutputString(_T("/c2 opt val3 is omitted. set %d\n"), DEFAULT_REREAD_SPEED_VAL);
+					OutputString(_T(
+						"/c2 val3 is omitted. set [%d]\n"), DEFAULT_REREAD_SPEED_VAL);
 				}
 			}
 			else if (!_tcscmp(argv[i - 1], _T("/f"))) {
@@ -572,6 +621,21 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 			else if (!_tcscmp(argv[i - 1], _T("/r"))) {
 				pExtArg->bReverse = TRUE;
 			}
+			else if (!_tcscmp(argv[i - 1], _T("/rc"))) {
+				pExtArg->bReadContinue = TRUE;
+				if (argc > i && _tcsncmp(argv[i], _T("/"), 1)) {
+					pExtArg->dwTimeoutNum = _tcstoul(argv[i], &endptr, 10);
+					if (*endptr) {
+						OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
+						return FALSE;
+					}
+				}
+				else {
+					pExtArg->dwTimeoutNum = DEFAULT_SPTD_TIMEOUT_VAL;
+					OutputString(
+						_T("/rc val is omitted. set [%d]\n"), DEFAULT_SPTD_TIMEOUT_VAL);
+				}
+			}
 		}
 		if (!_tcscmp(argv[1], _T("cd"))) {
 			*pExecType = cd;
@@ -584,7 +648,7 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 	else if (argc >= 5 && !_tcscmp(argv[1], _T("dvd"))) {
 		s_dwSpeed = _tcstoul(argv[4], &endptr, 10);
 		if (*endptr) {
-			OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+			OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 			return FALSE;
 		}
 		for (INT i = 6; i <= argc; i++) {
@@ -601,17 +665,17 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 	else if (argc >= 7 && (!_tcscmp(argv[1], _T("data")) || !_tcscmp(argv[1], _T("audio")))) {
 		s_dwSpeed = _tcstoul(argv[4], &endptr, 10);
 		if (*endptr) {
-			OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+			OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 			return FALSE;
 		}
 		s_nStartLBA = _tcstol(argv[5], &endptr, 10);
 		if (*endptr) {
-			OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+			OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 			return FALSE;
 		}
 		s_nEndLBA = _tcstol(argv[6], &endptr, 10);
 		if (*endptr) {
-			OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+			OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 			return FALSE;
 		}
 
@@ -626,7 +690,7 @@ int checkArg(int argc, _TCHAR* argv[], PEXEC_TYPE pExecType, PEXT_ARG pExtArg)
 					if (argc > i) {
 						pExtArg->nAudioCDOffsetNum = _tcstol(argv[i], &endptr, 10);
 						if (*endptr) {
-							OutputErrorString(_T("Bad arg: %s Please integer\n"), endptr);
+							OutputErrorString(_T("Bad arg:[%s] Please integer\n"), endptr);
 							return FALSE;
 						}
 					}
@@ -669,7 +733,7 @@ void printUsage(void)
 	OutputString(
 		_T("Usage\n")
 		_T("\tcd <DriveLetter> <Filename> <DriveSpeed(0-72)> [/a (val)]\n")
-		_T("\t   [/c2 (val1) (val2) (val3)] [/f] [/i] [/l] [/m] [/p] [/r]\n")
+		_T("\t   [/c2 (val1) (val2) (val3)] [/f] [/i] [/l] [/m] [/p] [/r] [/rc (val)]\n")
 		_T("\t\tRipping a CD from a to z\n")
 		_T("\tdvd <DriveLetter> <Filename> <DriveSpeed(0-72)> [/c] [/f]\n")
 		_T("\t\tRipping a DVD from a to z\n")
@@ -720,6 +784,9 @@ void printUsage(void)
 		_T("\t\t\t               PX-708, PX-712, PX-716, PX-755, PX-760\n")
 		_T("\t/r\tReverse reading CD (including data track)\n")
 		_T("\t\t\tFor Alpha-Disc, very slow\n")
+		_T("\t/rc\tIf read error, continue reading and ignore c2 error (Only CD)\n")
+		_T("\t\t\tFor RingPROTECH, safedisc, smartE\n")
+		_T("\t\t\tval\t timeout value (default: 60)\n")
 		_T("\t/c\tLog Copyright Management Information\n"));
 }
 
@@ -792,8 +859,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	printSeveralInfo();
 
 	EXEC_TYPE execType;
-	EXT_ARG pExtArg = { 0 };
-	if (!checkArg(argc, argv, &execType, &pExtArg)) {
+	EXT_ARG extArg = { 0 };
+	if (!checkArg(argc, argv, &execType, &extArg)) {
 		printUsage();
 		nRet = FALSE;
 	}
@@ -807,7 +874,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		_tcsftime(szBuf, sizeof(szBuf) / sizeof(szBuf[0]), _T("%Y-%m-%d(%a) %H:%M:%S"), ts);
 		OutputString(_T("Start: %s\n"), szBuf);
 		
-		nRet = exec(argv, &execType, &pExtArg);
+		nRet = exec(argv, &execType, &extArg);
 		nRet = soundBeep(nRet);
 
 		now = time(NULL);

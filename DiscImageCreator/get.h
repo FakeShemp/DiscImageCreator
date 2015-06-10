@@ -2,8 +2,16 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
-#include "forwardDeclaration.h"
 #include "enum.h"
+
+BOOL GetAlignedAllocatedBuffer(
+	PDEVICE pDevice,
+	LPBYTE* ppSrcBuf,
+	DWORD dwSize,
+	LPBYTE* ppOutBuf,
+	LPCTSTR pszFuncName,
+	LONG lLineNum
+	);
 
 BOOL GetCreatedFileList(
 	PHANDLE h,
@@ -37,8 +45,9 @@ BOOL GetWriteOffset(
 	LPBYTE lpBuf
 	);
 
-BOOL GetEccEdcCheckCmd(
-	LPTSTR pszCmd,
+BOOL GetEccEdcCmd(
+	LPTSTR pszStr,
 	size_t cmdSize,
+	LPCTSTR pszCmd,
 	LPCTSTR pszImgPath
 	);

@@ -1,13 +1,12 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
-#include "stdafx.h"
 #include "struct.h"
 #include "get.h"
 #include "output.h"
 #include "outputIoctlLog.h"
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x00(
+VOID OutputAdditionalSenseCodeQualifier0x00(
 	BYTE byAscq
 	)
 {
@@ -57,7 +56,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x00(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x01(
+VOID OutputAdditionalSenseCodeQualifier0x01(
 	BYTE byAscq
 	)
 {
@@ -71,7 +70,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x01(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x02(
+VOID OutputAdditionalSenseCodeQualifier0x02(
 	BYTE byAscq
 	)
 {
@@ -85,7 +84,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x02(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x03(
+VOID OutputAdditionalSenseCodeQualifier0x03(
 	BYTE byAscq
 	)
 {
@@ -99,7 +98,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x03(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x04(
+VOID OutputAdditionalSenseCodeQualifier0x04(
 	BYTE byAscq
 	)
 {
@@ -188,7 +187,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x04(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x05(
+VOID OutputAdditionalSenseCodeQualifier0x05(
 	BYTE byAscq
 	)
 {
@@ -202,7 +201,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x05(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x06(
+VOID OutputAdditionalSenseCodeQualifier0x06(
 	BYTE byAscq
 	)
 {
@@ -216,7 +215,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x06(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x07(
+VOID OutputAdditionalSenseCodeQualifier0x07(
 	BYTE byAscq
 	)
 {
@@ -230,7 +229,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x07(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x08(
+VOID OutputAdditionalSenseCodeQualifier0x08(
 	BYTE byAscq
 	)
 {
@@ -256,7 +255,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x08(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x09(
+VOID OutputAdditionalSenseCodeQualifier0x09(
 	BYTE byAscq
 	)
 {
@@ -282,7 +281,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x09(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x0a(
+VOID OutputAdditionalSenseCodeQualifier0x0a(
 	BYTE byAscq
 	)
 {
@@ -296,7 +295,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x0a(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x0b(
+VOID OutputAdditionalSenseCodeQualifier0x0b(
 	BYTE byAscq
 	)
 {
@@ -337,7 +336,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x0b(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x0c(
+VOID OutputAdditionalSenseCodeQualifier0x0c(
 	BYTE byAscq
 	)
 {
@@ -390,7 +389,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x0c(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x0d(
+VOID OutputAdditionalSenseCodeQualifier0x0d(
 	BYTE byAscq
 	)
 {
@@ -419,7 +418,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x0d(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x0e(
+VOID OutputAdditionalSenseCodeQualifier0x0e(
 	BYTE byAscq
 	)
 {
@@ -442,7 +441,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x0e(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x10(
+VOID OutputAdditionalSenseCodeQualifier0x10(
 	BYTE byAscq
 	)
 {
@@ -465,7 +464,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x10(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x11(
+VOID OutputAdditionalSenseCodeQualifier0x11(
 	BYTE byAscq
 	)
 {
@@ -536,7 +535,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x11(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x12(
+VOID OutputAdditionalSenseCodeQualifier0x12(
 	BYTE byAscq
 	)
 {
@@ -550,7 +549,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x12(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x13(
+VOID OutputAdditionalSenseCodeQualifier0x13(
 	BYTE byAscq
 	)
 {
@@ -564,7 +563,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x13(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x14(
+VOID OutputAdditionalSenseCodeQualifier0x14(
 	BYTE byAscq
 	)
 {
@@ -587,7 +586,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x14(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x15(
+VOID OutputAdditionalSenseCodeQualifier0x15(
 	BYTE byAscq
 	)
 {
@@ -607,7 +606,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x15(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x16(
+VOID OutputAdditionalSenseCodeQualifier0x16(
 	BYTE byAscq
 	)
 {
@@ -633,7 +632,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x16(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x17(
+VOID OutputAdditionalSenseCodeQualifier0x17(
 	BYTE byAscq
 	)
 {
@@ -674,7 +673,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x17(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x18(
+VOID OutputAdditionalSenseCodeQualifier0x18(
 	BYTE byAscq
 	)
 {
@@ -712,7 +711,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x18(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x19(
+VOID OutputAdditionalSenseCodeQualifier0x19(
 	BYTE byAscq
 	)
 {
@@ -735,7 +734,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x19(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x1a(
+VOID OutputAdditionalSenseCodeQualifier0x1a(
 	BYTE byAscq
 	)
 {
@@ -749,7 +748,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x1a(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x1b(
+VOID OutputAdditionalSenseCodeQualifier0x1b(
 	BYTE byAscq
 	)
 {
@@ -763,7 +762,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x1b(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x1c(
+VOID OutputAdditionalSenseCodeQualifier0x1c(
 	BYTE byAscq
 	)
 {
@@ -783,7 +782,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x1c(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x1d(
+VOID OutputAdditionalSenseCodeQualifier0x1d(
 	BYTE byAscq
 	)
 {
@@ -800,7 +799,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x1d(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x1e(
+VOID OutputAdditionalSenseCodeQualifier0x1e(
 	BYTE byAscq
 	)
 {
@@ -814,7 +813,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x1e(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x1f(
+VOID OutputAdditionalSenseCodeQualifier0x1f(
 	BYTE byAscq
 	)
 {
@@ -828,7 +827,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x1f(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x20(
+VOID OutputAdditionalSenseCodeQualifier0x20(
 	BYTE byAscq
 	)
 {
@@ -863,7 +862,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x20(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x21(
+VOID OutputAdditionalSenseCodeQualifier0x21(
 	BYTE byAscq
 	)
 {
@@ -886,7 +885,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x21(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x22(
+VOID OutputAdditionalSenseCodeQualifier0x22(
 	BYTE byAscq
 	)
 {
@@ -900,7 +899,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x22(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x23(
+VOID OutputAdditionalSenseCodeQualifier0x23(
 	BYTE byAscq
 	)
 {
@@ -944,7 +943,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x23(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x24(
+VOID OutputAdditionalSenseCodeQualifier0x24(
 	BYTE byAscq
 	)
 {
@@ -964,7 +963,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x24(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x25(
+VOID OutputAdditionalSenseCodeQualifier0x25(
 	BYTE byAscq
 	)
 {
@@ -978,7 +977,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x25(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x26(
+VOID OutputAdditionalSenseCodeQualifier0x26(
 	BYTE byAscq
 	)
 {
@@ -1034,7 +1033,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x26(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x27(
+VOID OutputAdditionalSenseCodeQualifier0x27(
 	BYTE byAscq
 	)
 {
@@ -1069,7 +1068,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x27(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x28(
+VOID OutputAdditionalSenseCodeQualifier0x28(
 	BYTE byAscq
 	)
 {
@@ -1089,7 +1088,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x28(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x29(
+VOID OutputAdditionalSenseCodeQualifier0x29(
 	BYTE byAscq
 	)
 {
@@ -1124,7 +1123,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x29(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x2a(
+VOID OutputAdditionalSenseCodeQualifier0x2a(
 	BYTE byAscq
 	)
 {
@@ -1177,7 +1176,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x2a(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x2b(
+VOID OutputAdditionalSenseCodeQualifier0x2b(
 	BYTE byAscq
 	)
 {
@@ -1191,7 +1190,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x2b(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x2c(
+VOID OutputAdditionalSenseCodeQualifier0x2c(
 	BYTE byAscq
 	)
 {
@@ -1226,7 +1225,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x2c(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x2e(
+VOID OutputAdditionalSenseCodeQualifier0x2e(
 	BYTE byAscq
 	)
 {
@@ -1249,7 +1248,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x2e(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x2f(
+VOID OutputAdditionalSenseCodeQualifier0x2f(
 	BYTE byAscq
 	)
 {
@@ -1272,7 +1271,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x2f(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x30(
+VOID OutputAdditionalSenseCodeQualifier0x30(
 	BYTE byAscq
 	)
 {
@@ -1319,7 +1318,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x30(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x31(
+VOID OutputAdditionalSenseCodeQualifier0x31(
 	BYTE byAscq
 	)
 {
@@ -1342,7 +1341,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x31(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x32(
+VOID OutputAdditionalSenseCodeQualifier0x32(
 	BYTE byAscq
 	)
 {
@@ -1359,7 +1358,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x32(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x34(
+VOID OutputAdditionalSenseCodeQualifier0x34(
 	BYTE byAscq
 	)
 {
@@ -1373,7 +1372,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x34(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x35(
+VOID OutputAdditionalSenseCodeQualifier0x35(
 	BYTE byAscq
 	)
 {
@@ -1402,7 +1401,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x35(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x37(
+VOID OutputAdditionalSenseCodeQualifier0x37(
 	BYTE byAscq
 	)
 {
@@ -1416,7 +1415,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x37(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x38(
+VOID OutputAdditionalSenseCodeQualifier0x38(
 	BYTE byAscq
 	)
 {
@@ -1430,7 +1429,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x38(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x39(
+VOID OutputAdditionalSenseCodeQualifier0x39(
 	BYTE byAscq
 	)
 {
@@ -1444,7 +1443,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x39(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x3a(
+VOID OutputAdditionalSenseCodeQualifier0x3a(
 	BYTE byAscq
 	)
 {
@@ -1470,7 +1469,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x3a(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x3b(
+VOID OutputAdditionalSenseCodeQualifier0x3b(
 	BYTE byAscq
 	)
 {
@@ -1508,7 +1507,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x3b(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x3d(
+VOID OutputAdditionalSenseCodeQualifier0x3d(
 	BYTE byAscq
 	)
 {
@@ -1522,7 +1521,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x3d(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x3e(
+VOID OutputAdditionalSenseCodeQualifier0x3e(
 	BYTE byAscq
 	)
 {
@@ -1548,7 +1547,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x3e(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x3f(
+VOID OutputAdditionalSenseCodeQualifier0x3f(
 	BYTE byAscq
 	)
 {
@@ -1625,7 +1624,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x3f(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x40(
+VOID OutputAdditionalSenseCodeQualifier0x40(
 	BYTE byAscq
 	)
 {
@@ -1639,7 +1638,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x40(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x41(
+VOID OutputAdditionalSenseCodeQualifier0x41(
 	BYTE byAscq
 	)
 {
@@ -1653,7 +1652,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x41(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x42(
+VOID OutputAdditionalSenseCodeQualifier0x42(
 	BYTE byAscq
 	)
 {
@@ -1667,7 +1666,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x42(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x43(
+VOID OutputAdditionalSenseCodeQualifier0x43(
 	BYTE byAscq
 	)
 {
@@ -1681,7 +1680,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x43(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x44(
+VOID OutputAdditionalSenseCodeQualifier0x44(
 	BYTE byAscq
 	)
 {
@@ -1701,7 +1700,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x44(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x45(
+VOID OutputAdditionalSenseCodeQualifier0x45(
 	BYTE byAscq
 	)
 {
@@ -1715,7 +1714,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x45(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x46(
+VOID OutputAdditionalSenseCodeQualifier0x46(
 	BYTE byAscq
 	)
 {
@@ -1729,7 +1728,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x46(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x47(
+VOID OutputAdditionalSenseCodeQualifier0x47(
 	BYTE byAscq
 	)
 {
@@ -1764,7 +1763,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x47(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x48(
+VOID OutputAdditionalSenseCodeQualifier0x48(
 	BYTE byAscq
 	)
 {
@@ -1778,7 +1777,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x48(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x49(
+VOID OutputAdditionalSenseCodeQualifier0x49(
 	BYTE byAscq
 	)
 {
@@ -1792,7 +1791,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x49(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x4a(
+VOID OutputAdditionalSenseCodeQualifier0x4a(
 	BYTE byAscq
 	)
 {
@@ -1806,7 +1805,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x4a(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x4b(
+VOID OutputAdditionalSenseCodeQualifier0x4b(
 	BYTE byAscq
 	)
 {
@@ -1883,7 +1882,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x4b(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x4c(
+VOID OutputAdditionalSenseCodeQualifier0x4c(
 	BYTE byAscq
 	)
 {
@@ -1897,7 +1896,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x4c(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x4e(
+VOID OutputAdditionalSenseCodeQualifier0x4e(
 	BYTE byAscq
 	)
 {
@@ -1911,7 +1910,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x4e(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x51(
+VOID OutputAdditionalSenseCodeQualifier0x51(
 	BYTE byAscq
 	)
 {
@@ -1928,7 +1927,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x51(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x53(
+VOID OutputAdditionalSenseCodeQualifier0x53(
 	BYTE byAscq
 	)
 {
@@ -1945,7 +1944,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x53(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x55(
+VOID OutputAdditionalSenseCodeQualifier0x55(
 	BYTE byAscq
 	)
 {
@@ -1983,7 +1982,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x55(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x57(
+VOID OutputAdditionalSenseCodeQualifier0x57(
 	BYTE byAscq
 	)
 {
@@ -1997,7 +1996,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x57(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x58(
+VOID OutputAdditionalSenseCodeQualifier0x58(
 	BYTE byAscq
 	)
 {
@@ -2011,7 +2010,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x58(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x59(
+VOID OutputAdditionalSenseCodeQualifier0x59(
 	BYTE byAscq
 	)
 {
@@ -2025,7 +2024,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x59(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x5a(
+VOID OutputAdditionalSenseCodeQualifier0x5a(
 	BYTE byAscq
 	)
 {
@@ -2048,7 +2047,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x5a(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x5b(
+VOID OutputAdditionalSenseCodeQualifier0x5b(
 	BYTE byAscq
 	)
 {
@@ -2071,7 +2070,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x5b(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x5c(
+VOID OutputAdditionalSenseCodeQualifier0x5c(
 	BYTE byAscq
 	)
 {
@@ -2091,7 +2090,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x5c(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x5d(
+VOID OutputAdditionalSenseCodeQualifier0x5d(
 	BYTE byAscq
 	)
 {
@@ -2351,7 +2350,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x5d(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x5e(
+VOID OutputAdditionalSenseCodeQualifier0x5e(
 	BYTE byAscq
 	)
 {
@@ -2395,7 +2394,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x5e(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x63(
+VOID OutputAdditionalSenseCodeQualifier0x63(
 	BYTE byAscq
 	)
 {
@@ -2412,7 +2411,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x63(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x64(
+VOID OutputAdditionalSenseCodeQualifier0x64(
 	BYTE byAscq
 	)
 {
@@ -2429,7 +2428,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x64(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x65(
+VOID OutputAdditionalSenseCodeQualifier0x65(
 	BYTE byAscq
 	)
 {
@@ -2443,7 +2442,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x65(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x67(
+VOID OutputAdditionalSenseCodeQualifier0x67(
 	BYTE byAscq
 	)
 {
@@ -2457,7 +2456,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x67(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x68(
+VOID OutputAdditionalSenseCodeQualifier0x68(
 	BYTE byAscq
 	)
 {
@@ -2471,7 +2470,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x68(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x6f(
+VOID OutputAdditionalSenseCodeQualifier0x6f(
 	BYTE byAscq
 	)
 {
@@ -2506,7 +2505,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x6f(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x72(
+VOID OutputAdditionalSenseCodeQualifier0x72(
 	BYTE byAscq
 	)
 {
@@ -2541,7 +2540,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x72(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x73(
+VOID OutputAdditionalSenseCodeQualifier0x73(
 	BYTE byAscq
 	)
 {
@@ -2582,7 +2581,7 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x73(
 	}
 }
 
-VOID OutputIoctlAdditionalSenseCodeQualifier0x74(
+VOID OutputAdditionalSenseCodeQualifier0x74(
 	BYTE byAscq
 	)
 {
@@ -2627,290 +2626,290 @@ VOID OutputIoctlAdditionalSenseCodeQualifier0x74(
 //  Direct Access Block Device (SBC-3)
 //  C/DVD Device (MMC-6)
 //  Optical Memory Block Device (SBC)
-VOID OutputIoctlAdditionalSenseCode(
+VOID OutputAdditionalSenseCode(
 	BYTE byAsc,
 	BYTE byAscq
 	)
 {
 	switch (byAsc) {
 	case SCSI_ADSENSE_NO_SENSE:
-		OutputIoctlAdditionalSenseCodeQualifier0x00(byAscq);
+		OutputAdditionalSenseCodeQualifier0x00(byAscq);
 		break;
 	case 0x01:
-		OutputIoctlAdditionalSenseCodeQualifier0x01(byAscq);
+		OutputAdditionalSenseCodeQualifier0x01(byAscq);
 		break;
 	case SCSI_ADSENSE_NO_SEEK_COMPLETE:
-		OutputIoctlAdditionalSenseCodeQualifier0x02(byAscq);
+		OutputAdditionalSenseCodeQualifier0x02(byAscq);
 		break;
 	case 0x03:
-		OutputIoctlAdditionalSenseCodeQualifier0x03(byAscq);
+		OutputAdditionalSenseCodeQualifier0x03(byAscq);
 		break;
 	case SCSI_ADSENSE_LUN_NOT_READY:
-		OutputIoctlAdditionalSenseCodeQualifier0x04(byAscq);
+		OutputAdditionalSenseCodeQualifier0x04(byAscq);
 		break;
 	case 0x05:
-		OutputIoctlAdditionalSenseCodeQualifier0x05(byAscq);
+		OutputAdditionalSenseCodeQualifier0x05(byAscq);
 		break;
 	case 0x06:
-		OutputIoctlAdditionalSenseCodeQualifier0x06(byAscq);
+		OutputAdditionalSenseCodeQualifier0x06(byAscq);
 		break;
 	case 0x07:
-		OutputIoctlAdditionalSenseCodeQualifier0x07(byAscq);
+		OutputAdditionalSenseCodeQualifier0x07(byAscq);
 		break;
 	case SCSI_ADSENSE_LUN_COMMUNICATION:
-		OutputIoctlAdditionalSenseCodeQualifier0x08(byAscq);
+		OutputAdditionalSenseCodeQualifier0x08(byAscq);
 		break;
 	case 0x09:
-		OutputIoctlAdditionalSenseCodeQualifier0x09(byAscq);
+		OutputAdditionalSenseCodeQualifier0x09(byAscq);
 		break;
 	case 0x0a:
-		OutputIoctlAdditionalSenseCodeQualifier0x0a(byAscq);
+		OutputAdditionalSenseCodeQualifier0x0a(byAscq);
 		break;
 	case 0x0b:
-		OutputIoctlAdditionalSenseCodeQualifier0x0b(byAscq);
+		OutputAdditionalSenseCodeQualifier0x0b(byAscq);
 		break;
 	case SCSI_ADSENSE_WRITE_ERROR:
-		OutputIoctlAdditionalSenseCodeQualifier0x0c(byAscq);
+		OutputAdditionalSenseCodeQualifier0x0c(byAscq);
 		break;
 	case 0x0d:
-		OutputIoctlAdditionalSenseCodeQualifier0x0d(byAscq);
+		OutputAdditionalSenseCodeQualifier0x0d(byAscq);
 		break;
 	case 0x0e:
-		OutputIoctlAdditionalSenseCodeQualifier0x0e(byAscq);
+		OutputAdditionalSenseCodeQualifier0x0e(byAscq);
 		break;
 	case 0x10:
-		OutputIoctlAdditionalSenseCodeQualifier0x10(byAscq);
+		OutputAdditionalSenseCodeQualifier0x10(byAscq);
 		break;
 	case 0x11:
-		OutputIoctlAdditionalSenseCodeQualifier0x11(byAscq);
+		OutputAdditionalSenseCodeQualifier0x11(byAscq);
 		break;
 	case 0x12:
-		OutputIoctlAdditionalSenseCodeQualifier0x12(byAscq);
+		OutputAdditionalSenseCodeQualifier0x12(byAscq);
 		break;
 	case 0x13:
-		OutputIoctlAdditionalSenseCodeQualifier0x13(byAscq);
+		OutputAdditionalSenseCodeQualifier0x13(byAscq);
 		break;
 	case SCSI_ADSENSE_TRACK_ERROR:
-		OutputIoctlAdditionalSenseCodeQualifier0x14(byAscq);
+		OutputAdditionalSenseCodeQualifier0x14(byAscq);
 		break;
 	case SCSI_ADSENSE_SEEK_ERROR:
-		OutputIoctlAdditionalSenseCodeQualifier0x15(byAscq);
+		OutputAdditionalSenseCodeQualifier0x15(byAscq);
 		break;
 	case 0x16:
-		OutputIoctlAdditionalSenseCodeQualifier0x16(byAscq);
+		OutputAdditionalSenseCodeQualifier0x16(byAscq);
 		break;
 	case SCSI_ADSENSE_REC_DATA_NOECC:
-		OutputIoctlAdditionalSenseCodeQualifier0x17(byAscq);
+		OutputAdditionalSenseCodeQualifier0x17(byAscq);
 		break;
 	case SCSI_ADSENSE_REC_DATA_ECC:
-		OutputIoctlAdditionalSenseCodeQualifier0x18(byAscq);
+		OutputAdditionalSenseCodeQualifier0x18(byAscq);
 		break;
 	case 0x19:
-		OutputIoctlAdditionalSenseCodeQualifier0x19(byAscq);
+		OutputAdditionalSenseCodeQualifier0x19(byAscq);
 		break;
 	case SCSI_ADSENSE_PARAMETER_LIST_LENGTH:
-		OutputIoctlAdditionalSenseCodeQualifier0x1a(byAscq);
+		OutputAdditionalSenseCodeQualifier0x1a(byAscq);
 		break;
 	case 0x1b:
-		OutputIoctlAdditionalSenseCodeQualifier0x1b(byAscq);
+		OutputAdditionalSenseCodeQualifier0x1b(byAscq);
 		break;
 	case 0x1c:
-		OutputIoctlAdditionalSenseCodeQualifier0x1c(byAscq);
+		OutputAdditionalSenseCodeQualifier0x1c(byAscq);
 		break;
 	case 0x1d:
-		OutputIoctlAdditionalSenseCodeQualifier0x1d(byAscq);
+		OutputAdditionalSenseCodeQualifier0x1d(byAscq);
 		break;
 	case 0x1e:
-		OutputIoctlAdditionalSenseCodeQualifier0x1e(byAscq);
+		OutputAdditionalSenseCodeQualifier0x1e(byAscq);
 		break;
 	case 0x1f:
-		OutputIoctlAdditionalSenseCodeQualifier0x1f(byAscq);
+		OutputAdditionalSenseCodeQualifier0x1f(byAscq);
 		break;
 	case SCSI_ADSENSE_ILLEGAL_COMMAND:
-		OutputIoctlAdditionalSenseCodeQualifier0x20(byAscq);
+		OutputAdditionalSenseCodeQualifier0x20(byAscq);
 		break;
 	case SCSI_ADSENSE_ILLEGAL_BLOCK:
-		OutputIoctlAdditionalSenseCodeQualifier0x21(byAscq);
+		OutputAdditionalSenseCodeQualifier0x21(byAscq);
 		break;
 	case 0x22:
-		OutputIoctlAdditionalSenseCodeQualifier0x22(byAscq);
+		OutputAdditionalSenseCodeQualifier0x22(byAscq);
 		break;
 	case 0x23:
-		OutputIoctlAdditionalSenseCodeQualifier0x23(byAscq);
+		OutputAdditionalSenseCodeQualifier0x23(byAscq);
 		break;
 	case SCSI_ADSENSE_INVALID_CDB:
-		OutputIoctlAdditionalSenseCodeQualifier0x24(byAscq);
+		OutputAdditionalSenseCodeQualifier0x24(byAscq);
 		break;
 	case SCSI_ADSENSE_INVALID_LUN:
-		OutputIoctlAdditionalSenseCodeQualifier0x25(byAscq);
+		OutputAdditionalSenseCodeQualifier0x25(byAscq);
 		break;
 	case SCSI_ADSENSE_INVALID_FIELD_PARAMETER_LIST:
-		OutputIoctlAdditionalSenseCodeQualifier0x26(byAscq);
+		OutputAdditionalSenseCodeQualifier0x26(byAscq);
 		break;
 	case SCSI_ADSENSE_WRITE_PROTECT:
-		OutputIoctlAdditionalSenseCodeQualifier0x27(byAscq);
+		OutputAdditionalSenseCodeQualifier0x27(byAscq);
 		break;
 	case SCSI_ADSENSE_MEDIUM_CHANGED:
-		OutputIoctlAdditionalSenseCodeQualifier0x28(byAscq);
+		OutputAdditionalSenseCodeQualifier0x28(byAscq);
 		break;
 	case SCSI_ADSENSE_BUS_RESET:
-		OutputIoctlAdditionalSenseCodeQualifier0x29(byAscq);
+		OutputAdditionalSenseCodeQualifier0x29(byAscq);
 		break;
 	case SCSI_ADSENSE_PARAMETERS_CHANGED:
-		OutputIoctlAdditionalSenseCodeQualifier0x2a(byAscq);
+		OutputAdditionalSenseCodeQualifier0x2a(byAscq);
 		break;
 	case 0x2b:
-		OutputIoctlAdditionalSenseCodeQualifier0x2b(byAscq);
+		OutputAdditionalSenseCodeQualifier0x2b(byAscq);
 		break;
 	case 0x2c:
-		OutputIoctlAdditionalSenseCodeQualifier0x2c(byAscq);
+		OutputAdditionalSenseCodeQualifier0x2c(byAscq);
 		break;
 	case SCSI_ADSENSE_INSUFFICIENT_TIME_FOR_OPERATION:
-		OutputIoctlAdditionalSenseCodeQualifier0x2e(byAscq);
+		OutputAdditionalSenseCodeQualifier0x2e(byAscq);
 		break;
 	case 0x2f:
-		OutputIoctlAdditionalSenseCodeQualifier0x2f(byAscq);
+		OutputAdditionalSenseCodeQualifier0x2f(byAscq);
 		break;
 	case SCSI_ADSENSE_INVALID_MEDIA:
-		OutputIoctlAdditionalSenseCodeQualifier0x30(byAscq);
+		OutputAdditionalSenseCodeQualifier0x30(byAscq);
 		break;
 	case 0x31:
-		OutputIoctlAdditionalSenseCodeQualifier0x31(byAscq);
+		OutputAdditionalSenseCodeQualifier0x31(byAscq);
 		break;
 	case 0x32:
-		OutputIoctlAdditionalSenseCodeQualifier0x32(byAscq);
+		OutputAdditionalSenseCodeQualifier0x32(byAscq);
 		break;
 	case 0x34:
-		OutputIoctlAdditionalSenseCodeQualifier0x34(byAscq);
+		OutputAdditionalSenseCodeQualifier0x34(byAscq);
 		break;
 	case 0x35:
-		OutputIoctlAdditionalSenseCodeQualifier0x35(byAscq);
+		OutputAdditionalSenseCodeQualifier0x35(byAscq);
 		break;
 	case 0x37:
-		OutputIoctlAdditionalSenseCodeQualifier0x37(byAscq);
+		OutputAdditionalSenseCodeQualifier0x37(byAscq);
 		break;
 	case 0x38:
-		OutputIoctlAdditionalSenseCodeQualifier0x38(byAscq);
+		OutputAdditionalSenseCodeQualifier0x38(byAscq);
 		break;
 	case 0x39:
-		OutputIoctlAdditionalSenseCodeQualifier0x39(byAscq);
+		OutputAdditionalSenseCodeQualifier0x39(byAscq);
 		break;
 	case SCSI_ADSENSE_NO_MEDIA_IN_DEVICE:
-		OutputIoctlAdditionalSenseCodeQualifier0x3a(byAscq);
+		OutputAdditionalSenseCodeQualifier0x3a(byAscq);
 		break;
 	case SCSI_ADSENSE_POSITION_ERROR:
-		OutputIoctlAdditionalSenseCodeQualifier0x3b(byAscq);
+		OutputAdditionalSenseCodeQualifier0x3b(byAscq);
 		break;
 	case 0x3d:
-		OutputIoctlAdditionalSenseCodeQualifier0x3d(byAscq);
+		OutputAdditionalSenseCodeQualifier0x3d(byAscq);
 		break;
 	case 0x3e:
-		OutputIoctlAdditionalSenseCodeQualifier0x3e(byAscq);
+		OutputAdditionalSenseCodeQualifier0x3e(byAscq);
 		break;
 	case SCSI_ADSENSE_OPERATING_CONDITIONS_CHANGED:
-		OutputIoctlAdditionalSenseCodeQualifier0x3f(byAscq);
+		OutputAdditionalSenseCodeQualifier0x3f(byAscq);
 		break;
 	case 0x40:
-		OutputIoctlAdditionalSenseCodeQualifier0x40(byAscq);
+		OutputAdditionalSenseCodeQualifier0x40(byAscq);
 		break;
 	case 0x41:
-		OutputIoctlAdditionalSenseCodeQualifier0x41(byAscq);
+		OutputAdditionalSenseCodeQualifier0x41(byAscq);
 		break;
 	case 0x42:
-		OutputIoctlAdditionalSenseCodeQualifier0x42(byAscq);
+		OutputAdditionalSenseCodeQualifier0x42(byAscq);
 		break;
 	case 0x43:
-		OutputIoctlAdditionalSenseCodeQualifier0x43(byAscq);
+		OutputAdditionalSenseCodeQualifier0x43(byAscq);
 		break;
 	case 0x44:
-		OutputIoctlAdditionalSenseCodeQualifier0x44(byAscq);
+		OutputAdditionalSenseCodeQualifier0x44(byAscq);
 		break;
 	case 0x45:
-		OutputIoctlAdditionalSenseCodeQualifier0x45(byAscq);
+		OutputAdditionalSenseCodeQualifier0x45(byAscq);
 		break;
 	case 0x46:
-		OutputIoctlAdditionalSenseCodeQualifier0x46(byAscq);
+		OutputAdditionalSenseCodeQualifier0x46(byAscq);
 		break;
 	case 0x47:
-		OutputIoctlAdditionalSenseCodeQualifier0x47(byAscq);
+		OutputAdditionalSenseCodeQualifier0x47(byAscq);
 		break;
 	case 0x48:
-		OutputIoctlAdditionalSenseCodeQualifier0x48(byAscq);
+		OutputAdditionalSenseCodeQualifier0x48(byAscq);
 		break;
 	case 0x49:
-		OutputIoctlAdditionalSenseCodeQualifier0x49(byAscq);
+		OutputAdditionalSenseCodeQualifier0x49(byAscq);
 		break;
 	case 0x4a:
-		OutputIoctlAdditionalSenseCodeQualifier0x4a(byAscq);
+		OutputAdditionalSenseCodeQualifier0x4a(byAscq);
 		break;
 	case 0x4b:
-		OutputIoctlAdditionalSenseCodeQualifier0x4b(byAscq);
+		OutputAdditionalSenseCodeQualifier0x4b(byAscq);
 		break;
 	case 0x4c:
-		OutputIoctlAdditionalSenseCodeQualifier0x4c(byAscq);
+		OutputAdditionalSenseCodeQualifier0x4c(byAscq);
 		break;
 	case 0x4e:
-		OutputIoctlAdditionalSenseCodeQualifier0x4e(byAscq);
+		OutputAdditionalSenseCodeQualifier0x4e(byAscq);
 		break;
 	case 0x51:
-		OutputIoctlAdditionalSenseCodeQualifier0x51(byAscq);
+		OutputAdditionalSenseCodeQualifier0x51(byAscq);
 		break;
 	case 0x53:
-		OutputIoctlAdditionalSenseCodeQualifier0x53(byAscq);
+		OutputAdditionalSenseCodeQualifier0x53(byAscq);
 		break;
 	case 0x55:
-		OutputIoctlAdditionalSenseCodeQualifier0x55(byAscq);
+		OutputAdditionalSenseCodeQualifier0x55(byAscq);
 		break;
 	case 0x57:
-		OutputIoctlAdditionalSenseCodeQualifier0x57(byAscq);
+		OutputAdditionalSenseCodeQualifier0x57(byAscq);
 		break;
 	case 0x58:
-		OutputIoctlAdditionalSenseCodeQualifier0x58(byAscq);
+		OutputAdditionalSenseCodeQualifier0x58(byAscq);
 		break;
 	case 0x59:
-		OutputIoctlAdditionalSenseCodeQualifier0x59(byAscq);
+		OutputAdditionalSenseCodeQualifier0x59(byAscq);
 		break;
 	case SCSI_ADSENSE_OPERATOR_REQUEST:
-		OutputIoctlAdditionalSenseCodeQualifier0x5a(byAscq);
+		OutputAdditionalSenseCodeQualifier0x5a(byAscq);
 		break;
 	case 0x5b:
-		OutputIoctlAdditionalSenseCodeQualifier0x5b(byAscq);
+		OutputAdditionalSenseCodeQualifier0x5b(byAscq);
 		break;
 	case 0x5c:
-		OutputIoctlAdditionalSenseCodeQualifier0x5c(byAscq);
+		OutputAdditionalSenseCodeQualifier0x5c(byAscq);
 		break;
 	case SCSI_ADSENSE_FAILURE_PREDICTION_THRESHOLD_EXCEEDED:
-		OutputIoctlAdditionalSenseCodeQualifier0x5d(byAscq);
+		OutputAdditionalSenseCodeQualifier0x5d(byAscq);
 		break;
 	case 0x5e:
-		OutputIoctlAdditionalSenseCodeQualifier0x5e(byAscq);
+		OutputAdditionalSenseCodeQualifier0x5e(byAscq);
 		break;
 	case 0x63:
-		OutputIoctlAdditionalSenseCodeQualifier0x63(byAscq);
+		OutputAdditionalSenseCodeQualifier0x63(byAscq);
 		break;
 	case SCSI_ADSENSE_ILLEGAL_MODE_FOR_THIS_TRACK:
-		OutputIoctlAdditionalSenseCodeQualifier0x64(byAscq);
+		OutputAdditionalSenseCodeQualifier0x64(byAscq);
 		break;
 	case 0x65:
-		OutputIoctlAdditionalSenseCodeQualifier0x65(byAscq);
+		OutputAdditionalSenseCodeQualifier0x65(byAscq);
 		break;
 	case 0x67:
-		OutputIoctlAdditionalSenseCodeQualifier0x67(byAscq);
+		OutputAdditionalSenseCodeQualifier0x67(byAscq);
 		break;
 	case 0x68:
-		OutputIoctlAdditionalSenseCodeQualifier0x68(byAscq);
+		OutputAdditionalSenseCodeQualifier0x68(byAscq);
 		break;
 	case SCSI_ADSENSE_COPY_PROTECTION_FAILURE:
-		OutputIoctlAdditionalSenseCodeQualifier0x6f(byAscq);
+		OutputAdditionalSenseCodeQualifier0x6f(byAscq);
 		break;
 	case 0x72:
-		OutputIoctlAdditionalSenseCodeQualifier0x72(byAscq);
+		OutputAdditionalSenseCodeQualifier0x72(byAscq);
 		break;
 	case SCSI_ADSENSE_POWER_CALIBRATION_ERROR:
-		OutputIoctlAdditionalSenseCodeQualifier0x73(byAscq);
+		OutputAdditionalSenseCodeQualifier0x73(byAscq);
 		break;
 	case 0x74:
-		OutputIoctlAdditionalSenseCodeQualifier0x74(byAscq);
+		OutputAdditionalSenseCodeQualifier0x74(byAscq);
 		break;
 	default:
 		if (byAsc >= SCSI_ADSENSE_VENDOR_UNIQUE || byAscq >= 0x80) {
@@ -2924,7 +2923,7 @@ VOID OutputIoctlAdditionalSenseCode(
 	OutputErrorString(_T("\n"));
 }
 
-VOID OutputIoctlSenseKey(
+VOID OutputSenseKey(
 	BYTE byKey
 	)
 {
@@ -2984,18 +2983,15 @@ VOID OutputIoctlSenseKey(
 	OutputErrorString(_T(" - "));
 }
 
-VOID OutputIoctlSenseData(
+VOID OutputSenseData(
 	PSENSE_DATA pSenseData
 	)
 {
-	BYTE byKey = pSenseData->SenseKey;
-	BYTE byAsc = pSenseData->AdditionalSenseCode;
-	BYTE byAscq = pSenseData->AdditionalSenseCodeQualifier;
-
 	OutputErrorString(
-		_T("SenseData Key-Asc-Ascq: %02x-%02x-%02x, "), byKey, byAsc, byAscq);
-	OutputIoctlSenseKey(byKey);
-	OutputIoctlAdditionalSenseCode(byAsc, byAscq);
+		_T("SenseData Key-Asc-Ascq: %02x-%02x-%02x, "),
+		pSenseData->SenseKey, pSenseData->AdditionalSenseCode, pSenseData->AdditionalSenseCodeQualifier);
+	OutputSenseKey(pSenseData->SenseKey);
+	OutputAdditionalSenseCode(pSenseData->AdditionalSenseCode, pSenseData->AdditionalSenseCodeQualifier);
 #ifdef _DEBUG
 	OutputErrorString(
 		_T("OtherSenseData\n")
@@ -3036,7 +3032,7 @@ VOID OutputIoctlSenseData(
 #endif
 }
 
-VOID OutputIoctlScsiStatus(
+VOID OutputScsiStatus(
 	BYTE byScsiStatus
 	)
 {
@@ -3076,12 +3072,12 @@ VOID OutputIoctlScsiStatus(
 	}
 }
 
-VOID OutputIoctlScsiAddress(
+VOID OutputScsiAddress(
 	PDEVICE pDevice
 	)
 {
 	OutputDriveLogA(
-		"IoctlScsiGetAddress\n"
+		"============================= IoctlScsiGetAddress =============================\n"
 		"\t    Length: %u\n"
 		"\tPortNumber: %u\n"
 		"\t    PathId: %u\n"
@@ -3094,13 +3090,13 @@ VOID OutputIoctlScsiAddress(
 		pDevice->address.Lun);
 }
 
-VOID OutputIoctlStorageAdaptorDescriptor(
+VOID OutputStorageAdaptorDescriptor(
 	PSTORAGE_ADAPTER_DESCRIPTOR pAdapterDescriptor,
-	PBOOL pBusTypeUSB
+	LPBOOL lpBusTypeUSB
 	)
 {
 	OutputDriveLogA(
-		"StorageAdapterDescriptor\n"
+		"=========================== StorageAdapterDescriptor ==========================\n"
 		"\t              Version: %u\n"
 		"\t                 Size: %u\n"
 		"\tMaximumTransferLength: %u (bytes)\n"
@@ -3144,7 +3140,7 @@ VOID OutputIoctlStorageAdaptorDescriptor(
 		break;
 	case STORAGE_BUS_TYPE::BusTypeUsb:
 		OutputDriveLogA("BusTypeUsb\n");
-		*pBusTypeUSB = TRUE;
+		*lpBusTypeUSB = TRUE;
 		break;
 	case STORAGE_BUS_TYPE::BusTypeRAID:
 		OutputDriveLogA("BusTypeRAID\n");
@@ -3187,7 +3183,7 @@ VOID OutputIoctlStorageAdaptorDescriptor(
 		pAdapterDescriptor->BusMinorVersion);
 }
 
-VOID OutputIoctlFloppyInfo(
+VOID OutputFloppyInfo(
 	PDISK_GEOMETRY pGeom,
 	DWORD dwGeomNum
 	)
