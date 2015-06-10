@@ -374,6 +374,7 @@ VOID WriteCcdFileForTrack(
 	UINT nTrackNum,
 	UCHAR byModeNum,
 	BOOL bISRC,
+	UCHAR byCtl,
 	FILE* fpCcd
 	);
 

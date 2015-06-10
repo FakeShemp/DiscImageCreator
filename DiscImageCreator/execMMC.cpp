@@ -354,7 +354,8 @@ BOOL DescrambleMainChannel(
 					}
 					fwrite(aSrcBuf, sizeof(UCHAR), sizeof(aSrcBuf), fpImg);
 				}
-				OutputString(_T("\rDescrambling data sector of img(LBA) %6d/%6d"), nStartLBA, nEndLBA);
+				OutputString(
+					_T("\rDescrambling data sector of img(LBA) %6d/%6d"), nStartLBA, nEndLBA);
 			}
 			OutputString(_T("\n"));
 		}
@@ -372,12 +373,14 @@ BOOL MergeMainChannelAndCDG(
 	BOOL bRet = TRUE;
 	if(bCDG && bAudioOnly) {
 		OutputString(_T("Merging img+cdg->bin\n"));
-		FILE* fpCdg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("rb"), 0, 0);
+		FILE* fpCdg =
+			CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("rb"), 0, 0);
 		if(fpCdg == NULL) {
 			OutputErrorString(_T("Failed to open file .cdg\n"));
 			bRet = FALSE;
 		}
-		FILE* fpBinAll = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("wb"), 0, 0);
+		FILE* fpBinAll =
+			CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("wb"), 0, 0);
 		if(fpBinAll == NULL) {
 			OutputErrorString(_T("Failed to open file .bin\n"));
 			bRet = FALSE;
@@ -388,7 +391,8 @@ BOOL MergeMainChannelAndCDG(
 
 			for(int i = 0; i < fsizeImg2 / CD_RAW_SECTOR_SIZE; i++) {
 				fread(buf, sizeof(UCHAR), CD_RAW_SECTOR_SIZE, fpImg);
-				fread(buf + CD_RAW_SECTOR_SIZE, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpCdg);
+				fread(buf + CD_RAW_SECTOR_SIZE,
+					sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpCdg);
 				fwrite(buf, sizeof(UCHAR), CD_RAW_SECTOR_WITH_SUBCODE_SIZE, fpBinAll);
 			}
 			FcloseAndNull(fpBinAll);
@@ -424,21 +428,23 @@ BOOL CreatingBinCueCcd(
 		}
 	}
 	for(UINT i = pDiscData->toc.FirstTrack; i <= pDiscData->toc.LastTrack; i++) {
-		FILE* fpBin = CreateOrOpenFileW(pszOutFile, NULL, 
-			pszFileNameWithoutPath, NULL, _T(".bin"), _T("wb"), i, pDiscData->toc.LastTrack);
+		FILE* fpBin = CreateOrOpenFileW(pszOutFile, NULL, pszFileNameWithoutPath,
+			NULL, _T(".bin"), _T("wb"), i, pDiscData->toc.LastTrack);
 		if(fpBin == NULL) {
 			OutputErrorString(_T("Failed to open .bin\n"));
 			bRet = FALSE;
 			break;
 		}
 		else {
-			OutputString(_T("\rCreating bin, cue, ccd(Track) %2d/%2d"), i, pDiscData->toc.LastTrack);
+			OutputString(_T("\rCreating bin, cue, ccd(Track) %2d/%2d"),
+				i, pDiscData->toc.LastTrack);
 			if(i == pDiscData->toc.FirstTrack) {
 				WriteCueFileFirst(pDiscData, bCatalog, fpCue);
 			}
 			WriteCueFile(pDiscData, pszFileNameWithoutPath, bCDG,
 				i, pModeList[i-1], pbISRCList[i-1], pCtlList[i-1], fpCue);
-			WriteCcdFileForTrack(pDiscData, i, pModeList[i-1], pbISRCList[i-1], fpCcd);
+			WriteCcdFileForTrack(pDiscData, i,
+				pModeList[i-1], pbISRCList[i-1], pCtlList[i-1], fpCcd);
 
 			BYTE byFrame = 0, bySecond = 0, byMinute = 0;
 			if(i == pDiscData->toc.FirstTrack) {
@@ -480,8 +486,10 @@ BOOL CreatingBinCueCcd(
 			}
 			// write each track
 			size_t uiBufsize = 0;
-			INT nLBA = pLBAStartList[i][0] == -1 ? pLBAStartList[i][1] : pLBAStartList[i][0];
-			INT nPrevLba = pLBAStartList[i-1][0] == -1 ? pLBAStartList[i-1][1] : pLBAStartList[i-1][0];
+			INT nLBA =
+				pLBAStartList[i][0] == -1 ? pLBAStartList[i][1] : pLBAStartList[i][0];
+			INT nPrevLba =
+				pLBAStartList[i-1][0] == -1 ? pLBAStartList[i-1][1] : pLBAStartList[i-1][0];
 			INT nWriteSectorSize = 
 				(bCDG && pDiscData->bAudioOnly) ? CD_RAW_SECTOR_WITH_SUBCODE_SIZE : CD_RAW_SECTOR_SIZE;
 
@@ -1062,7 +1070,8 @@ BOOL ReadCDForSearchingOffset(
 			OutputMmcCdSub96Align(Subcode, pDiscData->nFirstDataLBA, fpLog);
 			UCHAR aBuf2[CD_RAW_SECTOR_SIZE*2] = {0};
 			memcpy(aBuf2, pBuf, CD_RAW_SECTOR_SIZE);
-			memcpy(aBuf2 + CD_RAW_SECTOR_SIZE, pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, CD_RAW_SECTOR_SIZE);
+			memcpy(aBuf2 + CD_RAW_SECTOR_SIZE,
+				pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, CD_RAW_SECTOR_SIZE);
 			bRet = GetWriteOffset(pDiscData, aBuf2);
 		}
 		else {
@@ -1071,7 +1080,8 @@ BOOL ReadCDForSearchingOffset(
 			// ==>Sense data, Key:Asc:Ascq: 05:64:00(ILLEGAL_REQUEST. ILLEGAL MODE FOR THIS TRACK)
 			// else if Track1 isn't DataTrack (pc engine etc)
 			// ==>no error.
-			OutputString(_T("This drive can't read data sector in scrambled mode.\n"));
+			OutputString(
+				_T("This drive can't read data sector in scrambled mode.\n"));
 			FreeAndNull(aBuf);
 			return FALSE;
 		}
@@ -1079,7 +1089,8 @@ BOOL ReadCDForSearchingOffset(
 		if(bRet) {
 			OutputLogString(fpLog, _T("Offset"));
 			if(bGetDrive) {
-				OutputLogString(fpLog, _T("(Drive offset data referes to www.accuraterip.com)"));
+				OutputLogString(fpLog,
+					_T("(Drive offset data referes to www.accuraterip.com)"));
 			}
 			OutputLogString(fpLog,
 				_T("\n")
@@ -1099,12 +1110,15 @@ BOOL ReadCDForSearchingOffset(
 	}
 
 	if(0 < pDiscData->nCombinedOffset) {
-		pDiscData->nAdjustSectorNum = pDiscData->nCombinedOffset / CD_RAW_SECTOR_SIZE + 1;
+		pDiscData->nAdjustSectorNum =
+			pDiscData->nCombinedOffset / CD_RAW_SECTOR_SIZE + 1;
 	}
 	else if(pDiscData->nCombinedOffset < 0) {
-		pDiscData->nAdjustSectorNum = pDiscData->nCombinedOffset / CD_RAW_SECTOR_SIZE - 1;
+		pDiscData->nAdjustSectorNum =
+			pDiscData->nCombinedOffset / CD_RAW_SECTOR_SIZE - 1;
 	}
-	OutputLogString(fpLog, _T("\tNeed overread sector: %d\n"), pDiscData->nAdjustSectorNum);
+	OutputLogString(fpLog,
+		_T("\tNeed overread sector: %d\n"), pDiscData->nAdjustSectorNum);
 	fflush(fpLog);
 
 	return bRet;
@@ -1259,16 +1273,19 @@ BOOL ReadConfiguration(
 	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		pDiscData->usCurrentMedia = ProfileCdrom;
 		// not false. because undefined mmc1..
-		OutputLogString(fpLog, _T("\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n"));
+		OutputLogString(fpLog,
+			_T("\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n"));
 		bRet = TRUE;
 	}
 	else {
 		OutputLogString(fpLog, _T("\tCurrenProfile: "));
-		pDiscData->usCurrentMedia = MAKEWORD(pHeader.CurrentProfile[1], pHeader.CurrentProfile[0]);
+		pDiscData->usCurrentMedia =
+			MAKEWORD(pHeader.CurrentProfile[1], pHeader.CurrentProfile[0]);
 		OutputMmcFeatureProfileType(pDiscData->usCurrentMedia, fpLog);
 		OutputLogString(fpLog, _T("\n"));
 
-		ULONG ulAllLen = MAKELONG(MAKEWORD(pHeader.DataLength[3], pHeader.DataLength[2]), 
+		ULONG ulAllLen =
+			MAKELONG(MAKEWORD(pHeader.DataLength[3], pHeader.DataLength[2]), 
 			MAKEWORD(pHeader.DataLength[1], pHeader.DataLength[0])) + sizeof(pHeader.DataLength);
 		PUCHAR pPConf = (PUCHAR)calloc((size_t)ulAllLen + pDevData->AlignmentMask, sizeof(UCHAR));
 		if(!pPConf) {
@@ -1691,7 +1708,7 @@ BOOL ReadTOC(
 	}
 
 	OutputLogString(fpLog, _T("TOC on SCSIOP_READ_TOC\n"));
-	_TCHAR strType[6] = {0};
+	_TCHAR strType[7] = {0};
 	BOOL bFirstData = TRUE;
 	for(INT i = pDiscData->toc.FirstTrack; i <= pDiscData->toc.LastTrack; i++) {
 		for(INT j = 0, k = 24; j < 4; j++, k -= 8) {
@@ -1702,21 +1719,26 @@ BOOL ReadTOC(
 		pDiscData->nLength += pDiscData->aTocLBA[i-1][1] - pDiscData->aTocLBA[i-1][0] + 1;
 
 		if((pDiscData->toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == 0) {
-			_tcscpy(strType, _T("Audio"));
+			_tcscpy(strType, _T(" Audio"));
 		}
 		else if((pDiscData->toc.TrackData[i-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 			if(bFirstData) {
 				pDiscData->nFirstDataLBA = pDiscData->aTocLBA[i-1][0];
 				bFirstData = FALSE;
 			}
-			_tcscpy(strType, _T(" Data"));
+			_tcscpy(strType, _T("  Data"));
+		}
+		if(i == pDiscData->toc.FirstTrack && pDiscData->aTocLBA[i-1][0] > 0) {
+			pDiscData->nLength += pDiscData->aTocLBA[i-1][0];
+			OutputLogString(fpLog, _T("\tPregap Track   , LBA %6u-%6u, Length %6u\n"), 
+				0, pDiscData->aTocLBA[i-1][0] - 1, pDiscData->aTocLBA[i-1][0]);
 		}
 		OutputLogString(fpLog, _T("\t%s Track %2u, LBA %6u-%6u, Length %6u\n"), 
 			strType, i, pDiscData->aTocLBA[i-1][0], pDiscData->aTocLBA[i-1][1], 
 			pDiscData->aTocLBA[i-1][1] - pDiscData->aTocLBA[i-1][0] + 1);
 	}
 	OutputLogString(fpLog, 
-		_T("\t                                   Total  %6u\n"), pDiscData->nLength);
+		_T("\t                                    Total  %6u\n"), pDiscData->nLength);
 	return TRUE;
 }
 
@@ -1754,7 +1776,8 @@ BOOL ReadTOCFull(
 	}
 	size_t uiFullTocStructSize = uiFullTocSize + uiFullTocHeaderSize;
 	if(pDevData->bPlextor && pDevData->bPlextorPX712A && uiFullTocStructSize > 1028) {
-		OutputErrorString(_T("On this drive, can't get CDROM_TOC_FULL_TOC_DATA of this disc\n"));
+		OutputErrorString(
+			_T("On this drive, can't get CDROM_TOC_FULL_TOC_DATA of this disc\n"));
 		return TRUE;
 	}
 	size_t uiFullTocFixStructSize = uiFullTocStructSize;
@@ -1762,7 +1785,8 @@ BOOL ReadTOCFull(
 	if(uiFullTocFixStructSize % 4) {
 		uiFullTocFixStructSize = (uiFullTocFixStructSize / 4 + 1) * 4;
 	}
-	OutputLogString(fpLog, _T("FullTocSize: %d, FullTocStructSize: %d, FullTocStructFixSize: %d\n"),
+	OutputLogString(fpLog,
+		_T("FullTocSize: %d, FullTocStructSize: %d, FullTocStructFixSize: %d\n"),
 		uiFullTocSize, uiFullTocStructSize, uiFullTocFixStructSize);
 
 	PUCHAR pPFullToc = 
@@ -1875,7 +1899,8 @@ BOOL ReadTOCText(
 	OutputLogString(fpLog, _T("CDTEXT on SCSIOP_READ_TOC\n"));
 	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false. because undefined mmc1..
-		OutputLogString(fpLog, _T("\tUndefined CDROM_READ_TOC_EX_FORMAT_CDTEXT on this drive\n"));
+		OutputLogString(fpLog,
+			_T("\tUndefined CDROM_READ_TOC_EX_FORMAT_CDTEXT on this drive\n"));
 		bRet = TRUE;
 	}
 	else {
@@ -1932,7 +1957,8 @@ BOOL ReadTOCText(
 					OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 					throw;
 				}
-				OutputMmcTocCDWText(pDiscData, pDesc, pTmpText, entrySize, uiTocTextEntries, allTextSize, fpLog);
+				OutputMmcTocCDWText(pDiscData, pDesc, pTmpText,
+					entrySize, uiTocTextEntries, allTextSize, fpLog);
 				FreeAndNull(pTmpWText);
 			}
 		}

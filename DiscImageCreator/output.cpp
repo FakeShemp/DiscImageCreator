@@ -3886,6 +3886,7 @@ VOID WriteCcdFileForTrack(
 	UINT nTrackNum,
 	UCHAR byModeNum,
 	BOOL bISRC,
+	UCHAR byCtl,
 	FILE* fpCcd
 	)
 {
@@ -3896,6 +3897,36 @@ VOID WriteCcdFileForTrack(
 		byModeNum);
 	if(bISRC) {
 		_ftprintf(fpCcd, _T("ISRC=%s\n"), pDiscData->szISRC[nTrackNum-1]);
+	}
+	if((byCtl & AUDIO_WITH_PREEMPHASIS) == AUDIO_WITH_PREEMPHASIS ||
+		(byCtl & DIGITAL_COPY_PERMITTED) == DIGITAL_COPY_PERMITTED ||
+		(byCtl & TWO_FOUR_CHANNEL_AUDIO) == TWO_FOUR_CHANNEL_AUDIO) {
+		_TCHAR aBuf[22] = {0};
+		_tcscat(aBuf, _T("FLAGS="));
+		switch(byCtl) {
+		case AUDIO_WITH_PREEMPHASIS:
+			_tcscat(aBuf, _T(" PRE\n"));
+			break;
+		case DIGITAL_COPY_PERMITTED:
+			_tcscat(aBuf, _T(" DCP\n"));
+			break;
+		case DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
+			_tcscat(aBuf, _T(" DCP PRE\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO:
+			_tcscat(aBuf, _T(" 4CH\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO | AUDIO_WITH_PREEMPHASIS:
+			_tcscat(aBuf, _T(" 4CH PRE\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED:
+			_tcscat(aBuf, _T(" 4CH DCP\n"));
+			break;
+		case TWO_FOUR_CHANNEL_AUDIO | DIGITAL_COPY_PERMITTED | AUDIO_WITH_PREEMPHASIS:
+			_tcscat(aBuf, _T(" 4CH DCP PRE\n"));
+			break;
+		}
+		fwrite(aBuf, sizeof(_TCHAR), _tcslen(aBuf), fpCcd);
 	}
 }
 
