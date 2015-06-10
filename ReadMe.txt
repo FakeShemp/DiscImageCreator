@@ -237,3 +237,6 @@ fixed ripping DVD DL
 fixed ISO9660 PVD log
 added DiscInformation(0x51) log
 added reading floppy (WIP)
+
+**2013-04-07
+added C2 error log (check only one, not re-read)

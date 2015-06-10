@@ -1,4 +1,4 @@
-/*
+g/*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #include "stdafx.h"
@@ -123,7 +123,6 @@ BOOL ReadVolumeDescriptor(
 
 BOOL CheckCDG(
 	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
 	CONST PUCHAR aCmd,
 	ULONG ulBufLen,
 	PUCHAR pBuf,
@@ -134,11 +133,6 @@ BOOL CheckCDG(
 	UCHAR byScsiStatus = 0;
 	aCmd[5] = 75;
 	INT nShift = CD_RAW_SECTOR_SIZE;
-	if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly && pDevData->bPlextor)) {
-		if(pDevData->bPlextor) {
-			nShift += CD_RAW_READ_C2_SIZE_294;
-		}
-	}
 
 	if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 		ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
@@ -164,380 +158,117 @@ BOOL CheckCDG(
 	return bRet;
 }
 
-BOOL UpdateSubchannelQData(
-	PSUB_Q_DATA subQ,
-	PSUB_Q_DATA prevSubQ,
-	PSUB_Q_DATA prevPrevSubQ
-	)
-{
-	if(prevSubQ->byAdr != ADR_ENCODES_MEDIA_CATALOG && 
-		prevSubQ->byAdr != ADR_ENCODES_ISRC) {
-		prevPrevSubQ->byMode = prevSubQ->byMode;
-		prevPrevSubQ->byAdr = prevSubQ->byAdr;
-		prevPrevSubQ->nRelativeTime = prevSubQ->nRelativeTime;
-	}
-	else if((prevSubQ->byAdr == ADR_ENCODES_MEDIA_CATALOG || 
-		prevSubQ->byAdr == ADR_ENCODES_ISRC) && prevSubQ->byIndex == 0) {
-			subQ->nRelativeTime = prevSubQ->nRelativeTime + 1;
-	}
-
-	if(subQ->byAdr != ADR_ENCODES_MEDIA_CATALOG && 
-		subQ->byAdr != ADR_ENCODES_ISRC) {
-		prevSubQ->byMode = subQ->byMode;
-		prevSubQ->byAdr = subQ->byAdr;
-	}
-	else if(prevSubQ->byIndex == 0 && prevSubQ->nRelativeTime == 0) {
-		prevSubQ->byIndex = 1;
-	}
-
-	prevPrevSubQ->byTrackNum = prevSubQ->byTrackNum;
-	prevPrevSubQ->byIndex = prevSubQ->byIndex;
-	prevPrevSubQ->byCtl = prevSubQ->byCtl;
-	prevPrevSubQ->nAbsoluteTime = prevSubQ->nAbsoluteTime;
-	prevSubQ->byTrackNum = subQ->byTrackNum;
-	prevSubQ->byIndex = subQ->byIndex;
-	prevSubQ->byCtl = subQ->byCtl;
-	prevSubQ->nRelativeTime = subQ->nRelativeTime;
-	prevSubQ->nAbsoluteTime++;
-
-	return TRUE;
-}
-
-BOOL PreserveTrackAttribution(
+BOOL CheckC2Error(
+	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
-	INT nLBA,
-	PUCHAR byCurrentTrackNum,
-	PSUB_Q_DATA subQ,
-	PSUB_Q_DATA prevSubQ,
-	PSUB_Q_DATA prevPrevSubQ,
-	PUCHAR pCtlList,
-	PUCHAR pModeList,
-	PINT* pLBAStartList,
-	PINT* pLBAOfDataTrackList,
-	FILE* fpLog
-	)
-{
-	if(subQ->byTrackNum > 0) {
-		// preserve mode, ctl
-		if(nLBA == pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
-			pCtlList[subQ->byTrackNum-1] = subQ->byCtl;
-			pModeList[subQ->byTrackNum-1] = subQ->byMode;
-		}
-		// preserve nLBA
-		if(prevSubQ->byTrackNum + 1 == subQ->byTrackNum) {
-			if(subQ->byIndex > 0) {
-				// index 1 is prior to TOC
-				if(subQ->byIndex == 1 && nLBA != pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
-					OutputLogString(fpLog, 
-						_T("Subchannel & TOC isn't sync. Track %2d, LBA on subchannel: %6d, index: %2d, LBA on TOC: %6d\n"),
-						subQ->byTrackNum, nLBA, subQ->byIndex, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
-					pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
-					if(pLBAStartList[subQ->byTrackNum-1][0] == pLBAStartList[subQ->byTrackNum-1][1]) {
-						pLBAStartList[subQ->byTrackNum-1][0] = -1;
-					}
-				}
-				else {
-					pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
-				}
-			}
-			// preserve end lba of data track
-			if(prevSubQ->byTrackNum > 0) {
-				if(pLBAOfDataTrackList[prevSubQ->byTrackNum-1][0] != -1 &&
-					pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] == -1 &&
-					(prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-						pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] = nLBA - 1;
-				}
-			}
-			*byCurrentTrackNum = subQ->byTrackNum;
-		}
-		// Hyper Wars (Japan)
-		// LBA[098484, 0x180B4], Data, Copy NG, TOC[TrackNum-03, Index-00, RelativeTime-00:02:01, AbsoluteTime-21:55:09] RtoW:ZERO mode
-		// LBA[098485, 0x180B5], Data, Copy NG, TOC[TrackNum-03, Index-00, RelativeTime-00:02:00, AbsoluteTime-21:55:10] RtoW:ZERO mode
-		// LBA[098486, 0x180B6], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-03, Index-00, RelativeTime-00:01:74, AbsoluteTime-21:55:11] RtoW:ZERO mode
-		// LBA[098487, 0x180B7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-03, Index-00, RelativeTime-00:01:73, AbsoluteTime-21:55:12] RtoW:ZERO mode
-		if((prevPrevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-			(prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) == 0 &&
-			subQ->byIndex == 0 && prevSubQ->byIndex == 0 && prevPrevSubQ->byIndex == 0) {
-			pLBAOfDataTrackList[subQ->byTrackNum-1][subQ->byIndex+1] = nLBA - 1;
-		}
-		// preserve index
-		if(prevSubQ->byIndex + 1 == subQ->byIndex && *byCurrentTrackNum >= 0) {
-			if(subQ->byIndex != 1) {
-				pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
-			}
-			else {
-				// index 1 is prior to TOC
-				if(nLBA != pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
-					OutputLogString(fpLog,
-						_T("Subchannel & TOC isn't sync. Track %2d, LBA on subchannel: %6d, prevIndex: %2d, LBA on TOC: %6d\n"),
-						subQ->byTrackNum, nLBA, prevSubQ->byIndex, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
-				}
-				pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
-				if(pLBAStartList[subQ->byTrackNum-1][0] == pLBAStartList[subQ->byTrackNum-1][1]) {
-					// Crow, The - Original Motion Picture Soundtrack (82519-2)
-					pLBAStartList[subQ->byTrackNum-1][0] = -1;
-				}
-			}
-		}
-		else if(prevSubQ->byIndex >= 1 && subQ->byIndex == 0) {
-			pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
-		}
-
-		if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) == 0) {
-			OutputLogString(fpLog,
-				_T("LBA %6d, Track[%02d] is data track, but this sector is audio\n"),
-				nLBA, subQ->byTrackNum);
-		}
-		else if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == 0 &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-			OutputLogString(fpLog,
-				_T("LBA %6d, Track[%02d] is audio track, but this sector is data\n"),
-				nLBA, subQ->byTrackNum);
-		}
-
-		// preserve first lba of data track offset
-		if(pLBAOfDataTrackList[subQ->byTrackNum-1][0] == -1 &&
-			(pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-			pLBAOfDataTrackList[subQ->byTrackNum-1][0] = nLBA;
-		}
-		// preserve end data track offset
-		else if(nLBA == pDiscData->nLength - 1) {
-			// preserve end data track offset
-			if(pLBAOfDataTrackList[subQ->byTrackNum-1][0] != -1 &&
-				pLBAOfDataTrackList[subQ->byTrackNum-1][1] == -1 &&
-				(subQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-					pLBAOfDataTrackList[subQ->byTrackNum-1][1] = pDiscData->nLength - 1;
-			}
-		}
-	}
-	return TRUE;
-}
-
-BOOL DescrambleMainChannel(
-	PDISC_DATA pDiscData,
-	PINT* pLBAOfDataTrackList,
-	FILE* fpTbl,
-	FILE* fpImg,
+	LPCTSTR pszOutFile,
+	LPCTSTR pszOption,
+	PUCHAR pBuf,
+	INT nOffsetStart,
+	INT nOffsetEnd,
 	FILE* fpLog
 	)
 {
 	BOOL bRet = TRUE;
-	UCHAR aScrambledBuf[CD_RAW_SECTOR_SIZE] = {0};
-	fread(aScrambledBuf, sizeof(UCHAR), sizeof(aScrambledBuf), fpTbl);
-	UCHAR aSrcBuf[CD_RAW_SECTOR_SIZE] = {0};
-
-	for(INT k = 0; k < pDiscData->toc.LastTrack; k++) {
-		if(pLBAOfDataTrackList[k][0] != -1) {
-			OutputLogString(fpLog, _T("\tData Sector, LBA %6d-%6d\n"), 
-				pLBAOfDataTrackList[k][0], pLBAOfDataTrackList[k][1]);
-			UINT nStartLBA = pDiscData->aSessionNum[k] >= 2 
-				? pLBAOfDataTrackList[k][0] - (11400 * (pDiscData->aSessionNum[k] - 1)) 
-				: pLBAOfDataTrackList[k][0];
-			UINT nEndLBA = pDiscData->aSessionNum[k] >= 2 
-				? pLBAOfDataTrackList[k][1] - (11400 * (pDiscData->aSessionNum[k] - 1)) 
-				: pLBAOfDataTrackList[k][1];
-			for(; nStartLBA <= nEndLBA; nStartLBA++) {
-				// ファイルを読み書き両用モードで開いている時は 注意が必要です。
-				// 読み込みを行った後に書き込みを行う場合やその逆を行う場合は、 
-				// 必ずfseekを呼ばなければなりません。もしこれを忘れると、
-				// 場合によってはバッファー内と 実際にディスクに描き込まれた
-				// データに矛盾が生じ、正確に書き込まれない場合や、
-				// 嘘の データを読み込む場合があります。
-				fseek(fpImg, (long)nStartLBA * CD_RAW_SECTOR_SIZE, SEEK_SET);
-				fread(aSrcBuf, sizeof(UCHAR), sizeof(aSrcBuf), fpImg);
-				if(IsValidDataHeader(aSrcBuf)) {
-					fseek(fpImg, -CD_RAW_SECTOR_SIZE, SEEK_CUR);
-					for(INT n = 0; n < CD_RAW_SECTOR_SIZE; n++) {
-						aSrcBuf[n] ^= aScrambledBuf[n];
-					}
-					fwrite(aSrcBuf, sizeof(UCHAR), sizeof(aSrcBuf), fpImg);
-				}
-				OutputString(
-					_T("\rDescrambling data sector of img(LBA) %6d/%6d"), nStartLBA, nEndLBA);
-			}
-			OutputString(_T("\n"));
-		}
-	}
-	return bRet;
-}
-
-BOOL MergeMainChannelAndCDG(
-	LPCTSTR pszOutFile,
-	BOOL bCDG,
-	BOOL bAudioOnly,
-	FILE* fpImg
-	)
-{
-	BOOL bRet = TRUE;
-	if(bCDG && bAudioOnly) {
-		OutputString(_T("Merging img+cdg->bin\n"));
-		FILE* fpCdg =
-			CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("rb"), 0, 0);
-		if(fpCdg == NULL) {
-			OutputErrorString(_T("Failed to open file .cdg\n"));
-			bRet = FALSE;
-		}
-		FILE* fpBinAll =
-			CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("wb"), 0, 0);
-		if(fpBinAll == NULL) {
-			OutputErrorString(_T("Failed to open file .bin\n"));
-			bRet = FALSE;
-		}
-		if(bRet) {
-			LONG fsizeImg2 = (LONG)GetFilesize(0, fpImg);
-			UCHAR buf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE] = {0};
-
-			for(int i = 0; i < fsizeImg2 / CD_RAW_SECTOR_SIZE; i++) {
-				fread(buf, sizeof(UCHAR), CD_RAW_SECTOR_SIZE, fpImg);
-				fread(buf + CD_RAW_SECTOR_SIZE,
-					sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpCdg);
-				fwrite(buf, sizeof(UCHAR), CD_RAW_SECTOR_WITH_SUBCODE_SIZE, fpBinAll);
-			}
-			FcloseAndNull(fpBinAll);
-			FcloseAndNull(fpCdg);
-		}
-	}
-	return bRet;
-}
-
-BOOL CreatingBinCueCcd(
-	PDISC_DATA pDiscData,
-	LPCTSTR pszOutFile,
-	BOOL bCatalog,
-	BOOL bCDG,
-	PUCHAR pCtlList,
-	PUCHAR pModeList,
-	PBOOL pbISRCList,
-	PINT* pLBAStartList,
-	FILE* fpImg,
-	FILE* fpCue,
-	FILE* fpCcd
-	)
-{
-	BOOL bRet = TRUE;
-	TCHAR pszFileNameWithoutPath[_MAX_FNAME] = {0};
-	FILE* fpBinWithCDG = NULL;
-	if(bCDG && pDiscData->bAudioOnly) {
-		fpBinWithCDG = 
-			CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
-		if(fpBinWithCDG == NULL) {
-			OutputErrorString(_T("Failed to open file .bin\n"));
+	// read all sector with C2 pointer
+	if(pDevData->bC2ErrorData && pszOption && !_tcscmp(pszOption, _T("c2"))) {
+		FILE* fpC2 = NULL;
+		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
+		BOOL bC2Error = FALSE;
+		aCmd[0] = SCSIOP_READ_CD;
+		aCmd[1] = READ_CD_FLAG::All;
+		aCmd[8] = 1;
+		aCmd[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
+			READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
+		aCmd[10] = READ_CD_FLAG::Raw;
+		if(NULL == (fpC2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".c2.err"), _T("wb"), 0, 0))) {
 			return FALSE;
 		}
-	}
-	for(UINT i = pDiscData->toc.FirstTrack; i <= pDiscData->toc.LastTrack; i++) {
-		FILE* fpBin = CreateOrOpenFileW(pszOutFile, NULL, pszFileNameWithoutPath,
-			NULL, _T(".bin"), _T("wb"), i, pDiscData->toc.LastTrack);
-		if(fpBin == NULL) {
-			OutputErrorString(_T("Failed to open .bin\n"));
-			bRet = FALSE;
-			break;
+		ULONG ulBufLen = 0;
+		if(pDevData->bPlextor) {
+			ulBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE + CD_RAW_READ_C2_SIZE_294;
+			aCmd[9] |= READ_CD_FLAG::C2ErrorBlockData;
 		}
 		else {
-			OutputString(_T("\rCreating bin, cue, ccd(Track) %2d/%2d"),
-				i, pDiscData->toc.LastTrack);
-			if(i == pDiscData->toc.FirstTrack) {
-				WriteCueFileFirst(pDiscData, bCatalog, fpCue);
-			}
-			WriteCueFile(pDiscData, pszFileNameWithoutPath, bCDG,
-				i, pModeList[i-1], pbISRCList[i-1], pCtlList[i-1], fpCue);
-			WriteCcdFileForTrack(pDiscData, i,
-				pModeList[i-1], pbISRCList[i-1], pCtlList[i-1], fpCcd);
+			ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
+			aCmd[9] |= READ_CD_FLAG::C2AndBlockErrorBits;
+		}
+		UCHAR byScsiStatus = 0;
+		try {
+			for(INT nLBA = nOffsetStart; nLBA < pDiscData->nLength + nOffsetEnd; nLBA++) {
+				if(pDiscData->nStartLBAof2ndSession != -1 &&
+					pDiscData->nLastLBAof1stSession == nLBA) {
+					INT nStartSession2 = pDiscData->nStartLBAof2ndSession - 1;
+					OutputLogString(fpLog, 
+						_T("Skip from Leadout of Session 1 [%d] to Leadin of Session 2 [%d]\n"),
+						pDiscData->nLastLBAof1stSession, nStartSession2);
+					nLBA = nStartSession2;
+					continue;
+				}
+				aCmd[2] = HIBYTE(HIWORD(nLBA));
+				aCmd[3] = LOBYTE(HIWORD(nLBA));
+				aCmd[4] = HIBYTE(LOWORD(nLBA));
+				aCmd[5] = LOBYTE(LOWORD(nLBA));
+				if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, 
+					pBuf, ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
+					throw FALSE;
+				}
 
-			BYTE byFrame = 0, bySecond = 0, byMinute = 0;
-			if(i == pDiscData->toc.FirstTrack) {
-				LBAtoMSF(pLBAStartList[i-1][1] - pLBAStartList[i-1][0], 
-					&byFrame, &bySecond, &byMinute);
-				if(pLBAStartList[i-1][1] > 0) {
-					// Crow, The - Original Motion Picture Soundtrack (82519-2)
-					WriteCueFileForIndex(0, 0, 0, 0, fpCue);
-					WriteCcdFileForTrackIndex(0, 0, fpCcd);
+				if(byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
+					OutputErrorString(
+						_T("LBA %d Read error [L:%d]\n"), nLBA, __LINE__);
+					continue;
 				}
-				WriteCueFileForIndex(1, byFrame, 0, 0, fpCue);
-				WriteCcdFileForTrackIndex(1, pLBAStartList[i-1][1], fpCcd);
-			}
-			else if(pLBAStartList[i-1][0] == -1 && pLBAStartList[i-1][2] == -1) {
-				LBAtoMSF(pLBAStartList[i-1][1] - pLBAStartList[i-1][0], 
-					&byFrame, &bySecond, &byMinute);
-				WriteCueFileForIndex(1, 0, 0, 0, fpCue);
-				WriteCcdFileForTrackIndex(1, pLBAStartList[i-1][1], fpCcd);
-			}
-			else if(pLBAStartList[i-1][0] != -1) {
-				for(UCHAR index = 0; index < MAXIMUM_NUMBER_INDEXES; index++) {
-					if(pLBAStartList[i-1][index] != -1) {
-						LBAtoMSF(pLBAStartList[i-1][index] - pLBAStartList[i-1][0], 
-							&byFrame, &bySecond, &byMinute);
-						WriteCueFileForIndex(index, byFrame, bySecond, byMinute, fpCue);
-						WriteCcdFileForTrackIndex(index, pLBAStartList[i-1][index], fpCcd);
-					}
-				}
-			}
-			else {
-				for(UCHAR index = 1; index < MAXIMUM_NUMBER_INDEXES; index++) {
-					if(pLBAStartList[i-1][index] != -1) {
-						LBAtoMSF(pLBAStartList[i-1][index] - pLBAStartList[i-1][1], 
-							&byFrame, &bySecond, &byMinute);
-						WriteCueFileForIndex(index, byFrame, bySecond, byMinute, fpCue);
-						WriteCcdFileForTrackIndex(index, pLBAStartList[i-1][index], fpCcd);
-					}
-				}
-			}
-			// write each track
-			size_t uiBufsize = 0;
-			INT nLBA =
-				pLBAStartList[i][0] == -1 ? pLBAStartList[i][1] : pLBAStartList[i][0];
-			INT nPrevLba =
-				pLBAStartList[i-1][0] == -1 ? pLBAStartList[i-1][1] : pLBAStartList[i-1][0];
-			INT nWriteSectorSize = 
-				(bCDG && pDiscData->bAudioOnly) ? CD_RAW_SECTOR_WITH_SUBCODE_SIZE : CD_RAW_SECTOR_SIZE;
 
-			if(pDiscData->toc.LastTrack == pDiscData->toc.FirstTrack) {
-				uiBufsize = (size_t)pDiscData->nLength * nWriteSectorSize;
-				nPrevLba = 0;
-			}
-			else if(i == pDiscData->toc.FirstTrack) {
-				uiBufsize = (size_t)nLBA * nWriteSectorSize;
-				nPrevLba = 0;
-			}
-			else if(i == pDiscData->toc.LastTrack) {
-				INT nTmpLength = pDiscData->nLength;
-				if(pDiscData->aSessionNum[i-1] > 1) {
-					UINT nLeadinoutSize = 11400 * (pDiscData->aSessionNum[i-1] - 1);
-					nPrevLba -= nLeadinoutSize;
-					nTmpLength -= nLeadinoutSize;
-				}
-				uiBufsize = (size_t)(nTmpLength - nPrevLba) * nWriteSectorSize;
-			}
-			else {
-				if(i == pDiscData->toc.LastTrack - (UINT)1 && pDiscData->aSessionNum[i] > 1) {
-					nLBA -= 11400 * (pDiscData->aSessionNum[i] - 1);
-				}
-				uiBufsize = (size_t)(nLBA - nPrevLba) * nWriteSectorSize;
-			}
-			if(!(bCDG && pDiscData->bAudioOnly)) {
-				fseek(fpImg, nPrevLba * nWriteSectorSize, SEEK_SET);
-			}
-			PUCHAR pBuf = (PUCHAR)calloc(uiBufsize, sizeof(UCHAR));
-			if(pBuf == NULL) {
-				OutputErrorString(_T("Failed to alloc memory pBuf2\n"));
-				bRet = FALSE;
-			}
-			else {
-				if(bCDG && pDiscData->bAudioOnly) {
-					fread(pBuf, sizeof(UCHAR), uiBufsize, fpBinWithCDG);
+				INT nCnt = 1;
+				if(pDevData->bPlextor) {
+					// plextor:main+c2+sub
+//					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_294, Subcode);
+					fwrite(pBuf + CD_RAW_SECTOR_SIZE, 
+						sizeof(UCHAR), CD_RAW_READ_C2_SIZE_294, fpC2);
+					for(INT a = 0; a < CD_RAW_READ_C2_SIZE_294; a++) {
+						INT bit = 0x80;
+						for(INT n = 0; n < CHAR_BIT; n++) {
+							if(pBuf[CD_RAW_SECTOR_SIZE+a] & bit) {
+								bC2Error = TRUE;
+								OutputLogString(fpLog,
+									_T("C2 error exist(LBA) %6d, (Byte) %4d\n"), nLBA, nCnt);
+							}
+							bit >>= 1;
+							nCnt++;
+						}
+					}
 				}
 				else {
-					fread(pBuf, sizeof(UCHAR), uiBufsize, fpImg);
+					// slimtype and other:main+sub+c2
+//					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+					fwrite(pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, 
+						sizeof(UCHAR), CD_RAW_READ_C2_SIZE, fpC2);
+					for(INT a = 0; a < CD_RAW_READ_C2_SIZE; a++) {
+						INT bit = 0x80;
+						for(INT n = 0; n < CHAR_BIT; n++) {
+							if(pBuf[CD_RAW_SECTOR_WITH_SUBCODE_SIZE+a] & bit) {
+								OutputLogString(fpLog,
+									_T("C2 error exist(LBA) %6d, (Byte) %4d\n"), nLBA, nCnt);
+							}
+							bit >>= 1;
+							nCnt++;
+						}
+					}
 				}
-				fwrite(pBuf, sizeof(UCHAR), uiBufsize, fpBin);
-				FreeAndNull(pBuf);
-				FcloseAndNull(fpBin);
+				OutputString(
+					_T("\rChecking C2(LBA) %6d/%6d"), nLBA - nOffsetEnd, pDiscData->nLength - 1);
 			}
 		}
+		catch(BOOL b) {
+			bRet = b;
+		}
+		OutputString(_T("\n"));
+		FcloseAndNull(fpC2);
+		if(!bC2Error) {
+			OutputLogString(fpLog, _T("C2 error doesn't exist\n"));
+		}
 	}
-	OutputString(_T("\n"));
 	return bRet;
 }
 
@@ -545,6 +276,7 @@ BOOL ReadCDAll(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
+	LPCTSTR pszOption,
 	FILE* fpLog,
 	FILE* fpCcd
 	)
@@ -585,7 +317,6 @@ BOOL ReadCDAll(
 		return FALSE;
 	}
 
-	FILE* fpC2 = NULL;
 	FILE* fpCdg = NULL;
 	FILE* fpCue = NULL;
 	FILE* fpParse = NULL;
@@ -614,7 +345,7 @@ BOOL ReadCDAll(
 			throw _T("Failed to open scramble.bin\n");
 		}
 
-		size_t dwTrackAllocSize = (size_t)pDiscData->toc.LastTrack + 1;
+		size_t dwTrackAllocSize = (size_t)pDiscData->nLastTrackForFullToc + 1;
 		if(NULL == (pLBAStartList = (PINT*)calloc(dwTrackAllocSize, sizeof(_INT)))) {
 			throw _T("Failed to alloc memory pLBAStartList\n");
 		}
@@ -636,7 +367,7 @@ BOOL ReadCDAll(
 
 		size_t dwIndexAllocSize = (size_t)MAXIMUM_NUMBER_INDEXES * sizeof(_INT);
 		size_t dwRangeAllocSize = (size_t)2 * sizeof(_INT);
-		for(INT h = 0; h < pDiscData->toc.LastTrack + 1; h++) {
+		for(INT h = 0; h < pDiscData->nLastTrackForFullToc + 1; h++) {
 			if(NULL == (pLBAStartList[h] = (PINT)malloc(dwIndexAllocSize))) {
 				throw _T("Failed to alloc memory pLBAStartList[h]\n");
 			}
@@ -647,20 +378,12 @@ BOOL ReadCDAll(
 			FillMemory(pLBAOfDataTrackList[h], dwRangeAllocSize, -1);
 		}
 
-		ULONG ulBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE;
-		_TCHAR c2Path[_MAX_PATH] = {0};
-		if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
-			if(NULL == (fpC2 = CreateOrOpenFileW(pszOutFile, c2Path, NULL, NULL, _T(".c2.err"), _T("wb"), 0, 0))) {
-				throw _T("Failed to open .c2.err\n");
-			}
-			if(pDevData->bPlextor) {
-//				if(pDevData->bPlextor) {
-					ulBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE + CD_RAW_READ_C2_SIZE_294;
-//				}
-			}
-			else {
-				ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
-			}
+		ULONG ulBufLen = 0;
+		if(pDevData->bC2ErrorData && pszOption && !_tcscmp(pszOption, _T("c2"))) {
+			ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
+		}
+		else {
+			ulBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE;
 		}
 		if(NULL == (aBuf = (PUCHAR)calloc(ulBufLen + pDevData->AlignmentMask, sizeof(UCHAR)))) {
 			throw _T("Failed to alloc memory aBuf[h]\n");
@@ -674,31 +397,22 @@ BOOL ReadCDAll(
 		aCmd[8] = byTransferLen;
 		aCmd[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
 			READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
-		if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
-			if(pDevData->bPlextor) {
-				if(pDevData->bPlextor) {
-					aCmd[9] |= READ_CD_FLAG::C2ErrorBlockData;
-				}
-			}
-			else {
-				aCmd[9] |= READ_CD_FLAG::C2AndBlockErrorBits;
-			}
-		}
-		// memo CD+G ripping
-		// raw mode(001b) don't play CDG
-		// plextor:D8                  -> play CDG OK
-		// plextor:READ_CD_FLAG::Pack  -> play CDG OK
-		// plextor:READ_CD_FLAG::Raw   -> play CDG NG (PQ is OK)
-		// slimtype:READ_CD_FLAG::Pack -> play CDG NG (PQ is None)
-		// slimtype:READ_CD_FLAG::Raw  -> play CDG NG (PQ is OK)
 		aCmd[10] = READ_CD_FLAG::Raw;
 
 		BOOL bCDG = FALSE;
 		if(pDiscData->bAudioOnly) {
-			if(!CheckCDG(pDevData, pDiscData, aCmd, ulBufLen, pBuf, &bCDG)) {
+			aCmd[1] = READ_CD_FLAG::CDDA;
+			if(!CheckCDG(pDevData, aCmd, ulBufLen, pBuf, &bCDG)) {
 				throw _T("");
 			}
 			if(bCDG) {
+				// memo CD+G ripping
+				// raw mode(001b) don't play CDG
+				// plextor:D8                  -> play CDG OK
+				// plextor:READ_CD_FLAG::Pack  -> play CDG OK
+				// plextor:READ_CD_FLAG::Raw   -> play CDG NG (PQ is OK)
+				// slimtype:READ_CD_FLAG::Pack -> play CDG NG (PQ is None)
+				// slimtype:READ_CD_FLAG::Raw  -> play CDG NG (PQ is OK)
 				aCmd[10] = READ_CD_FLAG::Pack;
 				if(NULL == (fpCdg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("wb"), 0, 0))) {
 					throw _T("Failed to open .cdg\n");
@@ -707,23 +421,20 @@ BOOL ReadCDAll(
 		}
 		else {
 			ReadVolumeDescriptor(pDevData, &pDiscData->toc, aCmd, ulBufLen, pBuf, fpLog);
-		}
-		if(!pDiscData->bAudioOnly && pDevData->bPlextor) {
-			// PX-504A don't support...
-			// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
-			aCmd[0] = 0xD8;
-			aCmd[1] = 0x00;
-			aCmd[8] = 0x00;
-			aCmd[9] = byTransferLen;
-			aCmd[10] = 0x02; // 0=none, 1=Q(sub16[formatted]), 2=P-W(main+sub96[raw]), 3=P-W only(sub96[raw])
-		}
-		else {
-			aCmd[1] = READ_CD_FLAG::CDDA;
+			if(pDevData->bPlextor) {
+				// PX-504A don't support...
+				// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
+				aCmd[0] = 0xD8;
+				aCmd[1] = 0x00;
+				aCmd[8] = 0x00;
+				aCmd[9] = byTransferLen;
+				aCmd[10] = 0x02; // 0=none, 1=Q(sub16[formatted]), 2=P-W(main+sub96[raw]), 3=P-W only(sub96[raw])
+			}
 		}
 
 		UCHAR byScsiStatus = 0;
 		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
-		for(INT p = 0; p < pDiscData->toc.LastTrack; p++) {
+		for(INT p = 0; p < pDiscData->nLastTrackForFullToc; p++) {
 			aCmd[2] = HIBYTE(HIWORD(pDiscData->aTocLBA[p][0]));
 			aCmd[3] = LOBYTE(HIWORD(pDiscData->aTocLBA[p][0]));
 			aCmd[4] = HIBYTE(LOWORD(pDiscData->aTocLBA[p][0]));
@@ -733,17 +444,7 @@ BOOL ReadCDAll(
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw _T("");
 			}
-			if(pDevData->bC2ErrorData && pDiscData->bAudioOnly && pDevData->bPlextor) {
-//				if(pDevData->bPlextor) {
-					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_294, Subcode);
-//				}
-//				else {
-//					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
-//				}
-			}
-			else {
-				AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
-			}
+			AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
 			pEndCtlList[p] = (UCHAR)((Subcode[12] >> 4) & 0x0F);
 		}
 
@@ -783,6 +484,10 @@ BOOL ReadCDAll(
 		UCHAR byCurrentTrackNum = pDiscData->toc.FirstTrack;
 		OutputLogString(fpLog, 
 			_T("\n-----------------------------------log begin------------------------------------\n"));
+		if(!CheckC2Error(pDevData, pDiscData, pszOutFile,
+			pszOption, pBuf, nOffsetStart, nOffsetEnd, fpLog)) {
+			throw _T("Could't check C2 error\n");
+		}
 
 		for(INT nLBA = nOffsetStart; nLBA < pDiscData->nLength + nOffsetEnd; nLBA++) {
 			if(pDiscData->nStartLBAof2ndSession != -1 && pDiscData->nLastLBAof1stSession == nLBA) {
@@ -794,9 +499,6 @@ BOOL ReadCDAll(
 				prevSubQ.nAbsoluteTime = nLBA + 150;
 				continue;
 			}
-#if 0
-			nLBA=75;
-#endif
 			// 1st:Read main & sub channel
 			aCmd[2] = HIBYTE(HIWORD(nLBA));
 			aCmd[3] = LOBYTE(HIWORD(nLBA));
@@ -828,31 +530,7 @@ BOOL ReadCDAll(
 				prevSubQ.nAbsoluteTime++;
 				continue;
 			}
-			if(pDevData->bC2ErrorData && pDiscData->bAudioOnly && pDevData->bPlextor) {
-				// plextor PX755A:main+c2+sub
-				if(pDevData->bPlextor) {
-#if 0
-					OutputMmcCdSub96Raw(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_294, nLBA, fpLog);
-#endif
-					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_294, Subcode);
-				}
-				else {
-#if 0
-					OutputMmcCdSub96Raw(pBuf + CD_RAW_SECTOR_SIZE, nLBA, fpLog);
-#endif
-					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
-				}
-			}
-			else {
-				// slimtype:main+sub+c2
-#if 0
-				OutputMmcCdSub96Raw(pBuf + CD_RAW_SECTOR_SIZE, nLBA, fpLog);
-#endif
-				AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
-			}
-#if 0
-			OutputMmcCdSub96Raw(Subcode, nLBA, fpLog);
-#endif
+			AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
 
 			SUB_Q_DATA subQ = {0};
 			subQ.byCtl = (UCHAR)((Subcode[12] >> 4) & 0x0F);
@@ -884,20 +562,6 @@ BOOL ReadCDAll(
 			// 4th:Write track to scrambled
 			WriteMainChannel(pDiscData, pBuf, pLBAStartList, 
 				nLBA, nFixStartLBA, nFixEndLBA, uiShift, fpImg);
-			if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
-				if(pDevData->bPlextor) {
-					// plextor:main+c2+sub
-//					if(pDevData->bPlextor) {
-						fwrite(pBuf + CD_RAW_SECTOR_SIZE, 
-							sizeof(UCHAR), CD_RAW_READ_C2_SIZE_294, fpC2);
-//					}
-				}
-				else {
-					// slimtype:main+sub+c2
-					fwrite(pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, 
-						sizeof(UCHAR), CD_RAW_READ_C2_SIZE, fpC2);
-				}
-			}
 			UpdateSubchannelQData(&subQ, &prevSubQ, &prevPrevSubQ);
 			OutputString(
 				_T("\rCreating img(LBA) %6d/%6d"), nLBA - nOffsetEnd, pDiscData->nLength - 1);
@@ -906,49 +570,31 @@ BOOL ReadCDAll(
 		FcloseAndNull(fpCdg);
 		FcloseAndNull(fpImg);
 		FcloseAndNull(fpSub);
-		if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
-			FcloseAndNull(fpC2);
-//			if(pDevData->bPlextor && !pDevData->bPlextor) {
-//				_tremove(c2Path);
-//			}
-		}
 		FcloseAndNull(fpParse);
-		FreeAndNull(aBuf);
 
 		OutputLogString(fpLog, 
 			_T("------------------------------------log end-------------------------------------\n\n"));
-		OutputLogString(fpLog, _T("TOC with pregap\n"));
-		for(INT r = 0; r < pDiscData->toc.LastTrack; r++) {
-			OutputLogString(fpLog, 
-				_T("\tTrack %2d, Ctl %d, Mode %d"), r + 1, pCtlList[r], pModeList[r]);
-			for(INT k = 0; k < MAXIMUM_NUMBER_INDEXES; k++) {
-				if(pLBAStartList[r][k] != -1) {
-					OutputLogString(fpLog, _T(", Index%d %6d"), k, pLBAStartList[r][k]);
-				}
-				else if(k == 0) {
-					OutputLogString(fpLog, _T(",              "));
-				}
-			}
-			OutputLogString(fpLog, _T("\n"));
-		}
+		OutputMmcTocWithPregap(pDiscData, pCtlList, pModeList, pLBAStartList, fpLog);
+
 		// 5th:Descramble img
 		if(NULL == (fpImg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".img"), _T("rb+"), 0, 0))) {
 			throw _T("Failed to open file .img\n");
 		}
 		if(!DescrambleMainChannel(pDiscData, pLBAOfDataTrackList, fpTbl, fpImg, fpLog)) {
-			throw _T("");
+			throw _T("Failed to DescrambleMainChannel\n");
 		}
 		FcloseAndNull(fpTbl);
 
 		if(!MergeMainChannelAndCDG(pszOutFile, bCDG, pDiscData->bAudioOnly, fpImg)) {
-			throw _T("");
+			throw _T("Failed to MergeMainChannelAndCDG\n");
 		}
 
 		// 6th:Creating bin, cue, ccd
 		if(!CreatingBinCueCcd(pDiscData, pszOutFile, bCatalog, bCDG, 
 			 pCtlList, pModeList, pbISRCList, pLBAStartList, fpImg, fpCue, fpCcd)) {
-			throw _T("");
+			throw _T("Failed to CreatingBinCueCcd\n");
 		}
+		FreeAndNull(aBuf);
 	}
 	catch(LPTSTR str) {
 		OutputErrorString(str);
@@ -958,13 +604,12 @@ BOOL ReadCDAll(
 	fflush(fpLog);
 #endif
 	FcloseAndNull(fpImg);
-	FcloseAndNull(fpC2);
 	FcloseAndNull(fpCdg);
 	FcloseAndNull(fpCue);
 	FcloseAndNull(fpParse);
 	FcloseAndNull(fpSub);
 	FcloseAndNull(fpTbl);
-	for(INT h = 0; h < pDiscData->toc.LastTrack + 1; h++) {
+	for(INT h = 0; h < pDiscData->nLastTrackForFullToc + 1; h++) {
 		if(pLBAStartList) {
 			FreeAndNull(pLBAStartList[h]);
 		}
@@ -1021,7 +666,7 @@ BOOL ReadCDForSearchingOffset(
 		pDiscData->nCombinedOffset = nDriveSampleOffset * 4;
 		OutputLogString(fpLog, _T("Offset"));
 		if(bGetDrive) {
-			OutputLogString(fpLog, _T("(Drive offset data referes to www.accuraterip.com)"));
+			OutputLogString(fpLog, _T("(Drive offset data referes to http://www.accuraterip.com)"));
 		}
 		OutputLogString(fpLog, _T("\n\tDrive Offset(Byte) %d, (Samples) %d\n"), 
 			pDiscData->nCombinedOffset, nDriveSampleOffset);
@@ -1090,7 +735,7 @@ BOOL ReadCDForSearchingOffset(
 			OutputLogString(fpLog, _T("Offset"));
 			if(bGetDrive) {
 				OutputLogString(fpLog,
-					_T("(Drive offset data referes to www.accuraterip.com)"));
+					_T("(Drive offset data referes to http://www.accuraterip.com)"));
 			}
 			OutputLogString(fpLog,
 				_T("\n")
@@ -1346,6 +991,7 @@ BOOL ReadDiscInformation(
 				OutputMmcDiscInformation(pInfo, fpLog);
 			}
 		}
+		FreeAndNull(pPInfo);
 	}
 	return bRet;
 }
@@ -1601,7 +1247,6 @@ BOOL ReadDVDRaw(
 BOOL ReadDVDStructure(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
-	PINT nDVDSectorSize,
 	FILE* fpLog
 	)
 {
@@ -1679,7 +1324,7 @@ BOOL ReadDVDStructure(
 				}
 				else {
 					OutputMmcDVDStructureFormat(pDiscData, 0, pFormat,
-						pStructure, pStructureLength, &nLayerNum, nDVDSectorSize, i, fpLog);
+						pStructure, pStructureLength, &nLayerNum, i, fpLog);
 					if(nLayerNum == 1 &&
 						(pFormat[i] == 0 || pFormat[i] == 0x01 || pFormat[i] == 0x04 ||
 						pFormat[i] == 0x10 || pFormat[i] == 0x12 || pFormat[i] == 0x15)) {
@@ -1694,7 +1339,7 @@ BOOL ReadDVDStructure(
 							}
 							else {
 								OutputMmcDVDStructureFormat(pDiscData, 1, pFormat,
-									pStructure, pStructureLength, &nLayerNum, nDVDSectorSize, i, fpLog);
+									pStructure, pStructureLength, &nLayerNum, i, fpLog);
 							}
 						}
 					}
@@ -1886,16 +1531,18 @@ BOOL ReadTOCFull(
 					if(nLBA == aLBA[uiIdx]) {
 						ucMode = GetMode(pBuf);
 					}
-					UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
-					AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+					if(pTocData[b].SessionNumber == 1) {
+						UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
+						AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
 
-					UCHAR byAdr = (UCHAR)(Subcode[12] & 0x0F);
-					if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
-						BOOL bMCN = IsValidMCN(Subcode);
-						_TCHAR szCatalog[META_CATALOG_SIZE+1] = {0};
-						SetMCNToString(pDiscData, Subcode, szCatalog, bMCN);
-						WriteCcdFileForDiscCatalog(pDiscData, fpCcd);
-						break;
+						UCHAR byAdr = (UCHAR)(Subcode[12] & 0x0F);
+						if(byAdr == ADR_ENCODES_MEDIA_CATALOG) {
+							BOOL bMCN = IsValidMCN(Subcode);
+							_TCHAR szCatalog[META_CATALOG_SIZE+1] = {0};
+							SetMCNToString(pDiscData, Subcode, szCatalog, bMCN);
+							WriteCcdFileForDiscCatalog(pDiscData, fpCcd);
+							break;
+						}
 					}
 				}
 				FreeAndNull(aBuf2);

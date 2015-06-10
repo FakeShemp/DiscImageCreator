@@ -59,6 +59,10 @@ BOOL IsMacData(
 	CONST PUCHAR src
 	);
 
+BOOL IsPlextorDrive(
+	PDEVICE_DATA pDevData
+	);
+
 BOOL CheckAndFixSubchannel(
 	PDISC_DATA pDiscData,
 	PUCHAR Subcode,

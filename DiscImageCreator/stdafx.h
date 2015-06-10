@@ -117,6 +117,7 @@ typedef struct _DISC_DATA {
 	INT nAdjustSectorNum;
 	INT nCombinedOffset;
 	INT nLength;
+	UCHAR nLastTrackForFullToc;
 	BOOL bAudioOnly;
 	_TCHAR szCatalog[META_CATALOG_SIZE+1];
 	_TCHAR **szISRC;
@@ -127,7 +128,9 @@ typedef struct _DISC_DATA {
 # pragma pack ()
 
 #ifdef _DEBUG
+#define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
+#define new new(_NORMAL_BLOCK,__FILE__,__LINE__)
 #endif
 #include "convert.h"
 #include "execIoctl.h"

@@ -103,51 +103,8 @@ int exec(_TCHAR* argv[], ExecType execType)
 				}
 				devData.pszVendorId[8] = '\0';
 				devData.pszProductId[16] = '\0';
-				if(!strncmp(devData.pszVendorId, "PLEXTOR", 7)) {
-					devData.bPlextor = TRUE;
-					if(!strncmp(devData.pszProductId, "DVDR   PX-760A", 14)) {
-						devData.bPlextorPX760A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "DVDR   PX-755A", 14)) {
-						devData.bPlextorPX755A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "DVDR   PX-716A", 14)) {
-						devData.bPlextorPX716A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "DVDR   PX-712A", 14)) {
-						devData.bPlextorPX712A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "DVDR   PX-708A", 14)) {
-						devData.bPlextorPX708A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "DVDR   PX-320A", 14)) {
-						devData.bPlextorPX320A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W5232A", 16)) {
-						devData.bPlextorPXW5232A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W5224A", 16)) {
-						devData.bPlextorPXW5224A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W4824A", 16)) {
-						devData.bPlextorPXW4824A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W4012A", 16)) {
-						devData.bPlextorPXW4012A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W2410A", 16)) {
-						devData.bPlextorPXW2410A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W1610A", 16)) {
-						devData.bPlextorPXW1610A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W1210A", 16)) {
-						devData.bPlextorPXW1210A = TRUE;
-					}
-					else if(!strncmp(devData.pszProductId, "CD-R   PX-W8432T", 16)) {
-						devData.bPlextorPXW8432T = TRUE;
-					}
-				}
+
+				IsPlextorDrive(&devData);
 				ReadBufferCapacity(&devData, fpLog);
 				SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
 				bRet = ReadConfiguration(&devData, &discData, fpLog);
@@ -172,37 +129,39 @@ int exec(_TCHAR* argv[], ExecType execType)
 						OutputErrorString(_T("Failed to open file .ccd\n"));
 						throw FALSE;
 					}
-					size_t dwTrackAllocSize = (size_t)discData.toc.LastTrack + 1;
-					if(NULL == (discData.aSessionNum = (PUINT)calloc(dwTrackAllocSize, sizeof(_INT)))) {
-						throw _T("Failed to alloc memory discData.aSessionNum\n");
-					}
-					if(NULL == (discData.szISRC = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
-						throw _T("Failed to alloc memory discData.szISRC\n");
-					}
-					if(NULL == (discData.szTitle = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
-						throw _T("Failed to alloc memory discData.szTitle\n");
-					}
-					if(NULL == (discData.szPerformer = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
-						throw _T("Failed to alloc memory discData.szPerformer\n");
-					}
-					if(NULL == (discData.szSongWriter = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
-						throw _T("Failed to alloc memory discData.szTitle\n");
-					}
+					if(&devData.bCanCDText) {
+						size_t dwTrackAllocSize = (size_t)discData.toc.LastTrack + 1;
+						if(NULL == (discData.aSessionNum = (PUINT)calloc(dwTrackAllocSize, sizeof(_INT)))) {
+							throw _T("Failed to alloc memory discData.aSessionNum\n");
+						}
+						if(NULL == (discData.szISRC = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
+							throw _T("Failed to alloc memory discData.szISRC\n");
+						}
+						if(NULL == (discData.szTitle = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
+							throw _T("Failed to alloc memory discData.szTitle\n");
+						}
+						if(NULL == (discData.szPerformer = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
+							throw _T("Failed to alloc memory discData.szPerformer\n");
+						}
+						if(NULL == (discData.szSongWriter = (_TCHAR**)calloc(dwTrackAllocSize, sizeof(_INT)))) {
+							throw _T("Failed to alloc memory discData.szTitle\n");
+						}
 
-					size_t isrcSize = META_ISRC_SIZE + 1;
-					size_t textSize = META_CDTEXT_SIZE + 1;
-					for(INT h = 0; h < discData.toc.LastTrack + 1; h++) {
-						if(NULL == (discData.szISRC[h] = (_TCHAR*)calloc(isrcSize, sizeof(_TCHAR)))) {
-							throw _T("Failed to alloc memory discData.szISRC[h]\n");
-						}
-						if(NULL == (discData.szTitle[h] = (_TCHAR*)calloc(textSize, sizeof(_TCHAR)))) {
-							throw _T("Failed to alloc memory discData.szTitle[h]\n");
-						}
-						if(NULL == (discData.szPerformer[h] = (_TCHAR*)calloc(textSize, sizeof(_TCHAR)))) {
-							throw _T("Failed to alloc memory discData.szPerformer[h]\n");
-						}
-						if(NULL == (discData.szSongWriter[h] = (_TCHAR*)calloc(textSize, sizeof(_TCHAR)))) {
-							throw _T("Failed to alloc memory discData.szSongWriter[h]\n");
+						size_t isrcSize = META_ISRC_SIZE + 1;
+						size_t textSize = META_CDTEXT_SIZE + 1;
+						for(INT h = 0; h < discData.toc.LastTrack + 1; h++) {
+							if(NULL == (discData.szISRC[h] = (_TCHAR*)calloc(isrcSize, sizeof(_TCHAR)))) {
+								throw _T("Failed to alloc memory discData.szISRC[h]\n");
+							}
+							if(NULL == (discData.szTitle[h] = (_TCHAR*)calloc(textSize, sizeof(_TCHAR)))) {
+								throw _T("Failed to alloc memory discData.szTitle[h]\n");
+							}
+							if(NULL == (discData.szPerformer[h] = (_TCHAR*)calloc(textSize, sizeof(_TCHAR)))) {
+								throw _T("Failed to alloc memory discData.szPerformer[h]\n");
+							}
+							if(NULL == (discData.szSongWriter[h] = (_TCHAR*)calloc(textSize, sizeof(_TCHAR)))) {
+								throw _T("Failed to alloc memory discData.szSongWriter[h]\n");
+							}
 						}
 					}
 					bRet = ReadTOCFull(&devData, &discData, fpLog, fpCcd);
@@ -225,7 +184,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 							_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC, FALSE);
 					}
 					else if(bRet == TRUE && execType == rall) {
-						bRet = ReadCDAll(&devData, &discData, argv[4], fpLog, fpCcd);
+						bRet = ReadCDAll(&devData, &discData, argv[4], argv[5], fpLog, fpCcd);
 						fclose(fpCcd);
 					}
 				}
@@ -239,8 +198,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 					discData.usCurrentMedia == ProfileDvdPlusRW || 
 //					discData.usCurrentMedia == ProfileInvalid ||
 					discData.usCurrentMedia == ProfileDvdPlusR) {
-					INT nDVDSectorSize = 0;
-					bRet = ReadDVDStructure(&devData, &discData, &nDVDSectorSize, fpLog);
+					bRet = ReadDVDStructure(&devData, &discData, fpLog);
 					if(bRet) {
 						if(argv[5] && !_tcscmp(argv[5], _T("raw"))) {
 #if 0
@@ -258,24 +216,26 @@ int exec(_TCHAR* argv[], ExecType execType)
 			bRet = bErr;
 		}
 		FreeAndNull(discData.aSessionNum);
-		for(INT i = 0; i < discData.toc.LastTrack + 1; i++) {
-			if(discData.szISRC) {
-				FreeAndNull(discData.szISRC[i]);
+		if(&devData.bCanCDText) {
+			for(INT i = 0; i < discData.toc.LastTrack + 1; i++) {
+				if(discData.szISRC) {
+					FreeAndNull(discData.szISRC[i]);
+				}
+				if(discData.szTitle) {
+					FreeAndNull(discData.szTitle[i]);
+				}
+				if(discData.szPerformer) {
+					FreeAndNull(discData.szPerformer[i]);
+				}
+				if(discData.szSongWriter) {
+					FreeAndNull(discData.szSongWriter[i]);
+				}
 			}
-			if(discData.szTitle) {
-				FreeAndNull(discData.szTitle[i]);
-			}
-			if(discData.szPerformer) {
-				FreeAndNull(discData.szPerformer[i]);
-			}
-			if(discData.szSongWriter) {
-				FreeAndNull(discData.szSongWriter[i]);
-			}
+			FreeAndNull(discData.szISRC);
+			FreeAndNull(discData.szTitle);
+			FreeAndNull(discData.szPerformer);
+			FreeAndNull(discData.szSongWriter);
 		}
-		FreeAndNull(discData.szISRC);
-		FreeAndNull(discData.szTitle);
-		FreeAndNull(discData.szPerformer);
-		FreeAndNull(discData.szSongWriter);
 #ifndef _DEBUG
 		FcloseAndNull(fpLog);
 #endif
@@ -396,17 +356,16 @@ int _tmain(int argc, _TCHAR* argv[])
     GetVersionEx(&OSver);
 	OutputString(
 		_T("OS\n")
-		_T("\t BuildNumber: %d\n")
-		_T("\tMajorVersion: %d\n")
-		_T("\tMinorVersion: %d\n"),
-		OSver.dwBuildNumber, OSver.dwMajorVersion, OSver.dwMinorVersion);
+		_T("\tMajorVersion: %d, MinorVersion: %d, BuildNumber: %d\n"),
+		OSver.dwMajorVersion, OSver.dwMinorVersion, OSver.dwBuildNumber);
 	ExecType execType;
 	if(!checkArg(argc, argv, &execType)) {
 		OutputString(
 			_T("Usage\n")
-//			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi/raw>\n")
-			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi>\n")
+//			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <c2/cmi/raw>\n")
+			_T("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <c2/cmi>\n")
 			_T("\t\tRipping CD or DVD from a to z\n")
+			_T("\t\tc2:Check C2 error (Only CD)(Take twice as long)\n")
 			_T("\t\tcmi:Log Copyright Management Information (Only DVD)(Very slow)\n")
 //			_T("\t\traw:Ripping Raw mode (Only DVD)\n")
 			_T("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n")
@@ -414,7 +373,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			_T("\t-ra [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n")
 			_T("\t\tRipping CD from start to end (audio) (Only CD)\n")
 			_T("\t-f [DriveLetter] [DriveSpeed(0-72)] [filename]\n")
-			_T("\t\tRipping Floppy\n")
+			_T("\t\tRipping floppy\n")
 			_T("\t-c [DriveLetter]\n")
 			_T("\t\tClose tray\n")
 			_T("\t-s [DriveLetter]\n")

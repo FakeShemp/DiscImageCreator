@@ -141,6 +141,14 @@ VOID OutputMmcInquiryData(
 	FILE* fpLog
 	);
 
+VOID OutputMmcTocWithPregap(
+	PDISC_DATA pDiscData,
+	PUCHAR pCtlList,
+	PUCHAR pModeList,
+	PINT* pLBAStartList,
+	FILE* fpLog
+	);
+
 VOID OutputMmcToc(
 	PDISC_DATA pDiscData,
 	FILE* fpLog
@@ -214,7 +222,6 @@ VOID OutputMmcDVDStructureFormat(
 	CONST PUCHAR pStructure,
 	CONST PUSHORT pStructureLength,
 	PUCHAR nLayerNum,
-	PINT nDVDSectorSize,
 	size_t i,
 	FILE* fpLog
 	);
@@ -458,4 +465,53 @@ VOID WriteSubChannel(
 
 VOID WriteParsingSubfile(
 	LPCTSTR pszSubfile
+	);
+
+BOOL UpdateSubchannelQData(
+	PSUB_Q_DATA subQ,
+	PSUB_Q_DATA prevSubQ,
+	PSUB_Q_DATA prevPrevSubQ
+	);
+
+BOOL PreserveTrackAttribution(
+	PDISC_DATA pDiscData,
+	INT nLBA,
+	PUCHAR byCurrentTrackNum,
+	PSUB_Q_DATA subQ,
+	PSUB_Q_DATA prevSubQ,
+	PSUB_Q_DATA prevPrevSubQ,
+	PUCHAR pCtlList,
+	PUCHAR pModeList,
+	PINT* pLBAStartList,
+	PINT* pLBAOfDataTrackList,
+	FILE* fpLog
+	);
+
+BOOL DescrambleMainChannel(
+	PDISC_DATA pDiscData,
+	PINT* pLBAOfDataTrackList,
+	FILE* fpTbl,
+	FILE* fpImg,
+	FILE* fpLog
+	);
+
+BOOL MergeMainChannelAndCDG(
+	LPCTSTR pszOutFile,
+	BOOL bCDG,
+	BOOL bAudioOnly,
+	FILE* fpImg
+	);
+
+BOOL CreatingBinCueCcd(
+	PDISC_DATA pDiscData,
+	LPCTSTR pszOutFile,
+	BOOL bCatalog,
+	BOOL bCDG,
+	PUCHAR pCtlList,
+	PUCHAR pModeList,
+	PBOOL pbISRCList,
+	PINT* pLBAStartList,
+	FILE* fpImg,
+	FILE* fpCue,
+	FILE* fpCcd
 	);

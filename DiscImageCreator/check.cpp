@@ -375,6 +375,71 @@ BOOL IsMacData(
 	return bRet;
 }
 
+BOOL IsPlextorDrive(
+	PDEVICE_DATA pDevData
+	)
+{
+	if(!strncmp(pDevData->pszVendorId, "PLEXTOR", 7)) {
+		if(!strncmp(pDevData->pszProductId, "DVDR   PX-760A", 14)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPX760A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "DVDR   PX-755A", 14)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPX755A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "DVDR   PX-716A", 14)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPX716A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "DVDR   PX-712A", 14)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPX712A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "DVDR   PX-708A", 14)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPX708A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "DVDR   PX-320A", 14)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPX320A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W5232A", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW5232A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W5224A", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW5224A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W4824A", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW4824A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W4012A", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW4012A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W2410A", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW2410A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W1610A", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW1610A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W1210A", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW1210A = TRUE;
+		}
+		else if(!strncmp(pDevData->pszProductId, "CD-R   PX-W8432T", 16)) {
+			pDevData->bPlextor = TRUE;
+			pDevData->bPlextorPXW8432T = TRUE;
+		}
+	}
+	return TRUE;
+}
+
 BOOL CheckAndFixPSubchannel(
 	PUCHAR Subcode
 	)

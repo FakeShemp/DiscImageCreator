@@ -61,6 +61,7 @@ BOOL ReadCDAll(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
+	LPCTSTR pszOption,
 	FILE* fpLog,
 	FILE* fpCcd
 	);
@@ -109,14 +110,12 @@ BOOL ReadDVD(
 BOOL ReadDVDRaw(
 	PDEVICE_DATA pDevData,
 	LPCSTR pszVendorId,
-	LPCTSTR pszOutFile,
-	INT nDVDSectorSize
+	LPCTSTR pszOutFile
 	);
 
 BOOL ReadDVDStructure(
 	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
-	PINT nDVDSectorSize,
 	FILE* fpLog
 	);
 
