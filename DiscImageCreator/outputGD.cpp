@@ -8,9 +8,9 @@ BOOL DescrambleDataSector(
 	INT nLBA
 	)
 {
-	FILE* fpScr = CreateOrOpenFile(pszInFilename, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
+	FILE* fpScr = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".bin"), _T("rb"), 0, 0);
 	if (!fpScr) {
-		OutputErrorString("Failed to open file .bin [F:%s][L:%d]\n", 
+		OutputErrorStringA("Failed to open file .bin [F:%s][L:%d]\n", 
 			__FUNCTION__, __LINE__);
 		return FALSE;
 	}
@@ -19,10 +19,10 @@ BOOL DescrambleDataSector(
 	FILE* fpTbl = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (fpDescr = CreateOrOpenFile(pszInFilename, NULL, NULL, _T(".dec"), _T("wb"), 0, 0))) {
+		if(NULL == (fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".dec"), _T("wb"), 0, 0))) {
 			throw "Failed to open .dec\n";
 		}
-		if(NULL == (fptxt = CreateOrOpenFile(pszInFilename, NULL, NULL, _T(".offset.txt"), _T("w"), 0, 0))) {
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".offset.txt"), _T("w"), 0, 0))) {
 			throw "Failed to open .offset.txt\n";
 		}
 		if(NULL == (fpTbl = OpenProgrammabledFile(_T("scramble.bin"), _T("rb")))) {
@@ -56,7 +56,7 @@ BOOL DescrambleDataSector(
 		INT nVal = lba2 - 150 - nLBA;
 		INT nCombinedOffset = 
 			nVal > 0 ? -CD_RAW_SECTOR_SIZE * nVal + nOffset : nOffset;
-		OutputLogString(fptxt, "Combined offset(byte):%d, (sample):%d\n",
+		OutputLogStringA(fptxt, "Combined offset(byte):%d, (sample):%d\n",
 			nCombinedOffset, nCombinedOffset / 4);
 		FcloseAndNull(fptxt);
 
@@ -66,7 +66,7 @@ BOOL DescrambleDataSector(
 
 		LONG lSeekSize = CD_RAW_SECTOR_SIZE * (lba1 - lba2) + nOffset;
 		if(ulFilesize < (ULONG)lSeekSize) {
-			OutputErrorString("Out of range! SeekSize:%d, FileSize:%d\n", lSeekSize, ulFilesize);
+			OutputErrorStringA("Out of range! SeekSize:%d, FileSize:%d\n", lSeekSize, ulFilesize);
 			return FALSE;
 		}
 		fseek(fpScr, lSeekSize, SEEK_SET);
@@ -96,7 +96,7 @@ BOOL DescrambleDataSector(
 		printf("\n");
 	}
 	catch(PCHAR str) {
-		OutputErrorString(str);
+		OutputErrorStringA(str);
 	}
 	FcloseAndNull(fpScr);
 	FcloseAndNull(fpDescr);
@@ -109,9 +109,9 @@ BOOL SplitDescrambledFile(
 	LPCTSTR pszInFilename
 	)
 {
-	FILE* fpDescr = CreateOrOpenFile(pszInFilename, NULL, NULL, _T(".dec"), _T("rb"), 0, 0);
+	FILE* fpDescr = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".dec"), _T("rb"), 0, 0);
 	if(!fpDescr) {
-	OutputErrorString("Failed to open file .dec [F:%s][L:%d]\n", 
+	OutputErrorStringA("Failed to open file .dec [F:%s][L:%d]\n", 
 			__FUNCTION__, __LINE__);
 		return FALSE;
 	}
@@ -124,11 +124,11 @@ BOOL SplitDescrambledFile(
 	PUCHAR pBuf = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (fptxt = CreateOrOpenFile(pszInFilename, NULL, NULL, _T(".toc.txt"), _T("w"), 0, 0))) {
+		if(NULL == (fptxt = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".toc.txt"), _T("w"), 0, 0))) {
 			throw "Failed to open .toc.txt\n";
 		}
 #if 0
-		if(NULL == (fpCcd = CreateOrOpenFile(pszInFilename, NULL, NULL, _T(".ccd"), _T("w"), 0, 0))) {
+		if(NULL == (fpCcd = CreateOrOpenFileW(pszInFilename, NULL, NULL, _T(".ccd"), _T("w"), 0, 0))) {
 			throw "Failed to open .ccd\n";
 		}
 #endif
@@ -235,36 +235,36 @@ BOOL SplitDescrambledFile(
 			pToc[nTrackNum-3] = lToc - 300;
 			if(nTrackNum == 3) {
 				pToc[nTrackNum-3] += 150;
-				OutputLogString(fptxt, 
+				OutputLogStringA(fptxt, 
 					"Track %2d, Ctl %d,              , Index1 %6d\n", 
 					nTrackNum, byCtl, pToc[nTrackNum-3]);
 			}
 			else {
 				if((byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 					pToc[nTrackNum-3] -= 75;
-					OutputLogString(fptxt, 
+					OutputLogStringA(fptxt, 
 						"Track %2d, Ctl %d, Index0 %6d, Index1 %6d\n", 
 						nTrackNum, byCtl, pToc[nTrackNum-3], pToc[nTrackNum-3] + 225);
 				}
 				else {
-					OutputLogString(fptxt, 
+					OutputLogStringA(fptxt, 
 						"Track %2d, Ctl %d, Index0 %6d, Index1 %6d\n", 
 						nTrackNum, byCtl, pToc[nTrackNum-3], pToc[nTrackNum-3] + 150);
 				}
 			}
 		}
-		OutputLogString(fptxt, "MaxTrackNum %2d\n", nMaxTrackNum);
+		OutputLogStringA(fptxt, "MaxTrackNum %2d\n", nMaxTrackNum);
 		LONG lToc = 
 			MAKELONG(MAKEWORD(byToc[nMaxToc+4*2], byToc[nMaxToc+4*2+1]), 
 			MAKEWORD(byToc[nMaxToc+4*2+2], 0)) - 150;
-		OutputLogString(fptxt, "Leadout, LBA %6d\n", lToc);
+		OutputLogStringA(fptxt, "Leadout, LBA %6d\n", lToc);
 		pToc[nTrackNum-3] = lToc;
 
 		if(nMaxTrackNum > 3) {
 			rewind(fpDescr);
 			for(INT i = 3; i <= nMaxTrackNum; i++) {
 				printf("\rSplit File(num) %2d/%2d", i, nMaxTrackNum);
-				if(NULL == (fpBin = CreateOrOpenFile(pszInFilename, NULL,
+				if(NULL == (fpBin = CreateOrOpenFileW(pszInFilename, NULL,
 					NULL, _T(".bin"), _T("wb"), i, nMaxTrackNum))) {
 					throw "Failed to open .bin";
 				}
@@ -281,7 +281,7 @@ BOOL SplitDescrambledFile(
 		}
 	}
 	catch(PCHAR str) {
-		OutputErrorString(str);
+		OutputErrorStringA(str);
 		bRet = FALSE;
 	}
 	FcloseAndNull(fpDescr);

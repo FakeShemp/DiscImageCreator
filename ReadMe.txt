@@ -54,7 +54,6 @@ Mattel HyperScan
 Microsoft Xbox
 Microsoft Xbox 360
 NEC PC-88 series CD
-Nintendo GameCube
 Panasonic 3DO Interactive Multiplayer
 Philips CD-i
 Sharp X68000 CD
@@ -72,6 +71,7 @@ Blu-ray Disc (because I don't have a drive.)
 HD DVD (because I don't have a drive.)
 Protected Disc (because I don't have a disc.)
  Alpha-ROM, ProRing, SafeDisc, SecuROM, Star Force and so on...
+Nintendo GameCube
 Nintendo Wii (because I don't implement a code to decrypt.)
              (if you have a supported drive, you can rip a "encrypted" image.)
 ----------------------------------------------------------------------------
@@ -81,7 +81,9 @@ Vendor					Model					Firmware	Lead-in	Lead-out	Scrambled	GD-ROM									Wii-ROM
 -------------------------------------------------------------------------------------------------------------------------------------------
 HITACHI(HL-DT-ST)		GDR-8161B				0045		No		No			No			No(not open drive cover)				Yes
 HITACHI-LG(HL-DT-ST)	GWA-8164B(GDR8164B)		0M08		No		No			No			No(not open drive cover)				Yes
+HITACHI-LG(HL-DT-ST)	GDR-H20N				0D04		No		No			No			No(not open drive cover)				Yes
 LG(HL-DT-ST)			GCC-4320B				1.00		No		No			Yes			No(not open drive cover)				No
+HP(HL-DT-ST)			GDR-8163B				0B26		No		No			No			No(not open drive cover)				Yes
 HP(TSSTcorp)			TS-H353A				BA08		No		No			No			Yes										No
 HP(TSSTcorp)			TS-H353B				bc03(BC05)	No		No			Yes			No(not open drive cover)				No
 LITEON					DH-20A3S				9P56		No		No			Yes			No(not open drive cover)				No

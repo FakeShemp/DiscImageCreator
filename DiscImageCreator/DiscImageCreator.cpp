@@ -36,7 +36,7 @@ int exec(_TCHAR* argv[], ExecType execType)
 	HANDLE hDevice = CreateFile(szBuf, GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if(hDevice == INVALID_HANDLE_VALUE) {
-		OutputErrorString("Device Open fail\n");
+		OutputErrorStringA("Device Open fail\n");
 		return FALSE;
 	}
 	BOOL bRet = FALSE;
@@ -52,9 +52,9 @@ int exec(_TCHAR* argv[], ExecType execType)
 	ZeroMemory(pszProductId, sizeof(pszProductId));
 	FILE* fpLog = NULL;
 #ifndef _DEBUG
-	fpLog = CreateOrOpenFile(argv[4], NULL, NULL, _T(".log.txt"), _T("w"), 0, 0);
+	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, _T(".log.txt"), _T("w"), 0, 0);
 	if(!fpLog) {
-		OutputErrorString("Failed to open file .log.txt\n");
+		OutputErrorStringA("Failed to open file .log.txt\n");
 		return FALSE;
 	}
 #endif
@@ -77,9 +77,9 @@ int exec(_TCHAR* argv[], ExecType execType)
 		INT nLength = 0;
 		TCHAR out[_MAX_PATH];
 		ZeroMemory(out, sizeof(out));
-		FILE* fpCcd = CreateOrOpenFile(argv[4], out, NULL, _T(".ccd"), _T("w"), 0, 0);
+		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, _T(".ccd"), _T("w"), 0, 0);
 		if(!fpCcd) {
-			OutputErrorString("Failed to open file .ccd\n");
+			OutputErrorStringA("Failed to open file .ccd\n");
 			return FALSE;
 		}
 		bRet = ReadTOC(hDevice, &nLength, fpLog);
@@ -126,7 +126,14 @@ int exec(_TCHAR* argv[], ExecType execType)
 		INT nDVDSectorSize = 0;
 		bRet = ReadDVDStructure(hDevice, &nDVDSectorSize, fpLog);
 		if(bRet) {
-			bRet = ReadDVD(hDevice, argv[4], argv[5], nDVDSectorSize, fpLog);
+			if(argv[5] && !_tcscmp(argv[5], _T("raw"))) {
+#if 0
+				bRet = ReadDVDRaw(hDevice, pszVendorId, argv[4], argv[5], nDVDSectorSize, fpLog);
+#endif
+			}
+			else {
+				bRet = ReadDVD(hDevice, argv[4], argv[5], nDVDSectorSize, fpLog);
+			}
 		}
 	}
 #ifndef _DEBUG
@@ -231,27 +238,33 @@ int checkArg(int argc, _TCHAR* argv[], ExecType* execType)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	OutputString("DiscImageCreator BuildDate:[%s %s]\n", __DATE__, __TIME__);
+	OutputStringA("DiscImageCreator BuildDate:[%s %s]\n", __DATE__, __TIME__);
 	ExecType execType;
 	if(!checkArg(argc, argv, &execType)) {
-		OutputString("Usage\n");
-		OutputString("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cpi>\n");
-		OutputString("\t\tRipping CD or DVD from a to z\n");
-		OutputString("\t\tcpi:Log Copyright Management Information (Only DVD)(Very slow)\n");
-		OutputString("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n");
-		OutputString("\t\tRipping CD from start to end (data) (Only CD)\n");
-		OutputString("\t-ra [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n");
-		OutputString("\t\tRipping CD from start to end (audio) (Only CD)\n");
-		OutputString("\t-c [DriveLetter]\n");
-		OutputString("\t\tClose tray\n");
-		OutputString("\t-s [DriveLetter]\n");
-		OutputString("\t\tStop spin disc\n");
-		OutputString("\t-dec [filename] [LBA]\n");
-		OutputString("\t\tDescramble data sector (for GD-ROM Image)\n");
-		OutputString("\t-split [filename]\n");
-		OutputString("\t\tSplit descrambled File (for GD-ROM Image)\n");
-		OutputString("\t-sub [subfile]\n");
-		OutputString("\t\tParse CloneCD sub file\n");
+		OutputStringA("Usage\n");
+#if 0
+		OutputStringA("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi/raw>\n");
+#endif
+		OutputStringA("\t-rall [DriveLetter] [DriveSpeed(0-72)] [filename] <cmi>\n");
+		OutputStringA("\t\tRipping CD or DVD from a to z\n");
+		OutputStringA("\t\tcmi:Log Copyright Management Information (Only DVD)(Very slow)\n");
+#if 0
+		OutputStringA("\t\traw:Ripping Raw mode (Only DVD)\n");
+#endif
+		OutputStringA("\t-rd [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n");
+		OutputStringA("\t\tRipping CD from start to end (data) (Only CD)\n");
+		OutputStringA("\t-ra [DriveLetter] [DriveSpeed(0-72)] [filename] [StartLBA] [EndLBA]\n");
+		OutputStringA("\t\tRipping CD from start to end (audio) (Only CD)\n");
+		OutputStringA("\t-c [DriveLetter]\n");
+		OutputStringA("\t\tClose tray\n");
+		OutputStringA("\t-s [DriveLetter]\n");
+		OutputStringA("\t\tStop spin disc\n");
+		OutputStringA("\t-dec [filename] [LBA]\n");
+		OutputStringA("\t\tDescramble data sector (for GD-ROM Image)\n");
+		OutputStringA("\t-split [filename]\n");
+		OutputStringA("\t\tSplit descrambled File (for GD-ROM Image)\n");
+		OutputStringA("\t-sub [subfile]\n");
+		OutputStringA("\t\tParse CloneCD sub file\n");
 	}
 	else {
 		time_t now;

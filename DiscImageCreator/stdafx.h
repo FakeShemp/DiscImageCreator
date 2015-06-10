@@ -17,6 +17,7 @@
 #include <tchar.h>
 #include <time.h>
 #include <windows.h>
+#include <WinSock.h>
 
 // SPTI(need Windows Driver Kit(wdk))
 #include <ntddcdrm.h> // inc\api

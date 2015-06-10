@@ -3,36 +3,46 @@
  */
 
 #ifdef _DEBUG
-#define OutputString(str, ...) \
+#define OutputStringA(str, ...) \
 		{ \
 			CHAR c[256]; \
 			sprintf(c, str, __VA_ARGS__); \
 			OutputDebugStringA(c); \
 		}
-#define OutputErrorString(str, ...) \
+#define OutputErrorStringA(str, ...) \
 		{ \
 			CHAR c[256]; \
 			sprintf(c, str, __VA_ARGS__); \
 			OutputDebugStringA(c); \
 		}
-#define OutputLogString(fp, str, ...) \
+#define OutputLogStringA(fp, str, ...) \
 		{ \
 			CHAR c[256]; \
 			sprintf(c, str, __VA_ARGS__); \
 			OutputDebugStringA(c); \
+		}
+#define OutputLogStringW(fp, str, ...) \
+		{ \
+			_TCHAR c[256]; \
+			_stprintf(c, str, __VA_ARGS__); \
+			OutputDebugStringW(c); \
 		}
 #else
-#define OutputString(str, ...) \
+#define OutputStringA(str, ...) \
 		{ \
 			printf(str, __VA_ARGS__); \
 		}
-#define OutputErrorString(str, ...) \
+#define OutputErrorStringA(str, ...) \
 		{ \
 			fprintf(stderr, str, __VA_ARGS__); \
 		}
-#define OutputLogString(fp, str, ...) \
+#define OutputLogStringA(fp, str, ...) \
 		{ \
 			fprintf(fp, str, __VA_ARGS__); \
+		}
+#define OutputLogStringW(fp, str, ...) \
+		{ \
+			_ftprintf(fp, str, __VA_ARGS__); \
 		}
 #endif
 
@@ -52,12 +62,22 @@
 			} \
 		}
 
-FILE* CreateOrOpenFile(
+FILE* CreateOrOpenFileW(
 	LPCTSTR pszSrcPath,
 	LPTSTR pszOutPath,
 	LPTSTR pszFileNameWithoutPath,
 	LPCTSTR pszExt,
 	LPCTSTR pszMode,
+	INT nTrackNum,
+	INT nMaxTrackNum
+	);
+
+FILE* CreateOrOpenFileA(
+	LPCSTR pszSrcPath,
+	LPSTR pszOutPath,
+	LPSTR pszFileNameWithoutPath,
+	LPCSTR pszExt,
+	LPCSTR pszMode,
 	INT nTrackNum,
 	INT nMaxTrackNum
 	);
@@ -147,6 +167,103 @@ void OutputSubcode(
 void OutputVolumeDescriptor(
 	INT idx,
 	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputBootRecord(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+bool OutputTagFormat(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputPrimaryVolumeDescriptorForISO9660(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputVolumePartitionDescriptor(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputVolumeStructureDescriptorFormat(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputVolumeRecognitionSequence(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputBootDescriptor(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputAnchorVolumeDescriptorPointer(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputPrimaryVolumeDescriptorForUDF(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputImplementationUseVolumeDescriptor(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputPartitionDescriptor(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputLogicalVolumeDescriptor(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputUnallocatedSpaceDescriptor(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputVolumeDescriptorPointer(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+bool OutputVolumeDescriptorSequence(
+	INT idx,
+	CONST PUCHAR buf,
+	FILE* fpLog
+	);
+
+void OutputCopyrightManagementInformation(
+	INT nLBA,
+	INT i,
+	PUCHAR pBuf2,
 	FILE* fpLog
 	);
 

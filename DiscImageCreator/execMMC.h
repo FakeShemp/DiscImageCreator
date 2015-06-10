@@ -4,6 +4,7 @@
 
 #define CD_RAW_READ				(2048)
 #define CD_RAW_SECTOR_SIZE		(2352)
+#define DVD_RAW_READ			(2064)
 #define DRIVE_MAX_SPEED			(72)
 #define MAXIMUM_NUMBER_INDEXES	(100)
 
@@ -114,7 +115,16 @@ BOOL ReadDVD(
 	INT nDVDSectorSize,
 	FILE* fpLog
 	);
-
+#if 0
+BOOL ReadDVDRaw(
+	HANDLE hDevice,
+	LPCSTR pszVendorId,
+	LPCTSTR pszOutFile,
+	LPCTSTR pszOption,
+	INT nDVDSectorSize,
+	FILE* fpLog
+	);
+#endif
 BOOL ReadDVDStructure(
 	HANDLE hDevice,
 	PINT nDVDSectorSize,

@@ -139,3 +139,14 @@ void LBAtoMSF(
 	nLBA /= 60;
 	*byMinute = (UCHAR)(nLBA);
 }
+
+void LittleToBig(
+	_TCHAR* out,
+	CONST _TCHAR* in,
+	INT cnt
+	)
+{
+	for(INT a = 0; a < cnt; a++) {
+		out[a] = (_TCHAR)WORDSWAP(in[a]);
+	}
+}
