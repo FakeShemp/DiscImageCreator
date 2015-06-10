@@ -184,3 +184,6 @@ add STORAGE ADAPTER DESCRIPTOR log
 improved PC Engine CD dumping
 1. if subchannel and TOC don't sync, TOC has priority.
 2. if audio sector exists in data track, their sector is descrambled.
+
+**2012-01-18
+fix checking subchannel(RelativeTime)

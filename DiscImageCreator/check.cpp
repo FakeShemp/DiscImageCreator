@@ -41,7 +41,7 @@ BOOL IsValidRelativeTime(
 			}
 		}
 		else if(subQ->byIndex == 0) {
-			if(tmpLBA != 0 &&
+			if(tmpLBA != 0 && prevSubQ->byTrackNum == subQ->byTrackNum &&
 				prevSubQ->nRelativeTime != subQ->nRelativeTime + 1) {
 				bRet = FALSE;
 			}
@@ -560,7 +560,7 @@ BOOL CheckAndFixSubchannel(
 			UCHAR bySecond = 0;
 			UCHAR byMinute = 0;
 			if(!(prevSubQ->byIndex == 0 && subQ->byIndex == 1) &&
-				!(prevSubQ->byIndex == 1 && subQ->byIndex == 0)) {
+				!(prevSubQ->byIndex >= 1 && subQ->byIndex == 0)) {
 				if(subQ->byIndex > 0) {
 					LBAtoMSF(prevSubQ->nRelativeTime + 1, &byFrame, &bySecond, &byMinute);
 					subQ->nRelativeTime = prevSubQ->nRelativeTime + 1;
