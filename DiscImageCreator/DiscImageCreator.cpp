@@ -41,140 +41,147 @@ int exec(_TCHAR* argv[], ExecType execType)
 		return FALSE;
 	}
 	FILE* fpLog = NULL;
-	BOOL bDC = FALSE;
-	if(execType == ra && !_tcscmp(argv[5], _T("44990")) && !_tcscmp(argv[6], _T("549150"))) {
-		bDC = TRUE;
-	}
+	BOOL bRet = TRUE;
+	try {
+		BOOL bDC = FALSE;
+		if(execType == ra && !_tcscmp(argv[5], _T("44990")) && !_tcscmp(argv[6], _T("549150"))) {
+			bDC = TRUE;
+		}
 #ifndef _DEBUG
-	_TCHAR szLogtxt[12] = {0};
-	if(bDC) {
-		_tcscpy(szLogtxt, _T("_dc.log.txt"));
-	}
-	else {
-		_tcscpy(szLogtxt, _T(".log.txt"));
-	}
-	fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T(WFLAG), 0, 0);
+		_TCHAR szLogtxt[12] = {0};
+		if(bDC) {
+			_tcscpy(szLogtxt, _T("_dc.log.txt"));
+		}
+		else {
+			_tcscpy(szLogtxt, _T(".log.txt"));
+		}
+		fpLog = CreateOrOpenFileW(argv[4], NULL, NULL, NULL, szLogtxt, _T(WFLAG), 0, 0);
 
-	if(!fpLog) {
-		OutputErrorString(_T("Failed to open file %s\n"), szLogtxt);
-		return FALSE;
-	}
+		if(!fpLog) {
+			OutputErrorString(_T("Failed to open file %s\n"), szLogtxt);
+			throw;
+		}
 #endif
-	BOOL bRet = 0;
-	ULONG ulReturned = 0;
-	bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
-		sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
-	OutputScsiAdress(&devData, fpLog);
+		ULONG ulReturned = 0;
+		bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
+			sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
+		OutputScsiAdress(&devData, fpLog);
 
-    STORAGE_DESCRIPTOR_HEADER header = {0};
-	STORAGE_PROPERTY_QUERY query;
-	query.QueryType = PropertyStandardQuery;
-	query.PropertyId = StorageAdapterProperty;
+		STORAGE_DESCRIPTOR_HEADER header = {0};
+		STORAGE_PROPERTY_QUERY query;
+		query.QueryType = PropertyStandardQuery;
+		query.PropertyId = StorageAdapterProperty;
 
-	bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
-		sizeof(STORAGE_PROPERTY_QUERY), &header, sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
+		bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
+			sizeof(STORAGE_PROPERTY_QUERY), &header, sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
 
-	devData.adapterDescriptor = (PSTORAGE_ADAPTER_DESCRIPTOR)malloc(header.Size);
-	if (devData.adapterDescriptor == NULL) {
-		return 0;
-	}
-    ZeroMemory(devData.adapterDescriptor, header.Size);
-	bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
-		sizeof(STORAGE_PROPERTY_QUERY), devData.adapterDescriptor, header.Size, &ulReturned, FALSE);
-	OutputStorageAdaptorDescriptor(&devData, fpLog);
+		devData.adapterDescriptor = (PSTORAGE_ADAPTER_DESCRIPTOR)malloc(header.Size);
+		if (devData.adapterDescriptor == NULL) {
+			throw FALSE;
+		}
+		ZeroMemory(devData.adapterDescriptor, header.Size);
+		bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
+			sizeof(STORAGE_PROPERTY_QUERY), devData.adapterDescriptor, header.Size, &ulReturned, FALSE);
+		OutputStorageAdaptorDescriptor(&devData, fpLog);
 #ifdef WIN64
-	devData.AlignmentMask64 = (ULONG64)(devData.adapterDescriptor->AlignmentMask) & 0x00000000FFFFFFFF;
+		devData.AlignmentMask64 = (ULONG64)(devData.adapterDescriptor->AlignmentMask) & 0x00000000FFFFFFFF;
 #endif
-	if(execType == c) {
-		return StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
-	}
-	else if(execType == s) {
-		return StartStop(&devData, STOP_UNIT_CODE, STOP_UNIT_CODE);
-	}
+		if(execType == c) {
+			StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
+		}
+		else if(execType == s) {
+			StartStop(&devData, STOP_UNIT_CODE, STOP_UNIT_CODE);
+		}
+		else {
+			bRet = ReadTestUnitReady(&devData);
+			if(!bRet) {
+				throw FALSE;
+			}
+			DISC_DATA discData = {0};
+			discData.nLastLBAof1stSession = -1;
+			discData.nStartLBAof2ndSession = -1;
+			bRet = ReadDeviceInfo(&devData, &discData, fpLog);
+			if(!bRet) {
+				throw FALSE;
+			}
+			discData.pszVendorId[8] = '\0';
+			discData.pszProductId[16] = '\0';
 
-	bRet = ReadTestUnitReady(&devData);
-	if(!bRet) {
-		return FALSE;
-	}
-	DISC_DATA discData = {0};
-	discData.nLastLBAof1stSession = -1;
-	discData.nStartLBAof2ndSession = -1;
-	bRet = ReadDeviceInfo(&devData, &discData, fpLog);
-	if(!bRet) {
-		return FALSE;
-	}
-	discData.pszVendorId[8] = '\0';
-	discData.pszProductId[16] = '\0';
+			SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
+			bRet = ReadConfiguration(&devData, &discData, fpLog);
+			if(!bRet) {
+				throw FALSE;
+			}
+			if(discData.pusCurrentMedia == ProfileCdrom || 
+				discData.pusCurrentMedia == ProfileCdRecordable ||
+				discData.pusCurrentMedia == ProfileCdRewritable ||
+				(discData.pusCurrentMedia == ProfileInvalid && (execType == ra))) {
+				TCHAR out[_MAX_PATH] = {0};
+				FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
+				if(!fpCcd) {
+					OutputErrorString(_T("Failed to open file .ccd\n"));
+					throw FALSE;
+				}
+				bRet = ReadTOC(&devData, &discData, fpLog);
+				if(!bRet) {
+					throw FALSE;
+				}
+				bRet = ReadTOCFull(&devData, &discData, fpLog, fpCcd);
+				if(!bRet) {
+					throw FALSE;
+				}
+				if(execType != rall) {
+					fclose(fpCcd);
+					_tremove(out);
+				}
 
-	SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
-	bRet = ReadConfiguration(&devData, &discData, fpLog);
-	if(!bRet) {
-		return FALSE;
-	}
-	if(discData.pusCurrentMedia == ProfileCdrom || 
-		discData.pusCurrentMedia == ProfileCdRecordable ||
-		discData.pusCurrentMedia == ProfileCdRewritable ||
-		(discData.pusCurrentMedia == ProfileInvalid && (execType == ra))) {
-		TCHAR out[_MAX_PATH] = {0};
-		FILE* fpCcd = CreateOrOpenFileW(argv[4], out, NULL, NULL, _T(".ccd"), _T(WFLAG), 0, 0);
-		if(!fpCcd) {
-			OutputErrorString(_T("Failed to open file .ccd\n"));
-			return FALSE;
-		}
-		bRet = ReadTOC(&devData, &discData, fpLog);
-		if(!bRet) {
-			return FALSE;
-		}
-		bRet = ReadTOCFull(&devData, &discData, fpLog, fpCcd);
-		if(!bRet) {
-			return FALSE;
-		}
-		if(execType != rall) {
-			fclose(fpCcd);
-			_tremove(out);
-		}
+				bRet = ReadCDForSearchingOffset(&devData, &discData, fpLog);
 
-		bRet = ReadCDForSearchingOffset(&devData, &discData, fpLog);
-
-		if(execType == rd) {
-			bRet = ReadCDPartial(&devData, &discData, argv[4],
-				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC);
-		}
-		else if(execType == ra) {
-			bRet = ReadCDPartial(&devData, &discData, argv[4],
-				_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC);
-		}
-		else if(bRet == TRUE && execType == rall) {
-			bRet = ReadCDAll(&devData, &discData, argv[4], fpLog, fpCcd);
-			fclose(fpCcd);
-		}
-	}
-	else if(discData.pusCurrentMedia == ProfileDvdRom || 
-		discData.pusCurrentMedia == ProfileDvdRecordable ||
-		discData.pusCurrentMedia == ProfileDvdRam || 
-		discData.pusCurrentMedia == ProfileDvdRewritable || 
-		discData.pusCurrentMedia == ProfileDvdRWSequential || 
-		discData.pusCurrentMedia == ProfileDvdDashRDualLayer || 
-		discData.pusCurrentMedia == ProfileDvdDashRLayerJump || 
-		discData.pusCurrentMedia == ProfileDvdPlusRW || 
-//		discData.pusCurrentMedia == ProfileInvalid ||
-		discData.pusCurrentMedia == ProfileDvdPlusR) {
-		INT nDVDSectorSize = 0;
-		bRet = ReadDVDStructure(&devData, &nDVDSectorSize, fpLog);
-		if(bRet) {
-			if(argv[5] && !_tcscmp(argv[5], _T("raw"))) {
+				if(execType == rd) {
+					bRet = ReadCDPartial(&devData, &discData, argv[4],
+						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC);
+				}
+				else if(execType == ra) {
+					bRet = ReadCDPartial(&devData, &discData, argv[4],
+						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC);
+				}
+				else if(bRet == TRUE && execType == rall) {
+					bRet = ReadCDAll(&devData, &discData, argv[4], fpLog, fpCcd);
+					fclose(fpCcd);
+				}
+			}
+			else if(discData.pusCurrentMedia == ProfileDvdRom || 
+				discData.pusCurrentMedia == ProfileDvdRecordable ||
+				discData.pusCurrentMedia == ProfileDvdRam || 
+				discData.pusCurrentMedia == ProfileDvdRewritable || 
+				discData.pusCurrentMedia == ProfileDvdRWSequential || 
+				discData.pusCurrentMedia == ProfileDvdDashRDualLayer || 
+				discData.pusCurrentMedia == ProfileDvdDashRLayerJump || 
+				discData.pusCurrentMedia == ProfileDvdPlusRW || 
+//				discData.pusCurrentMedia == ProfileInvalid ||
+				discData.pusCurrentMedia == ProfileDvdPlusR) {
+				INT nDVDSectorSize = 0;
+				bRet = ReadDVDStructure(&devData, &nDVDSectorSize, fpLog);
+				if(bRet) {
+					if(argv[5] && !_tcscmp(argv[5], _T("raw"))) {
 #if 0
-				bRet = ReadDVDRaw(&devData, pszVendorId, argv[4], nDVDSectorSize);
+						bRet = ReadDVDRaw(&devData, pszVendorId, argv[4], nDVDSectorSize);
 #endif
-			}
-			else {
-				bRet = ReadDVD(&devData, argv[4], argv[5], nDVDSectorSize, fpLog);
+					}
+					else {
+						bRet = ReadDVD(&devData, argv[4], argv[5], nDVDSectorSize, fpLog);
+					}
+				}
 			}
 		}
+	}
+	catch(BOOL bErr) {
+		bRet = bErr;
 	}
 #ifndef _DEBUG
-	fclose(fpLog);
+	FcloseAndNull(fpLog);
 #endif
+	FreeAndNull(devData.adapterDescriptor);
 	CloseHandle(devData.hDevice);
 	return bRet;
 }
@@ -297,8 +304,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			_T("\t-split [filename]\n")
 			_T("\t\tSplit descrambled File (for GD-ROM Image)\n")
 			_T("\t-sub [subfile]\n")
-			_T("\t\tParse CloneCD sub file\n")
-			);
+			_T("\t\tParse CloneCD sub file\n"));
 	}
 	else {
 		time_t now;

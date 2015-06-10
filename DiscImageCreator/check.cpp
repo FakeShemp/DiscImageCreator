@@ -26,7 +26,8 @@ BOOL IsValidMSF(
 BOOL IsValidRelativeTime(
 	CONST SUB_Q_DATA* prevSubQ,
 	CONST SUB_Q_DATA* subQ,
-	CONST PUCHAR Subcode
+	CONST PUCHAR Subcode,
+	INT nLBA
 	)
 {
 	BOOL bRet = IsValidMSF(Subcode, 15, 16, 17);
@@ -41,6 +42,13 @@ BOOL IsValidRelativeTime(
 		}
 		else if(subQ->byIndex == 0) {
 			if(tmpLBA != 0 &&
+				prevSubQ->nRelativeTime != subQ->nRelativeTime + 1) {
+				bRet = FALSE;
+			}
+		}
+		if(nLBA != 0 && tmpLBA == 0 && prevSubQ->byTrackNum == subQ->byTrackNum &&
+			prevSubQ->byIndex == subQ->byIndex && subQ->byIndex != 0) {
+			if(prevSubQ->nRelativeTime + 1 != subQ->nRelativeTime ||
 				prevSubQ->nRelativeTime != subQ->nRelativeTime + 1) {
 				bRet = FALSE;
 			}
@@ -373,7 +381,7 @@ BOOL CheckAndFixPSubchannel(
 			Subcode[i] = 0x00;
 		}
 	}
-	return 0;
+	return TRUE;
 }
 
 BOOL CheckAndFixSubchannel(
@@ -547,7 +555,7 @@ BOOL CheckAndFixSubchannel(
 			prevPrevSubQ->byIndex = prevSubQ->byIndex;
 		}
 
-		if(!IsValidRelativeTime(prevSubQ, subQ, Subcode)) {
+		if(!IsValidRelativeTime(prevSubQ, subQ, Subcode, nLBA)) {
 			UCHAR byFrame = 0;
 			UCHAR bySecond = 0;
 			UCHAR byMinute = 0;

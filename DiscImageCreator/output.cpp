@@ -175,8 +175,7 @@ void OutputDriveSpeed(
 		pSetspeed->RequestType == 0 ? _T("CdromSetSpeed") : _T("CdromSetStreaming"),
 		pSetspeed->ReadSpeed,
 		pSetspeed->WriteSpeed,
-		pSetspeed->RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation")
-		);
+		pSetspeed->RotationControl == 0 ? _T("CdromDefaultRotation") : _T("CdromCAVRotation"));
 }
 
 void OutputScsiAdress(
@@ -295,8 +294,7 @@ void OutputInquiryData(
 		BOOLEAN_TO_STRING_YES_NO(pInquiry->SoftReset),
 		BOOLEAN_TO_STRING_YES_NO(pInquiry->CommandQueue),
 		BOOLEAN_TO_STRING_YES_NO(pInquiry->LinkedCommands),
-		BOOLEAN_TO_STRING_YES_NO(pInquiry->RelativeAddressing)
-		);
+		BOOLEAN_TO_STRING_YES_NO(pInquiry->RelativeAddressing));
 
 	strncpy(pDiscData->pszVendorId, (PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId));
 	strncpy(pDiscData->pszProductId, (PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId));
@@ -692,8 +690,7 @@ void OutputFeatureNumber(
 				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+6+n] & 0x01),
 				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+6+n] & 0x02),
 				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+6+n] & 0x04),
-				pConf[uiSize+7+n]
-				);
+				pConf[uiSize+7+n]);
 			for(INT i = 1; i <= pConf[uiSize+7+n]; i++) {
 				OutputLogString(fpLog, 
 					_T("\t\tLinkSize%d: %d\n"), i, pConf[uiSize+7+i+n]);

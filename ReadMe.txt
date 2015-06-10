@@ -143,7 +143,7 @@ http://forum.redump.org/topic/2620/dreamcastnaomi-gdrom-dumping-instructions/
 
 *Change Log
 **2011-11-xx
-**2012-03-xx
+**2012-03-21
 **2012-05-26
 **2012-06-20
 **2012-07-01
@@ -179,3 +179,8 @@ improved subchannel data
 refactoring
 add STORAGE ADAPTER DESCRIPTOR log
 => for getting alignmentMask of drive
+
+**2012-01-17
+improved PC Engine CD dumping
+1. if subchannel and TOC don't sync, TOC has priority.
+2. if audio sector exists in data track, their sector is descrambled.

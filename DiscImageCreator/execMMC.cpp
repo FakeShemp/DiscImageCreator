@@ -200,7 +200,8 @@ BOOL PreserveTrackAttribution(
 	PUCHAR pCtlList,
 	PUCHAR pModeList,
 	PINT* pLBAStartList,
-	PINT* pLBAOfDataTrackList
+	PINT* pLBAOfDataTrackList,
+	FILE* fpLog
 	)
 {
 	// preserve mode, ctl
@@ -210,12 +211,20 @@ BOOL PreserveTrackAttribution(
 	}
 	// preserve nLBA
 	if(prevSubQ->byTrackNum + 1 == subQ->byTrackNum) {
-		pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
+		// index 1 is prior to TOC
+		if(subQ->byIndex == 1 && nLBA != pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
+			OutputLogString(fpLog, _T("Track %2d, LBA on subchannel: %6d, LBA on TOC: %6d\n"),
+				subQ->byTrackNum, nLBA, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
+			pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
+		}
+		else {
+			pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
+		}
+		// Madou Monogatari I - Honoo no Sotsuenji (Japan)
+		// LBA[183031, 0x2CAF7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-21, Index-01, RelativeTime-00:31:70, AbsoluteTime-40:42:31] RtoW:ZERO mode
+		// LBA[183032, 0x2CAF8], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :32] RtoW:ZERO mode
+		// LBA[183033, 0x2CAF9], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-22, Index-01, RelativeTime-00:00:01, AbsoluteTime-40:42:33] RtoW:ZERO mode
 		if(subQ->nRelativeTime == 1) {
-			// Madou Monogatari I - Honoo no Sotsuenji (Japan)
-			// LBA[183031, 0x2CAF7], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-21, Index-01, RelativeTime-00:31:70, AbsoluteTime-40:42:31] RtoW:ZERO mode
-			// LBA[183032, 0x2CAF8], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :32] RtoW:ZERO mode
-			// LBA[183033, 0x2CAF9], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-22, Index-01, RelativeTime-00:00:01, AbsoluteTime-40:42:33] RtoW:ZERO mode
 			pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] -= 1;
 		}
 		// preserve end lba of data track
@@ -223,11 +232,6 @@ BOOL PreserveTrackAttribution(
 			pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] == -1 &&
 			(prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 				pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] = nLBA - 1;
-		}
-		// preserve first lba of data track
-		if(pLBAOfDataTrackList[subQ->byTrackNum-1][0] == -1 &&
-			(subQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-				pLBAOfDataTrackList[subQ->byTrackNum-1][0] = nLBA;
 		}
 		*byCurrentTrackNum = subQ->byTrackNum;
 	}
@@ -252,12 +256,28 @@ BOOL PreserveTrackAttribution(
 	// preserve index
 	if(prevSubQ->byIndex + 1 == subQ->byIndex && 
 		*byCurrentTrackNum != pDiscData->toc.FirstTrack) {
-		pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
+		if(subQ->byIndex != 1) {
+			pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
+		}
+		else {
+			// index 1 is prior to TOC
+			if(nLBA != pDiscData->aTocLBA[subQ->byTrackNum-1][0]) {
+				OutputLogString(fpLog,
+					_T("Subchannel & TOC isn't sync. Track %2d, LBA on subchannel: %6d, LBA on TOC: %6d\n"),
+					subQ->byTrackNum, nLBA, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
+			}
+			pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
+		}
+	}
+	if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+		(subQ->byCtl & AUDIO_DATA_TRACK) != AUDIO_DATA_TRACK) {
+		OutputLogString(fpLog, _T("LBA %6d, this data track has audio sector\n"), nLBA);
 	}
 	// preserve first lba of data track offset
 	if(pLBAOfDataTrackList[subQ->byTrackNum-1][0] == -1 &&
-		(subQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-			pLBAOfDataTrackList[subQ->byTrackNum-1][0] = nLBA;
+		(pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
+//		(subQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
+		pLBAOfDataTrackList[subQ->byTrackNum-1][0] = nLBA;
 	}
 	// preserve end data track offset
 	else if(nLBA == pDiscData->nLength - 1) {
@@ -661,7 +681,7 @@ BOOL ReadCDAll(
 		BOOL bCatalog = FALSE;
 		UCHAR byCurrentTrackNum = pDiscData->toc.FirstTrack;
 		OutputLogString(fpLog, 
-			_T("\n--------------------------------error log begin--------------------------------\n"));
+			_T("\n-----------------------------------log begin-----------------------------------\n"));
 
 		for(INT nLBA = nOffsetStart; nLBA < pDiscData->nLength + nOffsetEnd; nLBA++) {
 			if(pDiscData->nStartLBAof2ndSession != -1 && pDiscData->nLastLBAof1stSession == nLBA) {
@@ -728,7 +748,7 @@ BOOL ReadCDAll(
 				// 3rd:Write subchannel
 				WriteSubChannel(nLBA, byCurrentTrackNum, pBuf, Subcode, SubcodeRaw, fpSub, fpParse, fpCdg);
 				PreserveTrackAttribution(pDiscData, nLBA, &byCurrentTrackNum, &subQ,
-					&prevSubQ, &prevPrevSubQ, pCtlList, pModeList, pLBAStartList, pLBAOfDataTrackList);
+					&prevSubQ, &prevPrevSubQ, pCtlList, pModeList, pLBAStartList, pLBAOfDataTrackList, fpLog);
 			}
 
 			// 4th:Write track to scrambled
@@ -751,8 +771,8 @@ BOOL ReadCDAll(
 		FreeAndNull(aBuf);
 
 		OutputLogString(fpLog, 
-			_T("---------------------------------error log end---------------------------------\n\n"));
-		OutputLogString(fpLog, _T("TOC on Subchannel\n"));
+			_T("------------------------------------log end-----------------------------------\n\n"));
+		OutputLogString(fpLog, _T("TOC with pregap\n"));
 		for(INT r = 0; r < pDiscData->toc.LastTrack; r++) {
 			OutputLogString(fpLog, 
 				_T("\tTrack %2d, Ctl %d, Mode %d"), r + 1, pCtlList[r], pModeList[r]);
@@ -1239,7 +1259,7 @@ BOOL ReadDVD(
 					OutputCopyrightManagementInformation(nLBA, i, pBuf2, fpLog);
 				}
 			}
-			OutputString(_T("\rCreating iso(LBA):%7d/%7d"), 
+			OutputString(_T("\rCreating iso(LBA) %7d/%7d"), 
 				nLBA + byTransferLen - 1, nDVDSectorSize - 1);
 		}
 		OutputString(_T("\n"));
@@ -1271,13 +1291,14 @@ BOOL ReadDVDRaw(
 	PUCHAR aBuf = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if(NULL == (aBuf = (PUCHAR)malloc(DVD_RAW_READ * (size_t)byTransferLen + 0x10))) {
+		if(NULL == (aBuf = (PUCHAR)malloc(DVD_RAW_READ *
+			(size_t)byTransferLen + pDevData->adapterDescriptor->AlignmentMask))) {
 			throw _T("Can't alloc memory aBuf\n");
 		}
-		UCHAR aCmd[CDB12GENERIC_LENGTH];
-		ZeroMemory(aBuf, DVD_RAW_READ * (size_t)byTransferLen + 0x10);
+		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
+		ZeroMemory(aBuf, DVD_RAW_READ *
+			(size_t)byTransferLen + pDevData->adapterDescriptor->AlignmentMask);
 		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf, pDevData);
-		ZeroMemory(aCmd, sizeof(aCmd));
 		UCHAR cdblen = CDB12GENERIC_LENGTH;
 		if(pszVendorId && !strncmp(pszVendorId, "PLEXTER", 7)) {
 			aCmd[0] = SCSIOP_READ_DATA_BUFF;
@@ -1329,7 +1350,7 @@ BOOL ReadDVDRaw(
 			}
 
 			fwrite(pBuf, sizeof(UCHAR), (size_t)DVD_RAW_READ * byTransferLen, fp);
-			OutputString(_T("\rCreating raw(LBA):%7d/%7d"), 
+			OutputString(_T("\rCreating raw(LBA) %7d/%7d"), 
 				nLBA + byTransferLen - 1, nDVDSectorSize - 1);
 		}
 		OutputString(_T("\n"));
@@ -1340,7 +1361,7 @@ BOOL ReadDVDRaw(
 	}
 	FreeAndNull(aBuf);
 	FcloseAndNull(fp);
-#if 0
+#if 0 // TODO
 	unscrambler *u = unscrambler_new ();
 	CHAR pszOutFileA[_MAX_PATH];
 	ZeroMemory(pszOutFileA, sizeof(pszOutFileA));
@@ -1399,7 +1420,7 @@ BOOL ReadDVDStructure(
 	}
 	PUCHAR pFormat = (PUCHAR)malloc(uiFormatSize);
 	if(!pFormat) {
-		OutputErrorString(_T("Can't alloc memory L:%d"), __LINE__);
+		OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	ZeroMemory(pFormat, uiFormatSize);
@@ -1418,10 +1439,10 @@ BOOL ReadDVDStructure(
 				OutputLogString(fpLog, _T("\tDisc Structure List\n"));
 			}
 			OutputLogString(fpLog, 
-				_T("\t\tFormatCode:%02x, SDR:%s, RDS:%s, Structure Length:%d\n"), 
+				_T("\t\tFormatCode: %02x, SDR: %s, RDS: %s, Structure Length: %d\n"), 
 				pDiscStructure[4+i], 
-				(pDiscStructure[5+i] & 0x80) == 0x80 ? "Yes" : "No ", 
-				(pDiscStructure[5+i] & 0x40) == 0x40 ? "Yes" : "No ", 
+				BOOLEAN_TO_STRING_YES_NO(pDiscStructure[5+i] & 0x80), 
+				BOOLEAN_TO_STRING_YES_NO(pDiscStructure[5+i] & 0x40), 
 				(pDiscStructure[6+i] << 8) | pDiscStructure[7+i]);
 #endif
 			pFormat[j] = pDiscStructure[4+i];
@@ -1845,67 +1866,63 @@ BOOL ReadTOCText(
 				ZeroMemory(pInfo[z].Text, sizeof(pInfo[z].Text));
 				strncpy(pInfo[z].Text, pTmpText + uiIdx, len);
 				if(byAlbumTitleIdx != 0 && z < byAlbumTitleIdx) {
-					OutputLogString(fpLog, _T("\tAlbumTitle : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tAlbumTitle: %s\n"), pInfo[z].Text);
 					SetAlbumTitle(pInfo[z].Text);
 				}
 				else if(byAlbumTitleIdx != 0 && byAlbumTitleIdx != byAlbumIdx && 
 					byAlbumTitleIdx <= z && z <= byAlbumIdx) {
-					OutputLogString(fpLog, _T("\tTitle : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tTitle: %s\n"), pInfo[z].Text);
 					SetTitle(pInfo[z].Text, nTitleCnt);
 					nTitleCnt++;
 				}
 				else if(byPerformerIdx != 0 && byAlbumIdx != byPerformerIdx && 
 					byAlbumIdx <= z && z <= byPerformerIdx) {
-					OutputLogString(fpLog, _T("\tPerformer : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tPerformer: %s\n"), pInfo[z].Text);
 					SetPerformer(pInfo[z].Text);
 				}
 				else if(bySongwriterIdx != 0 && byPerformerIdx != bySongwriterIdx && 
 					byPerformerIdx <= z && z <= bySongwriterIdx) {
-					OutputLogString(fpLog, _T("\tSongwriter : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tSongwriter: %s\n"), pInfo[z].Text);
 					SetSongWriter(pInfo[z].Text);
 				}
 				else if(byComposerIdx != 0 && bySongwriterIdx != byComposerIdx && 
 					bySongwriterIdx <= z && z <= byComposerIdx) {
-					OutputLogString(fpLog, _T("\tComposer : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tComposer: %s\n"), pInfo[z].Text);
 				}
 				else if(byArrangerIdx && byComposerIdx != byArrangerIdx && 
 					byComposerIdx <= z && z <= byArrangerIdx) {
-					OutputLogString(fpLog, _T("\tArranger : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tArranger: %s\n"), pInfo[z].Text);
 				}
 				else if(byMessagesIdx != 0 && byArrangerIdx != byMessagesIdx && 
 					byArrangerIdx <= z && z <= byMessagesIdx) {
-					OutputLogString(fpLog, _T("\tMessages : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tMessages: %s\n"), pInfo[z].Text);
 				}
 				else if(byDiscIdIdx != 0 && byMessagesIdx != byDiscIdIdx && 
 					byMessagesIdx <= z && z <= byDiscIdIdx) {
-					OutputLogString(fpLog, _T("\tDiscId : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tDiscId: %s\n"), pInfo[z].Text);
 				}
 				else if(byGenreIdx != 0 && byDiscIdIdx != byGenreIdx && 
 					byDiscIdIdx <= z && z <= byGenreIdx) {
-					OutputLogString(fpLog, _T("\tGenre : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tGenre: %s\n"), pInfo[z].Text);
 				}
-#if 0
 				// detail in Page 54-55 of EN 60908:1999
 				else if(byTocInfoIdx != 0 && byGenreIdx != byTocInfoIdx && 
 					byGenreIdx <= z && z <= byTocInfoIdx) {
-					OutputLogString(fpLog, _T("\tTocInfo : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tTocInfo: %x\n"), pInfo[z].Text);
 				}
 				else if(byTocInfo2Idx != 0 && byTocInfoIdx != byTocInfo2Idx && 
 					byTocInfoIdx <= z && z <= byTocInfo2Idx) {
-					OutputLogString(fpLog, _T("\tTocInfo2 : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tTocInfo2: %x\n"), pInfo[z].Text);
 				}
-#endif
 				else if(byUpcEanIdx != 0 && byTocInfo2Idx != byUpcEanIdx && 
 					byTocInfo2Idx <= z && z <= byUpcEanIdx) {
-					OutputLogString(fpLog, _T("\tUpcEan : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tUpcEan: %s\n"), pInfo[z].Text);
 				}
-#if 0
 				// detail in Page 56 of EN 60908:1999
 				else if(bySizeInfoIdx != 0 && byUpcEanIdx != bySizeInfoIdx && 
 					byUpcEanIdx <= z && z <= bySizeInfoIdx) {
-					OutputLogString(fpLog, _T("\tSizeInfo : %s\n"), pInfo[z].Text);
+					OutputLogString(fpLog, _T("\tSizeInfo: %x\n"), pInfo[z].Text);
 				}
-#endif
 			}
 			uiIdx += len + 1;
 		}
