@@ -166,3 +166,6 @@ fix Paragraph Boundary
 **2012-12-29
 fix crashing in x86 build
 delete bom in unicode build
+
+**2012-01-03
+fix checking & data of subchannel

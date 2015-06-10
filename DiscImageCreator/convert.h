@@ -11,6 +11,10 @@ UCHAR BcdToDec(
 	UCHAR bySrc
 	);
 
+UCHAR DecToBcd(
+	UCHAR bySrc
+	);
+
 INT MSFtoLBA(
 	UCHAR byFrame,
 	UCHAR bySecond,

@@ -115,6 +115,17 @@ UCHAR BcdToDec(
 	return (UCHAR)(((bySrc >> 4) & 0x0F) * 10 + (bySrc & 0x0F));
 }
 
+UCHAR DecToBcd(
+	UCHAR bySrc
+	)
+{
+	INT m = 0;
+	INT n = bySrc;
+	m += n / 10;
+	n -= m * 10;
+	return (UCHAR)(m << 4 | n);
+}
+
 INT MSFtoLBA(
 	UCHAR byFrame, 
 	UCHAR bySecond, 

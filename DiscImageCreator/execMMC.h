@@ -63,6 +63,7 @@ __declspec(align(1)) typedef struct _SUB_Q_DATA {
 
 BOOL ReadCDAll(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCTSTR pszOutFile,
 	LPCSTR pszVendorId,
 	INT nWriteOffset,
@@ -75,6 +76,7 @@ BOOL ReadCDAll(
 
 BOOL ReadCDForSearchingOffset(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCSTR pszVendorId,
 	LPCSTR pszProductId,
 	PINT nCombinedOffset,
@@ -84,6 +86,7 @@ BOOL ReadCDForSearchingOffset(
 
 BOOL ReadCDPartial(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCTSTR pszOutFile,
 	LPCSTR pszVendorId,
 	INT nStart,
@@ -94,6 +97,7 @@ BOOL ReadCDPartial(
 
 BOOL ReadConfiguration(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	PUSHORT pusCurrentMedia,
 	PBOOL bCanCDText,
 	PBOOL bC2ErrorData,
@@ -102,6 +106,7 @@ BOOL ReadConfiguration(
 
 BOOL ReadDeviceInfo(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPSTR pszVendorId,
 	LPSTR pszProductId,
 	FILE* fpLog
@@ -109,6 +114,7 @@ BOOL ReadDeviceInfo(
 
 BOOL ReadDVD(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCTSTR pszOutFile,
 	LPCTSTR pszOption,
 	INT nDVDSectorSize,
@@ -117,6 +123,7 @@ BOOL ReadDVD(
 #if 0
 BOOL ReadDVDRaw(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCSTR pszVendorId,
 	LPCTSTR pszOutFile,
 	LPCTSTR pszOption,
@@ -126,22 +133,26 @@ BOOL ReadDVDRaw(
 #endif
 BOOL ReadDVDStructure(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	PINT nDVDSectorSize,
 	FILE* fpLog
 	);
 
 BOOL ReadTestUnitReady(
-	HANDLE hDevice
+	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress
 	);
 
 BOOL ReadTOC(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	PINT nLength,
 	FILE* fpLog
 	);
 
 BOOL ReadTOCFull(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCSTR pszVendorId,
 	LPCSTR pszProductId,
 	BOOL bCanCDText,
@@ -151,18 +162,21 @@ BOOL ReadTOCFull(
 
 BOOL ReadTOCText(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	FILE* fpLog,
 	FILE* fpCcd
 	);
 
 BOOL SetCDSpeed(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	INT nCDSpeedNum,
 	FILE* fpLog
 	);
 
 BOOL StartStop(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
     UCHAR Start,
     UCHAR LoadEject
 	);

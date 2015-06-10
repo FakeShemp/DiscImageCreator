@@ -27,6 +27,7 @@ inline PVOID ConvParagraphBoundary(
 
 BOOL ExecCommand(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	PUCHAR pbyCdbCmd,
 	UCHAR byCdbCmdLength,
 	PVOID pvBuffer,
@@ -39,6 +40,9 @@ BOOL ExecCommand(
 	SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb = {0};
 
 	swb.ScsiPassThroughDirect.Length = sizeof(SCSI_PASS_THROUGH_DIRECT);
+	swb.ScsiPassThroughDirect.PathId = pAdress->PathId;
+	swb.ScsiPassThroughDirect.TargetId = pAdress->TargetId;
+	swb.ScsiPassThroughDirect.Lun = pAdress->Lun;
 	swb.ScsiPassThroughDirect.CdbLength = byCdbCmdLength;
 	swb.ScsiPassThroughDirect.SenseInfoLength = SPTWB_SENSE_LENGTH;
 	swb.ScsiPassThroughDirect.DataIn = SCSI_IOCTL_DATA_IN;
@@ -56,6 +60,7 @@ BOOL ExecCommand(
 	BOOL bRet = DeviceIoControl(hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT, &swb, 
 		ulLength, &swb, ulLength, &ulReturned, NULL);
 	*byScsiStatus = swb.ScsiPassThroughDirect.ScsiStatus;
+
 	if(bRet) {
 		OutputScsiStatus(&swb, byScsiStatus, pszFuncname, nLineNum);
 	}
@@ -76,6 +81,7 @@ BOOL ExecCommand(
 
 BOOL ReadCDAll(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCTSTR pszOutFile,
 	LPCSTR pszVendorId,
 	INT nWriteOffset,
@@ -112,6 +118,7 @@ BOOL ReadCDAll(
 	PUCHAR pBuf2 = NULL;
 	BOOL bRet = TRUE;
 	try {
+		// init start
 		if(NULL == (fpSub = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".sub"), _T("wb"), 0, 0))) {
 			throw _T("Failed to open .sub\n");
 		}
@@ -194,7 +201,7 @@ BOOL ReadCDAll(
 			// check VolumeDescriptor
 			if((toc.TrackData[0].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
 				aCmd[5] = LOBYTE(LOWORD(n));
-				if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+				if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 					ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 					|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 					throw _T("");
@@ -225,7 +232,7 @@ BOOL ReadCDAll(
 				// check CDG
 				n = 75;
 				aCmd[5] = LOBYTE(LOWORD(n));
-				if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+				if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 					ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 					|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 					throw _T("");
@@ -267,7 +274,7 @@ BOOL ReadCDAll(
 			aCmd[3] = LOBYTE(HIWORD(aTocLBA[p][0]));
 			aCmd[4] = HIBYTE(LOWORD(aTocLBA[p][0]));
 			aCmd[5] = LOBYTE(LOWORD(aTocLBA[p][0]));
-			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, 
+			if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, 
 				pBuf, ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw _T("");
@@ -306,6 +313,7 @@ BOOL ReadCDAll(
 		prevSubQ.byTrackNum = toc.FirstTrack;
 		prevSubQ.byIndex = nOffsetStart < 0 ? (UCHAR)0 : (UCHAR)1;
 		prevSubQ.byMode = DATA_BLOCK_MODE0;
+		// init end
 
 		BOOL bCatalog = FALSE;
 		UCHAR byCurrentTrackNum = toc.FirstTrack;
@@ -331,7 +339,7 @@ BOOL ReadCDAll(
 			aCmd[3] = LOBYTE(HIWORD(nLBA));
 			aCmd[4] = HIBYTE(LOWORD(nLBA));
 			aCmd[5] = LOBYTE(LOWORD(nLBA));
-			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, 
+			if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, 
 				pBuf, ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
 				throw _T("");
 			}
@@ -370,6 +378,7 @@ BOOL ReadCDAll(
 			subQ.byMode = GetMode(pBuf + uiShift);
 
 			if(0 <= nLBA && nLBA < nLength) {
+				BOOL bBadAdr = FALSE;
 				// 2nd:Verification subchannel
 				if(subQ.byAdr == ADR_ENCODES_MEDIA_CATALOG) {
 					BOOL bMCN = IsValidMCN(Subcode);
@@ -382,46 +391,49 @@ BOOL ReadCDAll(
 					if(!bMCN) {
 						OutputLogString(fpLog, _T("LBA %6d, MCN[%s]\n"), nLBA, szCatalog);
 						subQ.byAdr = prevSubQ.byAdr;
-					}
-					//// Fix TrackNum, because don't exist.
-					// Cosmic Fantasy 2
-					// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
-					// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
-					// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
-					if((prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-					(subQ.byCtl & AUDIO_DATA_TRACK) == 0) {
-						subQ.byTrackNum = (UCHAR)(prevSubQ.byTrackNum + 1);
+						bBadAdr = TRUE;
 					}
 					else {
-						subQ.byTrackNum = prevSubQ.byTrackNum;
-					}
-					//// Fix Index, because don't exist.
-					// Psychic Detective Series Vol. 5 - Nightmare (Japan)
-					// LBA[080999, 0x13C67], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-02, Index-00, RelativeTime-00:00:00, AbsoluteTime-18:01:74] RtoW:ZERO mode
-					// LBA[081000, 0x13C68], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[3010911111863        , AbsoluteTime-     :00] RtoW:ZERO mode
-					// LBA[081001, 0x13C69], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-02, Index-01, RelativeTime-00:00:01, AbsoluteTime-18:02:01] RtoW:ZERO mode
-					if(prevSubQ.byIndex == 0 && prevSubQ.nRelativeTime == 0) {
-						subQ.byIndex = 1;
-					}
-					// Super Schwarzschild 2 (Japan)
-					// LBA[234845, 0x3955D], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-19, Index-01, RelativeTime-01:50:09, AbsoluteTime-52:13:20] RtoW:ZERO mode
-					// LBA[234846, 0x3955E], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-19, Index-02, RelativeTime-01:50:10, AbsoluteTime-52:13:21] RtoW:ZERO mode
-					// LBA[234847, 0x3955F], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :22] RtoW:ZERO mode
-					// LBA[234848, 0x39560], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-19, Index-01, RelativeTime-01:50:12, AbsoluteTime-52:13:23] RtoW:ZERO mode
-					else if(prevSubQ.byIndex > 1) {
-						subQ.byIndex = prevPrevSubQ.byIndex;
-						prevSubQ.byIndex = prevPrevSubQ.byIndex;
-					}
-					// Cosmic Fantasy 2
-					// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
-					// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
-					// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
-					else if((prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-					(subQ.byCtl & AUDIO_DATA_TRACK) == 0) {
-						subQ.byIndex = 0; // TODO
-					}
-					else {
-						subQ.byIndex = prevSubQ.byIndex;
+						//// Fix TrackNum, because don't exist.
+						// Cosmic Fantasy 2
+						// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
+						// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
+						// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
+						if((prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+						(subQ.byCtl & AUDIO_DATA_TRACK) == 0) {
+							subQ.byTrackNum = (UCHAR)(prevSubQ.byTrackNum + 1);
+						}
+						else {
+							subQ.byTrackNum = prevSubQ.byTrackNum;
+						}
+						//// Fix Index, because don't exist.
+						// Psychic Detective Series Vol. 5 - Nightmare (Japan)
+						// LBA[080999, 0x13C67], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-02, Index-00, RelativeTime-00:00:00, AbsoluteTime-18:01:74] RtoW:ZERO mode
+						// LBA[081000, 0x13C68], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[3010911111863        , AbsoluteTime-     :00] RtoW:ZERO mode
+						// LBA[081001, 0x13C69], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-02, Index-01, RelativeTime-00:00:01, AbsoluteTime-18:02:01] RtoW:ZERO mode
+						if(prevSubQ.byIndex == 0 && prevSubQ.nRelativeTime == 0) {
+							subQ.byIndex = 1;
+						}
+						// Super Schwarzschild 2 (Japan)
+						// LBA[234845, 0x3955D], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-19, Index-01, RelativeTime-01:50:09, AbsoluteTime-52:13:20] RtoW:ZERO mode
+						// LBA[234846, 0x3955E], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-19, Index-02, RelativeTime-01:50:10, AbsoluteTime-52:13:21] RtoW:ZERO mode
+						// LBA[234847, 0x3955F], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :22] RtoW:ZERO mode
+						// LBA[234848, 0x39560], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-19, Index-01, RelativeTime-01:50:12, AbsoluteTime-52:13:23] RtoW:ZERO mode
+						else if(prevSubQ.byIndex > 1) {
+							subQ.byIndex = prevPrevSubQ.byIndex;
+							prevSubQ.byIndex = prevPrevSubQ.byIndex;
+						}
+						// Cosmic Fantasy 2
+						// LBA[202749, 0x317FD], Data, Copy NG, TOC[TrackNum-80, Index-01, RelativeTime-00:06:63, AbsoluteTime-45:05:24] RtoW:ZERO mode
+						// LBA[202750, 0x317FE], Audio, 2ch, Copy NG, Pre-emphasis No, Media Catalog Number (MCN)[0000000000000        , AbsoluteTime-     :25] RtoW:ZERO mode
+						// LBA[202751, 0x317FF], Audio, 2ch, Copy NG, Pre-emphasis No, TOC[TrackNum-81, Index-00, RelativeTime-00:01:73, AbsoluteTime-45:05:26] RtoW:ZERO mode
+						else if((prevSubQ.byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
+						(subQ.byCtl & AUDIO_DATA_TRACK) == 0) {
+							subQ.byIndex = 0; // TODO
+						}
+						else {
+							subQ.byIndex = prevSubQ.byIndex;
+						}
 					}
 				}
 				else if(subQ.byAdr == ADR_ENCODES_ISRC) {
@@ -432,18 +444,25 @@ BOOL ReadCDAll(
 					if(!bISRC) {
 						OutputLogString(fpLog, _T("LBA %6d, ISRC[%s]\n"), nLBA, szISRC);
 						subQ.byAdr = prevSubQ.byAdr;
+						bBadAdr = TRUE;
 					}
-					// because don't exist tracknum, index...
-					subQ.byTrackNum = prevSubQ.byTrackNum;
-					subQ.byIndex = prevSubQ.byIndex;
+					else {
+						// because don't exist tracknum, index...
+						subQ.byTrackNum = prevSubQ.byTrackNum;
+						subQ.byIndex = prevSubQ.byIndex;
+					}
 				}
-				else {
-					if(subQ.byAdr == ADR_NO_MODE_INFORMATION || 
+				else if(subQ.byAdr == ADR_NO_MODE_INFORMATION || 
 						subQ.byAdr > ADR_ENCODES_ISRC) {
 						OutputLogString(fpLog, _T("LBA %6d, Adr[%d], correct[%d]\n"), 
 							nLBA, subQ.byAdr, prevSubQ.byAdr);
 						subQ.byAdr = prevSubQ.byAdr;
-					}
+						bBadAdr = TRUE;
+				}
+				if(bBadAdr) {
+					Subcode[12] = (UCHAR)(subQ.byCtl << 4 | subQ.byAdr);
+				}
+				if(subQ.byAdr == ADR_ENCODES_CURRENT_POSITION || bBadAdr) {
 					BOOL bPrevTrackNum = TRUE;
 					if(!IsValidTrackNumber(&prevPrevSubQ, &prevSubQ,
 						&subQ, toc.FirstTrack, toc.LastTrack, &bPrevTrackNum)) {
@@ -463,6 +482,7 @@ BOOL ReadCDAll(
 							subQ.nRelativeTime == 0) {
 							subQ.byTrackNum += 1;
 						}
+						Subcode[13] = DecToBcd(subQ.byTrackNum);
 					}
 					else if(!bPrevTrackNum) {
 						OutputLogString(fpLog, _T("LBA %6d, PrevTrackNum[%02d], correct[%02d]\n"), 
@@ -478,6 +498,7 @@ BOOL ReadCDAll(
 							nLBA, subQ.byIndex, prevSubQ.byIndex);
 						subQ.byTrackNum = prevSubQ.byTrackNum;
 						subQ.byIndex = prevSubQ.byIndex;
+						Subcode[14] = DecToBcd(subQ.byIndex);
 					}
 					else if(!bPrevIndex) {
 						OutputLogString(fpLog, _T("LBA %6d, PrevIndex[%02d], correct[%02d]\n"), 
@@ -496,7 +517,9 @@ BOOL ReadCDAll(
 					if(Subcode[18] != 0) {
 						OutputLogString(fpLog, 
 							_T("LBA %6d, Zero[%02d], correct[0]\n"), nLBA, Subcode[18]);
+						Subcode[18] = 0;
 					}
+					// no check RelativeTime
 					if(!IsValidAbsoluteTime(&prevSubQ, &subQ, Subcode, nLBA)) {
 						UCHAR byFrame, bySecond, byMinute;
 						LBAtoMSF(nLBA + 150, &byFrame, &bySecond, &byMinute);
@@ -504,6 +527,9 @@ BOOL ReadCDAll(
 							_T("LBA %6d, AbsoluteTime[%02d:%02d:%02d], correct[%02d:%02d:%02d]\n"), 
 							nLBA, BcdToDec(Subcode[19]), BcdToDec(Subcode[20]), 
 							BcdToDec(Subcode[21]), byMinute, bySecond, byFrame);
+						Subcode[19] = DecToBcd(byMinute);
+						Subcode[20] = DecToBcd(bySecond);
+						Subcode[21] = DecToBcd(byFrame);
 					}
 				}
 				if(!IsValidControl(&prevPrevSubQ, &prevSubQ, 
@@ -511,8 +537,8 @@ BOOL ReadCDAll(
 					OutputLogString(fpLog, _T("LBA %6d, Ctl[%d], correct[%d]\n"),
 						nLBA, subQ.byCtl, prevSubQ.byCtl);
 					subQ.byCtl = prevSubQ.byCtl;
+					Subcode[12] = (UCHAR)(subQ.byCtl << 4 | subQ.byAdr);
 				}
-
 				// 3rd:Write subchannel
 				fwrite(Subcode, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 				OutputSubcode(nLBA, byCurrentTrackNum, 
@@ -865,6 +891,7 @@ BOOL ReadCDAll(
 
 BOOL ReadCDForSearchingOffset(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCSTR pszVendorId,
 	LPCSTR pszProductId,
 	PINT nCombinedOffset,
@@ -933,7 +960,7 @@ BOOL ReadCDForSearchingOffset(
 		aCmd[3] = LOBYTE(HIWORD(nFirstDataLBA));
 		aCmd[4] = HIBYTE(LOWORD(nFirstDataLBA));
 		aCmd[5] = LOBYTE(LOWORD(nFirstDataLBA));
-		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+		if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 			CD_RAW_SECTOR_WITH_SUBCODE_SIZE * 2, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
 			return FALSE;
 		}
@@ -999,6 +1026,7 @@ BOOL ReadCDForSearchingOffset(
 
 BOOL ReadCDPartial(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCTSTR pszOutFile,
 	LPCSTR pszVendorId,
 	INT nStart,
@@ -1061,7 +1089,7 @@ BOOL ReadCDPartial(
 			aCmd[3] = LOBYTE(HIWORD(nLBA));
 			aCmd[4] = HIBYTE(LOWORD(nLBA));
 			aCmd[5] = LOBYTE(LOWORD(nLBA));
-			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+			if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 				CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
 				throw _T("");
 			}
@@ -1094,6 +1122,7 @@ BOOL ReadCDPartial(
 
 BOOL ReadConfiguration(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	PUSHORT pusCurrentMedia,
 	PBOOL bCanCDText,
 	PBOOL bC2ErrorData,
@@ -1111,7 +1140,7 @@ BOOL ReadConfiguration(
 	aCmd[7] = HIBYTE(uiSize);
 	aCmd[8] = LOBYTE(uiSize);
 	OutputLogString(fpLog, _T("Configuration\n"));
-	BOOL bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &pHeader, 
+	BOOL bRet = ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, &pHeader, 
 		(ULONG)uiSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		*pusCurrentMedia = ProfileCdrom;
@@ -1135,7 +1164,7 @@ BOOL ReadConfiguration(
 		PUCHAR pConf = (PUCHAR)ConvParagraphBoundary(pPConf);
 		aCmd[7] = HIBYTE(ulAllLen);
 		aCmd[8] = LOBYTE(ulAllLen);
-		bRet = ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pConf, 
+		bRet = ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, pConf, 
 			ulAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 		if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false. because undefined mmc1..
@@ -1151,6 +1180,7 @@ BOOL ReadConfiguration(
 
 BOOL ReadDeviceInfo(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPSTR pszVendorId,
 	LPSTR pszProductId,
 	FILE* fpLog
@@ -1162,7 +1192,7 @@ BOOL ReadDeviceInfo(
 
 	aCmd[0] = SCSIOP_INQUIRY;
 	aCmd[4] = sizeof(INQUIRYDATA);
-	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, &inquiryData, 
+	if(!ExecCommand(hDevice, pAdress, aCmd, CDB6GENERIC_LENGTH, &inquiryData, 
 		sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -1173,6 +1203,7 @@ BOOL ReadDeviceInfo(
 
 BOOL ReadDVD(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCTSTR pszOutFile,
 	LPCTSTR pszOption,
 	INT nDVDSectorSize,
@@ -1201,7 +1232,7 @@ BOOL ReadDVD(
 		aCmd[5] = 0;
 		aCmd[9] = byTransferLen;
 		aCmd[10] = 0x80; // Streaming
-		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+		if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			OutputErrorString(_T("Not supported Streaming. Changed ForceMediaAccess.\n"));
@@ -1210,7 +1241,7 @@ BOOL ReadDVD(
 		}
 
 		aCmd[5] = LOBYTE(0);
-		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+		if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw _T("");
@@ -1219,7 +1250,7 @@ BOOL ReadDVD(
 			OutputVolumeRecognitionSequence(i, pBuf, fpLog);
 		}
 		aCmd[5] = LOBYTE(32);
-		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+		if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw _T("");
@@ -1231,7 +1262,7 @@ BOOL ReadDVD(
 		}
 		aCmd[4] = HIBYTE(LOWORD(256));
 		aCmd[5] = LOBYTE(LOWORD(256));
-		if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+		if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 			(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw _T("");
@@ -1262,7 +1293,7 @@ BOOL ReadDVD(
 			aCmd[3] = LOBYTE(HIWORD(nLBA));
 			aCmd[4] = HIBYTE(LOWORD(nLBA));
 			aCmd[5] = LOBYTE(LOWORD(nLBA));
-			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pBuf, 
+			if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 				(ULONG)CD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw _T("");
@@ -1275,7 +1306,7 @@ BOOL ReadDVD(
 					aCmd2[3] = LOBYTE(HIWORD(nLBA + i));
 					aCmd2[4] = HIBYTE(LOWORD(nLBA + i));
 					aCmd2[5] = LOBYTE(LOWORD(nLBA + i));
-					if(!ExecCommand(hDevice, aCmd2, CDB10GENERIC_LENGTH, 
+					if(!ExecCommand(hDevice, pAdress, aCmd2, CDB10GENERIC_LENGTH, 
 						pBuf2, (ULONG)uiSize, &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
 						throw _T("");
 					}
@@ -1305,6 +1336,7 @@ BOOL ReadDVD(
 #if 0
 BOOL ReadDVDRaw(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCSTR pszVendorId,
 	LPCTSTR pszOutFile,
 	LPCTSTR pszOption,
@@ -1373,7 +1405,7 @@ BOOL ReadDVDRaw(
 				aCmd[8] = HIBYTE(LOWORD(nLBA));
 				aCmd[9] = LOBYTE(LOWORD(nLBA));
 			}
-			if(!ExecCommand(hDevice, aCmd, cdblen, pBuf, 
+			if(!ExecCommand(hDevice, pAdress, aCmd, cdblen, pBuf, 
 				(ULONG)DVD_RAW_READ * byTransferLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw _T("");
@@ -1424,6 +1456,7 @@ BOOL ReadDVDRaw(
 #endif
 BOOL ReadDVDStructure(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	PINT nDVDSectorSize,
 	FILE* fpLog
 	)
@@ -1438,7 +1471,7 @@ BOOL ReadDVDStructure(
 	aCmd[8] = HIBYTE(uiMaxDVDStructureSize);
 	aCmd[9] = LOBYTE(uiMaxDVDStructureSize);
 
-	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pDiscStructure, 
+	if(!ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, pDiscStructure, 
 		(ULONG)uiMaxDVDStructureSize, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -1496,7 +1529,7 @@ BOOL ReadDVDStructure(
 			aCmd[8] = HIBYTE(pStructureLength[i]);
 			aCmd[9] = LOBYTE(pStructureLength[i]);
 
-			if(!ExecCommand(hDevice, aCmd, CDB12GENERIC_LENGTH, pStructure, 
+			if(!ExecCommand(hDevice, pAdress, aCmd, CDB12GENERIC_LENGTH, pStructure, 
 				pStructureLength[i], &byScsiStatus, _T(__FUNCTION__), __LINE__)) {
 				throw _T("");
 			}
@@ -1521,14 +1554,15 @@ BOOL ReadDVDStructure(
 }
 
 BOOL ReadTestUnitReady(
-	HANDLE hDevice
+	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress
 	)
 {
 	UCHAR byScsiStatus = 0;
 	UCHAR aCmd[CDB6GENERIC_LENGTH] = {0};
 	aCmd[0] = SCSIOP_TEST_UNIT_READY;
 
-	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, NULL, 
+	if(!ExecCommand(hDevice, pAdress, aCmd, CDB6GENERIC_LENGTH, NULL, 
 		0, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -1538,6 +1572,7 @@ BOOL ReadTestUnitReady(
 
 BOOL ReadTOC(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	PINT nLength,
 	FILE* fpLog
 	)
@@ -1548,7 +1583,7 @@ BOOL ReadTOC(
 	aCmd[7] = HIBYTE(CDROM_TOC_SIZE);
 	aCmd[8] = LOBYTE(CDROM_TOC_SIZE);
 
-	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &toc, 
+	if(!ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, &toc, 
 		CDROM_TOC_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__) || 
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		OutputErrorString(_T("Can't get toc\n"));
@@ -1590,6 +1625,7 @@ BOOL ReadTOC(
 
 BOOL ReadTOCFull(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	LPCSTR pszVendorId,
 	LPCSTR pszProductId,
 	BOOL bCanCDText,
@@ -1606,7 +1642,7 @@ BOOL ReadTOCFull(
 	aCmd[7] = HIBYTE(uiFullTocDataSize);
 	aCmd[8] = LOBYTE(uiFullTocDataSize);
 
-	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &fullToc,
+	if(!ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, &fullToc,
 		(ULONG)uiFullTocDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		OutputErrorString(_T("Can't get CDROM_TOC_FULL_TOC_DATA 1\n"));
@@ -1619,7 +1655,7 @@ BOOL ReadTOCFull(
 
 	WriteCcdFileForDisc(uiTocEntries, fullToc.LastCompleteSession, fpCcd);
 	if(bCanCDText) {
-		ReadTOCText(hDevice, fpLog, fpCcd);
+		ReadTOCText(hDevice, pAdress, fpLog, fpCcd);
 	}
 	size_t uiFullTocDataMaxSize = uiFulltocsize + uiFullTocDataSize;
 	if(!strncmp(pszVendorId, "PLEXTOR", 7) &&
@@ -1639,7 +1675,7 @@ BOOL ReadTOCFull(
 	aCmd[8] = LOBYTE(uiFullTocDataMaxSize);
 	BOOL bRet = TRUE;
 	try {
-		if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pFullToc, 
+		if(!ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, pFullToc, 
 			(ULONG)uiFullTocDataMaxSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw _T("Can't get CDROM_TOC_FULL_TOC_DATA 2\n");
@@ -1676,7 +1712,7 @@ BOOL ReadTOCFull(
 					aCmd2[4] = HIBYTE(LOWORD(nLBA));
 					aCmd2[5] = LOBYTE(LOWORD(nLBA));
 
-					if(!ExecCommand(hDevice, aCmd2, CDB12GENERIC_LENGTH, pBuf,
+					if(!ExecCommand(hDevice, pAdress, aCmd2, CDB12GENERIC_LENGTH, pBuf,
 						CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 						|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 						OutputErrorString(_T("Can't read CD for MCN\n"));
@@ -1719,6 +1755,7 @@ BOOL ReadTOCFull(
 
 BOOL ReadTOCText(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	FILE* fpLog,
 	FILE* fpCcd
 	)
@@ -1732,7 +1769,7 @@ BOOL ReadTOCText(
 	aCmd[2] = CDROM_READ_TOC_EX_FORMAT_CDTEXT;
 	aCmd[7] = HIBYTE(uiCDTextDataSize);
 	aCmd[8] = LOBYTE(uiCDTextDataSize);
-	if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, &tocText,
+	if(!ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, &tocText,
 		(ULONG)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		OutputErrorString(_T("Can't get CDROM_TOC_CD_TEXT_DATA\n"));
@@ -1763,7 +1800,7 @@ BOOL ReadTOCText(
 	PCD_TEXT_INFO pInfo = NULL;
 	CHAR* pTmpText = NULL;
 	try {
-		if(!ExecCommand(hDevice, aCmd, CDB10GENERIC_LENGTH, pTocText, 
+		if(!ExecCommand(hDevice, pAdress, aCmd, CDB10GENERIC_LENGTH, pTocText, 
 			(ULONG)uiCDTextDataMaxSize, &byScsiStatus, _T(__FUNCTION__), __LINE__) 
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw _T("Can't get CDROM_TOC_CD_TEXT_DATA_BLOCK\n");
@@ -1986,6 +2023,7 @@ BOOL ReadTOCText(
 
 BOOL SetCDSpeed(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
 	INT nCDSpeedNum,
 	FILE* fpLog
 	)
@@ -2078,7 +2116,7 @@ BOOL SetCDSpeed(
 	aCDCmd[2] = HIBYTE(wCDSpeedList[nCDSpeedNum]);
 	aCDCmd[3] = LOBYTE(wCDSpeedList[nCDSpeedNum]);
 
-	if(!ExecCommand(hDevice, aCDCmd, CDB12GENERIC_LENGTH, &setspeed, 
+	if(!ExecCommand(hDevice, pAdress, aCDCmd, CDB12GENERIC_LENGTH, &setspeed, 
 		sizeof(CDROM_SET_SPEED), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -2098,6 +2136,7 @@ BOOL SetCDSpeed(
 
 BOOL StartStop(
 	HANDLE hDevice,
+	PSCSI_ADDRESS pAdress,
     UCHAR Start,
     UCHAR LoadEject
 	)
@@ -2107,7 +2146,7 @@ BOOL StartStop(
 	aCmd[0] = SCSIOP_START_STOP_UNIT;
 	aCmd[4] = UCHAR(LoadEject << 1 | Start);
 
-	if(!ExecCommand(hDevice, aCmd, CDB6GENERIC_LENGTH, NULL, 0, 
+	if(!ExecCommand(hDevice, pAdress, aCmd, CDB6GENERIC_LENGTH, NULL, 0, 
 		&byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;

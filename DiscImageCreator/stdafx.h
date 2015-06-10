@@ -78,6 +78,11 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 	#define AFLAG "a"
 #endif
 
+typedef struct _DEV_ADDR {
+	HANDLE hDevice;
+	SCSI_ADDRESS addr;
+} DEV_ADDR, *PDEV_ADDR;
+
 #include "convert.h"
 #include "execMMC.h"
 #include "check.h"
