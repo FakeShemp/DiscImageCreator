@@ -191,3 +191,8 @@ fix checking subchannel(RelativeTime)
 **2012-01-19
 fix ReadTOCText function
 => because mmc1 drive isn't defined.
+
+**2012-01-24
+fix subchannel reading
+ plextor + audio only disc => read cd command(0xbe) + read subchannel(0x100[pack])
+=> because if R-W channel bit is full on, reading speed is very slow.

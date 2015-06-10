@@ -9,14 +9,14 @@
 #ifdef _DEBUG
 #define OutputErrorString(str, ...) \
 		{ \
-			_TCHAR c[1024]; \
+			_TCHAR c[4096]; \
 			_stprintf(c, str, __VA_ARGS__); \
 			OutputDebugString(c); \
 		}
 #define OutputLogString(fp, str, ...) \
 		{ \
 			UNREFERENCED_PARAMETER(fp); \
-			_TCHAR c[1024]; \
+			_TCHAR c[4096]; \
 			_stprintf(c, str, __VA_ARGS__); \
 			OutputDebugString(c); \
 		}
@@ -102,7 +102,7 @@ void OutputStorageAdaptorDescriptor(
 
 void OutputInquiryData(
 	PINQUIRYDATA pInquiry,
-	PDISC_DATA pDiscData,
+	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	);
 
@@ -119,7 +119,7 @@ void OutputFeatureNumber(
 	CONST PUCHAR pConf,
 	ULONG ulAllLen,
 	size_t uiSize,
-	PDISC_DATA pDiscData,
+	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	);
 
@@ -399,6 +399,8 @@ void WriteMainChannel(
 	);
 
 void WriteSubChannel(
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	INT nLBA,
 	UCHAR byCurrentTrackNum,
 	PUCHAR pBuf,

@@ -47,8 +47,8 @@ BOOL ExecCommand(
 	SetLastError(NO_ERROR);
 
 	ULONG ulReturned = 0;
-	BOOL bRet = DeviceIoControl(pDevData->hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT, &swb, 
-		ulLength, &swb, ulLength, &ulReturned, NULL);
+	BOOL bRet = DeviceIoControl(pDevData->hDevice, IOCTL_SCSI_PASS_THROUGH_DIRECT,
+		&swb, ulLength, &swb, ulLength, &ulReturned, NULL);
 	*byScsiStatus = swb.ScsiPassThroughDirect.ScsiStatus;
 
 	if(bRet) {
@@ -120,7 +120,8 @@ BOOL ReadVolumeDescriptor(
 
 BOOL CheckCDG(
 	PDEVICE_DATA pDevData,
-	PUCHAR aCmd,
+	PDISC_DATA pDiscData,
+	CONST PUCHAR aCmd,
 	ULONG ulBufLen,
 	PUCHAR pBuf,
 	PBOOL bCDG
@@ -129,6 +130,11 @@ BOOL CheckCDG(
 	BOOL bRet = TRUE;
 	UCHAR byScsiStatus = 0;
 	aCmd[5] = 75;
+	INT nShift = CD_RAW_SECTOR_SIZE;
+	if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly && pDevData->bPlextor)) {
+		nShift += CD_RAW_READ_C2_SIZE_ALT;
+	}
+
 	if(!ExecCommand(pDevData, aCmd, CDB12GENERIC_LENGTH, pBuf, 
 		ulBufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
@@ -137,9 +143,16 @@ BOOL CheckCDG(
 	else {
 		INT nCDG = 0;
 		for(INT i = 0; i < 4; i++) {
-			nCDG += *(pBuf + CD_RAW_SECTOR_SIZE + i * 24);
+			nCDG += *(pBuf + nShift + i * 24);
 		}
-		if(nCDG > 0) {
+		if(nCDG == 0xfc) {
+			// Why R-W bit is full? If it isn't CD+G or CD-MIDI, R-W bit should be off...
+			//  Alanis Morissette - Jagged Little Pill (UK)
+			//  WipEout 2097: The Soundtrack
+			//  and more..
+			*bCDG = FALSE;
+		}
+		else if(nCDG > 0) {
 			*bCDG = TRUE;
 		}
 	}
@@ -216,6 +229,9 @@ BOOL PreserveTrackAttribution(
 			OutputLogString(fpLog, _T("Track %2d, LBA on subchannel: %6d, LBA on TOC: %6d\n"),
 				subQ->byTrackNum, nLBA, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
 			pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
+			if(pLBAStartList[subQ->byTrackNum-1][0] == pLBAStartList[subQ->byTrackNum-1][1]) {
+				pLBAStartList[subQ->byTrackNum-1][0] = -1;
+			}
 		}
 		else {
 			pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
@@ -228,10 +244,12 @@ BOOL PreserveTrackAttribution(
 			pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] -= 1;
 		}
 		// preserve end lba of data track
-		if(pLBAOfDataTrackList[prevSubQ->byTrackNum-1][0] != -1 &&
-			pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] == -1 &&
-			(prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
-				pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] = nLBA - 1;
+		if(prevSubQ->byTrackNum > 0) {
+			if(pLBAOfDataTrackList[prevSubQ->byTrackNum-1][0] != -1 &&
+				pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] == -1 &&
+				(prevSubQ->byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
+					pLBAOfDataTrackList[prevSubQ->byTrackNum-1][1] = nLBA - 1;
+			}
 		}
 		*byCurrentTrackNum = subQ->byTrackNum;
 	}
@@ -255,7 +273,8 @@ BOOL PreserveTrackAttribution(
 	}
 	// preserve index
 	if(prevSubQ->byIndex + 1 == subQ->byIndex && 
-		*byCurrentTrackNum != pDiscData->toc.FirstTrack) {
+		*byCurrentTrackNum >= 0) {
+//		*byCurrentTrackNum != pDiscData->toc.FirstTrack) {
 		if(subQ->byIndex != 1) {
 			pLBAStartList[subQ->byTrackNum-1][subQ->byIndex] = nLBA;
 		}
@@ -267,6 +286,10 @@ BOOL PreserveTrackAttribution(
 					subQ->byTrackNum, nLBA, pDiscData->aTocLBA[subQ->byTrackNum-1][0]);
 			}
 			pLBAStartList[subQ->byTrackNum-1][1] = pDiscData->aTocLBA[subQ->byTrackNum-1][0];
+			if(pLBAStartList[subQ->byTrackNum-1][0] == pLBAStartList[subQ->byTrackNum-1][1]) {
+				// Crow, The - Original Motion Picture Soundtrack (82519-2)
+				pLBAStartList[subQ->byTrackNum-1][0] = -1;
+			}
 		}
 	}
 	if((pDiscData->toc.TrackData[subQ->byTrackNum-1].Control & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
@@ -413,18 +436,26 @@ BOOL CreatingBinCueCcd(
 				i, pModeList[i-1], pbISRCList[i-1], pCtlList[i-1], fpCue);
 			bCatalog = FALSE;
 			WriteCcdFileForTrack(i, pModeList[i-1], pbISRCList[i-1], fpCcd);
+			BYTE byFrame = 0, bySecond = 0, byMinute = 0;
 			if(i == pDiscData->toc.FirstTrack) {
-				WriteCueFileForIndex(1, 0, 0, 0, fpCue);
-				WriteCcdFileForTrackIndex(1, 0, fpCcd);
+				LBAtoMSF(pLBAStartList[i-1][1] - pLBAStartList[i-1][0], 
+					&byFrame, &bySecond, &byMinute);
+				if(pLBAStartList[i-1][1] > 0) {
+					// Crow, The - Original Motion Picture Soundtrack (82519-2)
+					WriteCueFileForIndex(0, 0, 0, 0, fpCue);
+					WriteCcdFileForTrackIndex(0, 0, fpCcd);
+				}
+				WriteCueFileForIndex(1, byFrame, 0, 0, fpCue);
+				WriteCcdFileForTrackIndex(1, pLBAStartList[i-1][1], fpCcd);
 			}
-			// only 1 index
 			else if(pLBAStartList[i-1][0] == -1 && pLBAStartList[i-1][2] == -1) {
+				LBAtoMSF(pLBAStartList[i-1][1] - pLBAStartList[i-1][0], 
+					&byFrame, &bySecond, &byMinute);
 				WriteCueFileForIndex(1, 0, 0, 0, fpCue);
 				WriteCcdFileForTrackIndex(1, pLBAStartList[i-1][1], fpCcd);
 			}
 			else if(pLBAStartList[i-1][0] != -1) {
 				for(UCHAR index = 0; index < MAXIMUM_NUMBER_INDEXES; index++) {
-					BYTE byFrame = 0, bySecond = 0, byMinute = 0;
 					if(pLBAStartList[i-1][index] != -1) {
 						LBAtoMSF(pLBAStartList[i-1][index] - pLBAStartList[i-1][0], 
 							&byFrame, &bySecond, &byMinute);
@@ -435,7 +466,6 @@ BOOL CreatingBinCueCcd(
 			}
 			else {
 				for(UCHAR index = 1; index < MAXIMUM_NUMBER_INDEXES; index++) {
-					BYTE byFrame = 0, bySecond = 0, byMinute = 0;
 					if(pLBAStartList[i-1][index] != -1) {
 						LBAtoMSF(pLBAStartList[i-1][index] - pLBAStartList[i-1][1], 
 							&byFrame, &bySecond, &byMinute);
@@ -579,19 +609,29 @@ BOOL ReadCDAll(
 		ZeroMemory(pCtlList, dwTrackAllocSize);
 		ZeroMemory(pModeList, dwTrackAllocSize);
 		ZeroMemory(pbISRCList, dwTrackPointerAllocSize);
+		if(NULL == (pEndCtlList = (PUCHAR)malloc(dwTrackAllocSize))) {
+			throw _T("Failed to alloc memory pEndCtlList\n");
+		}
+		ZeroMemory(pEndCtlList, dwTrackAllocSize);
 
 		ULONG ulBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE;
-		if(pDiscData->bC2ErrorData && strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
+		if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
 			if(NULL == (fpC2 = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".c2.err"), _T("wb"), 0, 0))) {
 				throw _T("Failed to open .c2.err\n");
 			}
-			ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
+			if(pDevData->bPlextor) {
+				ulBufLen = CD_RAW_SECTOR_WITH_SUBCODE_SIZE + CD_RAW_READ_C2_SIZE_ALT;
+			}
+			else {
+				ulBufLen = CD_RAW_SECTOR_WITH_C2_AND_SUBCODE_SIZE;
+			}
 		}
 
 		if(NULL == (aBuf = (PUCHAR)malloc(ulBufLen + pDevData->adapterDescriptor->AlignmentMask))) {
 			throw _T("Failed to alloc memory aBuf[h]\n");
 		}
 		ZeroMemory(aBuf, ulBufLen + pDevData->adapterDescriptor->AlignmentMask);
+
 		PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf, pDevData);
 		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
 		UCHAR byTransferLen = 1;
@@ -600,31 +640,46 @@ BOOL ReadCDAll(
 		aCmd[8] = byTransferLen;
 		aCmd[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
 			READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
-		if(strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
-			aCmd[9] |= READ_CD_FLAG::C2ErrorBlockData;
-		}
-		aCmd[10] = READ_CD_FLAG::PtoW;
-
-		ReadVolumeDescriptor(pDevData, &pDiscData->toc, aCmd, ulBufLen, pBuf, fpLog);
-		BOOL bCDG = FALSE;
-		CheckCDG(pDevData, aCmd, ulBufLen, pBuf, &bCDG);
-		if(bCDG) {
-			if(NULL == (fpCdg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("wb"), 0, 0))) {
-				throw _T("Failed to open .cdg\n");
+		if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
+			if(pDevData->bPlextor) {
+				aCmd[9] |= READ_CD_FLAG::C2ErrorBlockData;
+			}
+			else {
+				aCmd[9] |= READ_CD_FLAG::C2AndBlockErrorBits;
 			}
 		}
-		if(NULL == (pEndCtlList = (PUCHAR)malloc(dwTrackAllocSize))) {
-			throw _T("Failed to alloc memory pEndCtlList\n");
+		// memo CD+G ripping
+		// raw mode(001b) don't play CDG
+		// plextor:D8                  -> play CDG OK
+		// plextor:READ_CD_FLAG::Pack  -> play CDG OK
+		// plextor:READ_CD_FLAG::Raw   -> play CDG NG (PQ is OK)
+		// slimtype:READ_CD_FLAG::Pack -> play CDG NG (PQ is None)
+		// slimtype:READ_CD_FLAG::Raw  -> play CDG NG (PQ is OK)
+		aCmd[10] = READ_CD_FLAG::Raw;
+
+		BOOL bCDG = FALSE;
+		if(pDiscData->bAudioOnly) {
+			if(!CheckCDG(pDevData, pDiscData, aCmd, ulBufLen, pBuf, &bCDG)) {
+				throw _T("");
+			}
+			if(bCDG) {
+				aCmd[10] = READ_CD_FLAG::Pack;
+				if(NULL == (fpCdg = CreateOrOpenFileW(pszOutFile, NULL, NULL, NULL, _T(".cdg"), _T("wb"), 0, 0))) {
+					throw _T("Failed to open .cdg\n");
+				}
+			}
 		}
-		ZeroMemory(pEndCtlList, dwTrackAllocSize);
-		if(!strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
+		else {
+			ReadVolumeDescriptor(pDevData, &pDiscData->toc, aCmd, ulBufLen, pBuf, fpLog);
+		}
+		if(!pDiscData->bAudioOnly && pDevData->bPlextor) {
 			// PX-504A don't support...
 			// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 			aCmd[0] = 0xD8;
 			aCmd[1] = 0x00;
 			aCmd[8] = 0x00;
 			aCmd[9] = byTransferLen;
-			aCmd[10] = 0x02; // 0=none, 1=Q, 2=P-W, 3=P-W only
+			aCmd[10] = 0x02; // 0=none, 1=Q(sub16[formatted]), 2=P-W(main+sub96[raw]), 3=P-W only(sub96[raw])
 		}
 		else {
 			aCmd[1] = READ_CD_FLAG::CDDA;
@@ -642,7 +697,12 @@ BOOL ReadCDAll(
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw _T("");
 			}
-			AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+			if(pDevData->bC2ErrorData && pDiscData->bAudioOnly && pDevData->bPlextor) {
+				AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_ALT, Subcode);
+			}
+			else {
+				AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+			}
 			pEndCtlList[p] = (UCHAR)((Subcode[12] >> 4) & 0x0F);
 		}
 
@@ -681,7 +741,7 @@ BOOL ReadCDAll(
 		BOOL bCatalog = FALSE;
 		UCHAR byCurrentTrackNum = pDiscData->toc.FirstTrack;
 		OutputLogString(fpLog, 
-			_T("\n-----------------------------------log begin-----------------------------------\n"));
+			_T("\n-----------------------------------log begin------------------------------------\n"));
 
 		for(INT nLBA = nOffsetStart; nLBA < pDiscData->nLength + nOffsetEnd; nLBA++) {
 			if(pDiscData->nStartLBAof2ndSession != -1 && pDiscData->nLastLBAof1stSession == nLBA) {
@@ -693,7 +753,9 @@ BOOL ReadCDAll(
 				prevSubQ.nAbsoluteTime = nLBA + 150;
 				continue;
 			}
-
+#ifdef _DEBUG
+//			nLBA=75;
+#endif
 			// 1st:Read main & sub channel
 			aCmd[2] = HIBYTE(HIWORD(nLBA));
 			aCmd[3] = LOBYTE(HIWORD(nLBA));
@@ -725,7 +787,23 @@ BOOL ReadCDAll(
 				prevSubQ.nAbsoluteTime++;
 				continue;
 			}
-			AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+			if(pDevData->bC2ErrorData && pDiscData->bAudioOnly && pDevData->bPlextor) {
+				// plextor:main+c2+sub
+#ifdef _DEBUG
+//				OutputRawSub96(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_ALT, nLBA, fpLog);
+#endif
+				AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_ALT, Subcode);
+			}
+			else {
+				// slimtype:main+sub+c2
+#ifdef _DEBUG
+//				OutputRawSub96(pBuf + CD_RAW_SECTOR_SIZE, nLBA, fpLog);
+#endif
+				AlignRowSubcode(pBuf + CD_RAW_SECTOR_SIZE, Subcode);
+			}
+#ifdef _DEBUG
+//			OutputRawSub96(Subcode, nLBA, fpLog);
+#endif
 
 			SUB_Q_DATA subQ = {0};
 			subQ.byCtl = (UCHAR)((Subcode[12] >> 4) & 0x0F);
@@ -740,38 +818,51 @@ BOOL ReadCDAll(
 
 			if(0 <= nLBA && nLBA < pDiscData->nLength) {
 				// 2nd:Verification subchannel
-				CheckAndFixSubchannel(&pDiscData->toc, nLBA, Subcode, &subQ, &prevSubQ, &prevPrevSubQ,
-					&byCurrentTrackNum, &bCatalog, pbISRCList, pEndCtlList, pLBAStartList, pLBAOfDataTrackList, fpLog);
+				CheckAndFixSubchannel(&pDiscData->toc, nLBA, Subcode, &subQ,
+					&prevSubQ, &prevPrevSubQ, &byCurrentTrackNum, &bCatalog,
+					pbISRCList, pEndCtlList, pLBAStartList, pLBAOfDataTrackList, fpLog);
 				UCHAR SubcodeRaw[CD_RAW_READ_SUBCODE_SIZE] = {0};
 				// fix raw subchannel
 				AlignColumnSubcode(Subcode, SubcodeRaw);
 				// 3rd:Write subchannel
-				WriteSubChannel(nLBA, byCurrentTrackNum, pBuf, Subcode, SubcodeRaw, fpSub, fpParse, fpCdg);
-				PreserveTrackAttribution(pDiscData, nLBA, &byCurrentTrackNum, &subQ,
-					&prevSubQ, &prevPrevSubQ, pCtlList, pModeList, pLBAStartList, pLBAOfDataTrackList, fpLog);
+				WriteSubChannel(pDevData, pDiscData, nLBA, byCurrentTrackNum, pBuf,
+					Subcode, SubcodeRaw, fpSub, fpParse, fpCdg);
+				PreserveTrackAttribution(pDiscData, nLBA, &byCurrentTrackNum,
+					&subQ, &prevSubQ, &prevPrevSubQ, pCtlList, pModeList,
+					pLBAStartList, pLBAOfDataTrackList, fpLog);
 			}
 
 			// 4th:Write track to scrambled
-			WriteMainChannel(pDiscData, nLBA, nFixStartLBA, nFixEndLBA, uiShift, pLBAStartList, pBuf, fpImg);
-			if(strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
-				fwrite(pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, 
-					sizeof(UCHAR), CD_RAW_READ_C2_SIZE, fpC2);
+			WriteMainChannel(pDiscData, nLBA, nFixStartLBA,
+				nFixEndLBA, uiShift, pLBAStartList, pBuf, fpImg);
+			if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
+				if(pDevData->bPlextor) {
+					// plextor:main+c2+sub
+					fwrite(pBuf + CD_RAW_SECTOR_SIZE, 
+						sizeof(UCHAR), CD_RAW_READ_C2_SIZE_ALT, fpC2);
+				}
+				else {
+					// slimtype:main+sub+c2
+					fwrite(pBuf + CD_RAW_SECTOR_WITH_SUBCODE_SIZE, 
+						sizeof(UCHAR), CD_RAW_READ_C2_SIZE, fpC2);
+				}
 			}
 			UpdateSubchannelQData(&subQ, &prevSubQ, &prevPrevSubQ);
-			OutputString(_T("\rCreating img(LBA) %6d/%6d"), nLBA - nOffsetEnd, pDiscData->nLength - 1);
+			OutputString(
+				_T("\rCreating img(LBA) %6d/%6d"), nLBA - nOffsetEnd, pDiscData->nLength - 1);
 		}
 		OutputString(_T("\n"));
 		FcloseAndNull(fpCdg);
 		FcloseAndNull(fpImg);
 		FcloseAndNull(fpSub);
-		if(strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
+		if(pDevData->bC2ErrorData && (pDiscData->bAudioOnly || !pDevData->bPlextor)) {
 			FcloseAndNull(fpC2);
 		}
 		FcloseAndNull(fpParse);
 		FreeAndNull(aBuf);
 
 		OutputLogString(fpLog, 
-			_T("------------------------------------log end-----------------------------------\n\n"));
+			_T("------------------------------------log end-------------------------------------\n\n"));
 		OutputLogString(fpLog, _T("TOC with pregap\n"));
 		for(INT r = 0; r < pDiscData->toc.LastTrack; r++) {
 			OutputLogString(fpLog, 
@@ -853,7 +944,7 @@ BOOL ReadCDForSearchingOffset(
 	}
 	BOOL bRet = FALSE;
 	INT nDriveSampleOffset = 0;
-	BOOL bGetDrive = GetDriveOffset(pDiscData->pszProductId, &nDriveSampleOffset);
+	BOOL bGetDrive = GetDriveOffset(pDevData->pszProductId, &nDriveSampleOffset);
 	if(!bGetDrive) {
 		CHAR a[6];
 		ZeroMemory(a, sizeof(a));
@@ -877,7 +968,8 @@ BOOL ReadCDForSearchingOffset(
 	else {
 		UCHAR byScsiStatus = 0;
 		UCHAR aCmd[CDB12GENERIC_LENGTH] = {0};
-		PUCHAR aBuf = (PUCHAR)malloc(CD_RAW_SECTOR_WITH_SUBCODE_SIZE * 2 + pDevData->adapterDescriptor->AlignmentMask);
+		PUCHAR aBuf = 
+			(PUCHAR)malloc(CD_RAW_SECTOR_WITH_SUBCODE_SIZE * 2 + pDevData->adapterDescriptor->AlignmentMask);
 		if(!aBuf) {
 			return FALSE;
 		}
@@ -885,7 +977,7 @@ BOOL ReadCDForSearchingOffset(
 
 		INT nDriveOffset = nDriveSampleOffset * 4;
 		UCHAR byTransferLen = 2;
-		if(!strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
+		if(pDevData->bPlextor) {
 			// PX-504A don't support...
 			// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 			aCmd[0] = 0xD8;
@@ -898,7 +990,7 @@ BOOL ReadCDForSearchingOffset(
 			aCmd[8] = byTransferLen;
 			aCmd[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
 				READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
-			aCmd[10] = READ_CD_FLAG::PtoW;
+			aCmd[10] = READ_CD_FLAG::Raw;
 		}
 		aCmd[2] = HIBYTE(HIWORD(pDiscData->nFirstDataLBA));
 		aCmd[3] = LOBYTE(HIWORD(pDiscData->nFirstDataLBA));
@@ -936,8 +1028,8 @@ BOOL ReadCDForSearchingOffset(
 			if(bGetDrive) {
 				OutputLogString(fpLog, _T("(Drive offset data referes to www.accuraterip.com)"));
 			}
-			OutputLogString(fpLog, _T("\n"));
-			OutputLogString(fpLog, 
+			OutputLogString(fpLog,
+				_T("\n")
 				_T("\t Combined Offset(Byte) %6d, (Samples) %5d\n")
 				_T("\t-   Drive Offset(Byte) %6d, (Samples) %5d\n")
 				_T("\t----------------------------------------------\n")
@@ -967,7 +1059,6 @@ BOOL ReadCDForSearchingOffset(
 
 BOOL ReadCDPartial(
 	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
 	INT nStart,
 	INT nEnd,
@@ -1010,7 +1101,7 @@ BOOL ReadCDPartial(
 
 		UCHAR Subcode[CD_RAW_READ_SUBCODE_SIZE] = {0};
 		UCHAR byTransferLen = 1;
-		if(!strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
+		if(pDevData->bPlextor) {
 			// PX-504A don't support...
 			// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 			aCmd[0] = 0xD8;
@@ -1023,7 +1114,7 @@ BOOL ReadCDPartial(
 			aCmd[8] = byTransferLen;
 			aCmd[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
 				READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
-			aCmd[10] = READ_CD_FLAG::PtoW;
+			aCmd[10] = READ_CD_FLAG::Raw;
 		}
 		for(INT nLBA = nStart; nLBA <= nEnd; nLBA++) {
 			aCmd[2] = HIBYTE(HIWORD(nLBA));
@@ -1108,11 +1199,11 @@ BOOL ReadConfiguration(
 			ulAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__);
 		if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false. because undefined mmc1..
-			OutputLogString(fpLog, _T("\tUndefined this drive\n"));
+			OutputLogString(fpLog, _T("\tUndefined SCSIOP_GET_CONFIGURATION Command on this drive\n"));
 			bRet = TRUE;
 		}
 		else {
-			OutputFeatureNumber(pConf, ulAllLen, uiSize, pDiscData, fpLog);
+			OutputFeatureNumber(pConf, ulAllLen, uiSize, pDevData, fpLog);
 		}
 		FreeAndNull(pPConf);
 	}
@@ -1121,7 +1212,6 @@ BOOL ReadConfiguration(
 
 BOOL ReadDeviceInfo(
 	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
 	FILE* fpLog
 	)
 {
@@ -1136,7 +1226,7 @@ BOOL ReadDeviceInfo(
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
 	}
-	OutputInquiryData(&inquiryData, pDiscData, fpLog);
+	OutputInquiryData(&inquiryData, pDevData, fpLog);
 	return TRUE;
 }
 
@@ -1579,20 +1669,20 @@ BOOL ReadTOCFull(
 	size_t uiTocEntries = uiFulltocsize / sizeof(CDROM_TOC_FULL_TOC_DATA_BLOCK);
 
 	WriteCcdFileForDisc(uiTocEntries, fullToc.LastCompleteSession, fpCcd);
-	if(pDiscData->bCanCDText) {
+	if(pDevData->bCanCDText) {
 		ReadTOCText(pDevData, fpLog, fpCcd);
 	}
 	size_t uiFullTocDataMaxSize = uiFulltocsize + uiFullTocDataSize;
-	if(!strncmp(pDiscData->pszVendorId, "PLEXTOR", 7) &&
-		!strncmp(pDiscData->pszProductId, "DVDR   PX-712A", 14) &&
+	if(pDevData->bPlextor &&
+		!strncmp(pDevData->pszProductId, "DVDR   PX-712A", 14) &&
 		uiFullTocDataMaxSize > 1028) {
 		OutputErrorString(_T("On this drive, can't get CDROM_TOC_FULL_TOC_DATA of this disc\n"));
 		return TRUE;
 	}
-	OutputLogString(fpLog, _T("CDROM_TOC_FULL_TOC_DATA:Length %d\n"), uiFulltocsize);
+	OutputLogString(fpLog, _T("CDROM_TOC_FULL_TOC_DATA Length: %d\n"), uiFulltocsize);
 	PUCHAR pPFullToc = (PUCHAR)malloc(uiFullTocDataMaxSize + pDevData->adapterDescriptor->AlignmentMask);
 	if(!pPFullToc) {
-		OutputString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
+		OutputErrorString(_T("Can't alloc memory [L:%d]\n"), __LINE__);
 		return FALSE;
 	}
 	PUCHAR pFullToc = (PUCHAR)ConvParagraphBoundary(pPFullToc, pDevData);
@@ -1619,7 +1709,7 @@ BOOL ReadTOCFull(
 				UCHAR aCmd2[CDB12GENERIC_LENGTH] = {0};
 				PUCHAR pBuf = (PUCHAR)ConvParagraphBoundary(aBuf2, pDevData);
 
-				if(!strncmp(pDiscData->pszVendorId, "PLEXTOR", 7)) {
+				if(pDevData->bPlextor) {
 					// PX-504A don't support...
 					// Sense data, Key:Asc:Ascq: 05:20:00(ILLEGAL_REQUEST. INVALID COMMAND OPERATION CODE)
 					aCmd2[0] = 0xD8;
@@ -1632,7 +1722,7 @@ BOOL ReadTOCFull(
 					aCmd2[8] = 0x01;
 					aCmd2[9] = READ_CD_FLAG::SyncData | READ_CD_FLAG::SubHeader | 
 						READ_CD_FLAG::UserData | READ_CD_FLAG::MainHeader | READ_CD_FLAG::Edc;
-					aCmd2[10] = READ_CD_FLAG::PtoW;
+					aCmd2[10] = READ_CD_FLAG::Raw;
 				}
 				UCHAR ucMode = 0;
 				for(INT nLBA =  aLBA[uiIdx]; nLBA < aLBA[uiIdx] + 100; nLBA++) {
@@ -1696,13 +1786,13 @@ BOOL ReadTOCText(
 	aCmd[8] = LOBYTE(uiCDTextDataSize);
 	BOOL bRet = ExecCommand(pDevData, aCmd, CDB10GENERIC_LENGTH, &tocText,
 		(ULONG)uiCDTextDataSize, &byScsiStatus, _T(__FUNCTION__), __LINE__);
+	OutputLogString(fpLog, _T("CDTEXT on SCSIOP_READ_TOC\n"));
 	if(!bRet || byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false. because undefined mmc1..
 		OutputLogString(fpLog, _T("\tUndefined CDROM_READ_TOC_EX_FORMAT_CDTEXT on this drive\n"));
 		bRet = TRUE;
 	}
 	else {
-		OutputLogString(fpLog, _T("CDTEXT on SCSIOP_READ_TOC\n"));
 		size_t uiTocTextsize = 
 			MAKEWORD(tocText.Length[1], tocText.Length[0]) - sizeof(tocText.Length);
 		size_t uiTocTextEntries = uiTocTextsize / sizeof(CDROM_TOC_CD_TEXT_DATA_BLOCK);

@@ -62,30 +62,6 @@ int exec(_TCHAR* argv[], ExecType execType)
 			throw;
 		}
 #endif
-		ULONG ulReturned = 0;
-		bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
-			sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
-		OutputScsiAdress(&devData, fpLog);
-
-		STORAGE_DESCRIPTOR_HEADER header = {0};
-		STORAGE_PROPERTY_QUERY query;
-		query.QueryType = PropertyStandardQuery;
-		query.PropertyId = StorageAdapterProperty;
-
-		bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
-			sizeof(STORAGE_PROPERTY_QUERY), &header, sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
-
-		devData.adapterDescriptor = (PSTORAGE_ADAPTER_DESCRIPTOR)malloc(header.Size);
-		if (devData.adapterDescriptor == NULL) {
-			throw FALSE;
-		}
-		ZeroMemory(devData.adapterDescriptor, header.Size);
-		bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
-			sizeof(STORAGE_PROPERTY_QUERY), devData.adapterDescriptor, header.Size, &ulReturned, FALSE);
-		OutputStorageAdaptorDescriptor(&devData, fpLog);
-#ifdef WIN64
-		devData.AlignmentMask64 = (ULONG64)(devData.adapterDescriptor->AlignmentMask) & 0x00000000FFFFFFFF;
-#endif
 		if(execType == c) {
 			StartStop(&devData, START_UNIT_CODE, START_UNIT_CODE);
 		}
@@ -97,17 +73,44 @@ int exec(_TCHAR* argv[], ExecType execType)
 			if(!bRet) {
 				throw FALSE;
 			}
-			DISC_DATA discData = {0};
-			discData.nLastLBAof1stSession = -1;
-			discData.nStartLBAof2ndSession = -1;
-			bRet = ReadDeviceInfo(&devData, &discData, fpLog);
+			ULONG ulReturned = 0;
+			bRet = DeviceIoControl(devData.hDevice, IOCTL_SCSI_GET_ADDRESS, &devData.adress, 
+				sizeof(SCSI_ADDRESS), &devData.adress, sizeof(SCSI_ADDRESS), &ulReturned, NULL);
+			OutputScsiAdress(&devData, fpLog);
+
+			STORAGE_DESCRIPTOR_HEADER header = {0};
+			STORAGE_PROPERTY_QUERY query;
+			query.QueryType = PropertyStandardQuery;
+			query.PropertyId = StorageAdapterProperty;
+
+			bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
+				sizeof(STORAGE_PROPERTY_QUERY), &header, sizeof(STORAGE_DESCRIPTOR_HEADER), &ulReturned, FALSE);
+
+			devData.adapterDescriptor = (PSTORAGE_ADAPTER_DESCRIPTOR)malloc(header.Size);
+			if (devData.adapterDescriptor == NULL) {
+				throw FALSE;
+			}
+			ZeroMemory(devData.adapterDescriptor, header.Size);
+			bRet = DeviceIoControl(devData.hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, 
+				sizeof(STORAGE_PROPERTY_QUERY), devData.adapterDescriptor, header.Size, &ulReturned, FALSE);
+			OutputStorageAdaptorDescriptor(&devData, fpLog);
+#ifdef WIN64
+			devData.AlignmentMask64 = (ULONG64)(devData.adapterDescriptor->AlignmentMask) & 0x00000000FFFFFFFF;
+#endif
+			bRet = ReadDeviceInfo(&devData, fpLog);
 			if(!bRet) {
 				throw FALSE;
 			}
-			discData.pszVendorId[8] = '\0';
-			discData.pszProductId[16] = '\0';
-
+			devData.pszVendorId[8] = '\0';
+			devData.pszProductId[16] = '\0';
+			if(!strncmp(devData.pszVendorId, "PLEXTOR", 7)) {
+				devData.bPlextor = TRUE;
+			}
 			SetCDSpeed(&devData, _ttoi(argv[3]), fpLog);
+
+			DISC_DATA discData = {0};
+			discData.nLastLBAof1stSession = -1;
+			discData.nStartLBAof2ndSession = -1;
 			bRet = ReadConfiguration(&devData, &discData, fpLog);
 			if(!bRet) {
 				throw FALSE;
@@ -138,11 +141,11 @@ int exec(_TCHAR* argv[], ExecType execType)
 				bRet = ReadCDForSearchingOffset(&devData, &discData, fpLog);
 
 				if(execType == rd) {
-					bRet = ReadCDPartial(&devData, &discData, argv[4],
+					bRet = ReadCDPartial(&devData, argv[4],
 						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::All, bDC);
 				}
 				else if(execType == ra) {
-					bRet = ReadCDPartial(&devData, &discData, argv[4],
+					bRet = ReadCDPartial(&devData, argv[4],
 						_ttoi(argv[5]), _ttoi(argv[6]), READ_CD_FLAG::CDDA, bDC);
 				}
 				else if(bRet == TRUE && execType == rall) {
@@ -314,7 +317,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		now = time(NULL);
 		ts = localtime(&now);
 		_tcsftime(buf, sizeof(buf), _T("%Y-%m-%d(%a) %H:%M:%S"), ts);
-		OutputString(_T("Start->%s\n"), buf);
+		OutputString(_T("Start -> %s\n"), buf);
 		BOOL bRet = exec(argv, execType);
 		if(bRet) {
 			Beep(440, 200);   // do
@@ -339,7 +342,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		now = time(NULL);
 		ts = localtime(&now);
 		_tcsftime(buf, sizeof(buf), _T("%Y-%m-%d(%a) %H:%M:%S"), ts);
-		OutputString(_T("End->%s\n"), buf);
+		OutputString(_T("End -> %s\n"), buf);
 	}
 	return 0;
 }

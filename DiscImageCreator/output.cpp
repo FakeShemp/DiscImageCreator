@@ -230,7 +230,7 @@ void OutputStorageAdaptorDescriptor(
 
 void OutputInquiryData(
 	PINQUIRYDATA pInquiry,
-	PDISC_DATA pDiscData,
+	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	)
 {
@@ -296,8 +296,8 @@ void OutputInquiryData(
 		BOOLEAN_TO_STRING_YES_NO(pInquiry->LinkedCommands),
 		BOOLEAN_TO_STRING_YES_NO(pInquiry->RelativeAddressing));
 
-	strncpy(pDiscData->pszVendorId, (PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId));
-	strncpy(pDiscData->pszProductId, (PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId));
+	strncpy(pDevData->pszVendorId, (PCHAR)pInquiry->VendorId, sizeof(pInquiry->VendorId));
+	strncpy(pDevData->pszProductId, (PCHAR)pInquiry->ProductId, sizeof(pInquiry->ProductId));
 #ifdef UNICODE
 	TCHAR buf1[8] = {0};
 	TCHAR buf2[16] = {0};
@@ -503,7 +503,7 @@ void OutputFeatureNumber(
 	CONST PUCHAR pConf,
 	ULONG ulAllLen,
 	size_t uiSize,
-	PDISC_DATA pDiscData,
+	PDEVICE_DATA pDevData,
 	FILE* fpLog
 	)
 {
@@ -653,8 +653,8 @@ void OutputFeatureNumber(
 				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x01),
 				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x02),
 				BOOLEAN_TO_STRING_YES_NO(pConf[uiSize+4+n] & 0x80));
-			pDiscData->bCanCDText = (BOOL)(pConf[uiSize+4+n] & 0x01);
-			pDiscData->bC2ErrorData = (BOOL)((pConf[uiSize+4+n] & 0x02) >> 1);
+			pDevData->bCanCDText = (BOOL)(pConf[uiSize+4+n] & 0x01);
+			pDevData->bC2ErrorData = (BOOL)((pConf[uiSize+4+n] & 0x02) >> 1);
 			break;
 		case FeatureDvdRead:
 			OutputLogString(fpLog,
@@ -1151,14 +1151,14 @@ void OutputParsingSubfile(
 	FILE* fpSub = CreateOrOpenFileW(pszSubfile, NULL, NULL, NULL, _T(".sub"), _T("rb"), 0, 0);
 	FILE* fpParse = CreateOrOpenFileW(pszSubfile, NULL, NULL, NULL, _T(".sub.txt"), _T(WFLAG), 0, 0);
 	if (!fpSub || !fpParse) {
-		OutputErrorString(_T("Failed to open file .sub [F:%s][L: %d]"), 
+		OutputErrorString(_T("Failed to open file .sub [F:%s][L:%d]"), 
 			_T(__FUNCTION__), __LINE__);
 		return;
 	}
 	ULONG datasize = GetFilesize(fpSub, 0);
 	PUCHAR data = (PUCHAR)malloc(datasize);
 	if(!data) {
-		OutputErrorString(_T("Cannot alloc memory [F:%s][L: %d]\n"), 
+		OutputErrorString(_T("Cannot alloc memory [F:%s][L:%d]\n"), 
 			_T(__FUNCTION__), __LINE__);
 		return;
 	}
@@ -1214,7 +1214,7 @@ void OutputScsiStatus(
 			for(INT i = 0; i < sizeof(aScsiStatus) / sizeof(INT) / 2; i++) {
 				if(swb->ScsiPassThroughDirect.ScsiStatus == aScsiStatus[i][0]) {
 					OutputErrorString(
-						_T("\nSCSI bus status codes:%02x-%s [F:%s][L: %d]\n"), 
+						_T("\nSCSI bus status codes:%02x-%s [F:%s][L:%d]\n"), 
 						aScsiStatus[i][0], (_TCHAR*)aScsiStatus[i][1], 
 						pszFuncname, nLineNum);
 					OutputSense(key, ASC, ASCQ);
@@ -1776,6 +1776,7 @@ void OutputSubcode(
 			_tcscat(str, _T("RtoW:USER mode"));
 			break;
 		default:
+			_tcscat(str, _T("RtoW:Reserved"));
 			break;
 		}
 		if(i < 3) {
@@ -1816,7 +1817,7 @@ void OutputTocFull(
 			break;
 		case 0xA2:
 			OutputLogString(fpLog, 
-				_T("\tSession %d, Leadout MSF %02d:%02d:%02d\n"), 
+				_T("\tSession %d, Leadout   MSF %02d:%02d:%02d\n"), 
 				pTocData[a].SessionNumber, pTocData[a].Msf[0], 
 				pTocData[a].Msf[1], pTocData[a].Msf[2]);
 			if(pTocData[a].SessionNumber == 1) {
@@ -3259,6 +3260,8 @@ void WriteMainChannel(
 }
 
 void WriteSubChannel(
+	PDEVICE_DATA pDevData,
+	PDISC_DATA pDiscData,
 	INT nLBA,
 	UCHAR byCurrentTrackNum,
 	PUCHAR pBuf,
@@ -3270,8 +3273,14 @@ void WriteSubChannel(
 	)
 {
 	fwrite(Subcode, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpSub);
-	OutputSubcode(nLBA, byCurrentTrackNum, 
-		Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
+	if(pDevData->bC2ErrorData && pDiscData->bAudioOnly && pDevData->bPlextor) {
+		OutputSubcode(nLBA, byCurrentTrackNum, 
+			Subcode, pBuf + CD_RAW_SECTOR_SIZE + CD_RAW_READ_C2_SIZE_ALT, fpParse);
+	}
+	else {
+		OutputSubcode(nLBA, byCurrentTrackNum, 
+			Subcode, pBuf + CD_RAW_SECTOR_SIZE, fpParse);
+	}
 	if(fpCdg != NULL) {
 		fwrite(SubcodeRaw, sizeof(UCHAR), CD_RAW_READ_SUBCODE_SIZE, fpCdg);
 	}

@@ -84,19 +84,23 @@ typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
 	#define AFLAG "a"
 #endif
 
-typedef struct _DEVICE_DATA {
+#pragma pack(1)
+__declspec(align(1)) typedef struct _DEVICE_DATA {
 	HANDLE hDevice;
 	SCSI_ADDRESS adress;
 	PSTORAGE_ADAPTER_DESCRIPTOR adapterDescriptor;
 #ifdef WIN64
 	ULONG64 AlignmentMask64;
 #endif
+	CHAR pszVendorId[8+1];
+	CHAR pszProductId[16+1];
+	BOOL bPlextor;
+	BOOL bCanCDText;
+	BOOL bC2ErrorData;
 } DEVICE_DATA, *PDEVICE_DATA;
 
 typedef struct _DISC_DATA {
 	CDROM_TOC toc;
-	CHAR pszVendorId[8+1];
-	CHAR pszProductId[16+1];
 	USHORT pusCurrentMedia;
 	INT aSessionNum[MAXIMUM_NUMBER_TRACKS];
 	INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2];
@@ -106,10 +110,9 @@ typedef struct _DISC_DATA {
 	INT nAdjustSectorNum;
 	INT nCombinedOffset;
 	INT nLength;
-	BOOL bCanCDText;
-	BOOL bC2ErrorData;
 	BOOL bAudioOnly;
 } DISC_DATA, *PDISC_DATA;
+# pragma pack ()
 
 #include "convert.h"
 #include "execMMC.h"

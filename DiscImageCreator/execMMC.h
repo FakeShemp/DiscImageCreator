@@ -3,6 +3,7 @@
  */
 
 #define CD_RAW_READ				(2048)
+#define CD_RAW_READ_C2_SIZE_ALT	(294)
 #define CD_RAW_SECTOR_SIZE		(2352)
 #define DVD_RAW_READ			(2064)
 #define DRIVE_MAX_SPEED			(72)
@@ -39,9 +40,9 @@ typedef struct _READ_CD_FLAG {
 
 	enum _SubData {
 		SubNone = 0,
-		PtoW = 1,
+		Raw = 1,
 		Q = 1 << 1,
-		RtoW = 1 << 3
+		Pack = 1 << 2
 	} SubData;
 } READ_CD_FLAG;
 
@@ -77,7 +78,6 @@ BOOL ReadCDForSearchingOffset(
 
 BOOL ReadCDPartial(
 	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
 	LPCTSTR pszOutFile,
 	INT nStart,
 	INT nEnd,
@@ -93,7 +93,6 @@ BOOL ReadConfiguration(
 
 BOOL ReadDeviceInfo(
 	PDEVICE_DATA pDevData,
-	PDISC_DATA pDiscData,
 	FILE* fpLog
 	);
 
