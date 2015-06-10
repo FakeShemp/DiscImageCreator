@@ -2,26 +2,28 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #include "stdafx.h"
+#include "struct.h"
+#include "convert.h"
 
 /*
 	<src>
-		pBuf[2352-2447] & 0x80 -> P channel
-		pBuf[2352-2447] & 0x40 -> Q channel
-		pBuf[2352-2447] & 0x20 -> R channel
-		pBuf[2352-2447] & 0x10 -> S channel
-		pBuf[2352-2447] & 0x08 -> T channel
-		pBuf[2352-2447] & 0x04 -> U channel
-		pBuf[2352-2447] & 0x02 -> V channel
-		pBuf[2352-2447] & 0x01 -> W channel
+		lpBuf[2352-2447] & 0x80 -> P channel
+		lpBuf[2352-2447] & 0x40 -> Q channel
+		lpBuf[2352-2447] & 0x20 -> R channel
+		lpBuf[2352-2447] & 0x10 -> S channel
+		lpBuf[2352-2447] & 0x08 -> T channel
+		lpBuf[2352-2447] & 0x04 -> U channel
+		lpBuf[2352-2447] & 0x02 -> V channel
+		lpBuf[2352-2447] & 0x01 -> W channel
 	<dst>
-		Subcode[ 0-11] -> P channel
-		Subcode[12-23] -> Q channel
-		Subcode[24-35] -> R channel
-		Subcode[36-47] -> S channel
-		Subcode[48-59] -> T channel
-		Subcode[60-71] -> U channel
-		Subcode[72-83] -> V channel
-		Subcode[84-95] -> W channel
+		lpSubcode[ 0-11] -> P channel
+		lpSubcode[12-23] -> Q channel
+		lpSubcode[24-35] -> R channel
+		lpSubcode[36-47] -> S channel
+		lpSubcode[48-59] -> T channel
+		lpSubcode[60-71] -> U channel
+		lpSubcode[72-83] -> V channel
+		lpSubcode[84-95] -> W channel
 */
 /*
 	//p(0x80)	//0x80  0	//0x40 L1	//0x20 L2	//0x10 L3	//0x08 L4	//0x04 L5	//0x02 L6	//0x01 L7
@@ -34,22 +36,22 @@
 	//w(0x01)	//0x80 R7	//0x40 R6	//0x20 R5	//0x10 R4	//0x08 R3	//0x04 R2	//0x02 R1	//0x01 0
 */
 BOOL AlignRowSubcode(
-	CONST PUCHAR pColumnSubcode,
-	PUCHAR pRowSubcode
+	LPBYTE lpColumnSubcode,
+	LPBYTE lpRowSubcode
 	)
 {
-	ZeroMemory(pRowSubcode, CD_RAW_READ_SUBCODE_SIZE);
+	ZeroMemory(lpRowSubcode, CD_RAW_READ_SUBCODE_SIZE);
 	INT nRow = 0;
-	for(INT bitNum = 0; bitNum < CHAR_BIT; bitNum++) {
-		for(INT nColumn = 0; nColumn < CD_RAW_READ_SUBCODE_SIZE; nRow++) {
+	for (INT bitNum = 0; bitNum < CHAR_BIT; bitNum++) {
+		for (INT nColumn = 0; nColumn < CD_RAW_READ_SUBCODE_SIZE; nRow++) {
 			UINT nMask = 0x80;
-			for(INT nShift = 0; nShift < CHAR_BIT; nShift++, nColumn++) {
+			for (INT nShift = 0; nShift < CHAR_BIT; nShift++, nColumn++) {
 				INT n = nShift - bitNum;
-				if(n > 0) {
-					pRowSubcode[nRow] |= (pColumnSubcode[nColumn] >> n) & nMask;
+				if (n > 0) {
+					lpRowSubcode[nRow] |= (lpColumnSubcode[nColumn] >> n) & nMask;
 				}
 				else {
-					pRowSubcode[nRow] |= (pColumnSubcode[nColumn] << abs(n)) & nMask;
+					lpRowSubcode[nRow] |= (lpColumnSubcode[nColumn] << abs(n)) & nMask;
 				}
 				nMask >>= 1;
 			}
@@ -60,23 +62,23 @@ BOOL AlignRowSubcode(
 
 /*
 	<src>
-		pRowSubcode[ 0-11] -> P channel
-		pRowSubcode[12-23] -> Q channel
-		pRowSubcode[24-35] -> R channel
-		pRowSubcode[36-47] -> S channel
-		pRowSubcode[48-59] -> T channel
-		pRowSubcode[60-71] -> U channel
-		pRowSubcode[72-83] -> V channel
-		pRowSubcode[84-95] -> W channel
+		lpRowSubcode[ 0-11] -> P channel
+		lpRowSubcode[12-23] -> Q channel
+		lpRowSubcode[24-35] -> R channel
+		lpRowSubcode[36-47] -> S channel
+		lpRowSubcode[48-59] -> T channel
+		lpRowSubcode[60-71] -> U channel
+		lpRowSubcode[72-83] -> V channel
+		lpRowSubcode[84-95] -> W channel
 	<dst>
-		pColumnSubcode[0-96] & 0x80 -> P channel
-		pColumnSubcode[0-96] & 0x40 -> Q channel
-		pColumnSubcode[0-96] & 0x20 -> R channel
-		pColumnSubcode[0-96] & 0x10 -> S channel
-		pColumnSubcode[0-96] & 0x08 -> T channel
-		pColumnSubcode[0-96] & 0x04 -> U channel
-		pColumnSubcode[0-96] & 0x02 -> V channel
-		pColumnSubcode[0-96] & 0x01 -> W channel
+		lpColumnSubcode[0-96] & 0x80 -> P channel
+		lpColumnSubcode[0-96] & 0x40 -> Q channel
+		lpColumnSubcode[0-96] & 0x20 -> R channel
+		lpColumnSubcode[0-96] & 0x10 -> S channel
+		lpColumnSubcode[0-96] & 0x08 -> T channel
+		lpColumnSubcode[0-96] & 0x04 -> U channel
+		lpColumnSubcode[0-96] & 0x02 -> V channel
+		lpColumnSubcode[0-96] & 0x01 -> W channel
 */
 /*
 	//p(0x80)	//0x80  0	//0x40 L1	//0x20 L2	//0x10 L3	//0x08 L4	//0x04 L5	//0x02 L6	//0x01 L7
@@ -89,21 +91,21 @@ BOOL AlignRowSubcode(
 	//w(0x01)	//0x80 R7	//0x40 R6	//0x20 R5	//0x10 R4	//0x08 R3	//0x04 R2	//0x02 R1	//0x01 0
 */
 BOOL AlignColumnSubcode(
-	CONST PUCHAR pRowSubcode,
-	PUCHAR pColumnSubcode
+	LPBYTE lpRowSubcode,
+	LPBYTE lpColumnSubcode
 	)
 {
 	INT nRow = 0;
 	UINT nMask = 0x80;
-	for(INT bitNum = 0; bitNum < CHAR_BIT; bitNum++) {
-		for(INT nColumn = 0; nColumn < CD_RAW_READ_SUBCODE_SIZE; nRow++) {
-			for(INT nShift = 0; nShift < CHAR_BIT; nShift++, nColumn++) {
+	for (INT bitNum = 0; bitNum < CHAR_BIT; bitNum++) {
+		for (INT nColumn = 0; nColumn < CD_RAW_READ_SUBCODE_SIZE; nRow++) {
+			for (INT nShift = 0; nShift < CHAR_BIT; nShift++, nColumn++) {
 				INT n = nShift - bitNum;
-				if(n > 0) {
-					pColumnSubcode[nColumn] |= (pRowSubcode[nRow] << n) & nMask;
+				if (n > 0) {
+					lpColumnSubcode[nColumn] |= (lpRowSubcode[nRow] << n) & nMask;
 				}
 				else {
-					pColumnSubcode[nColumn] |= (pRowSubcode[nRow] >> abs(n)) & nMask;
+					lpColumnSubcode[nColumn] |= (lpRowSubcode[nRow] >> abs(n)) & nMask;
 				}
 			}
 		}
@@ -112,28 +114,28 @@ BOOL AlignColumnSubcode(
 	return TRUE;
 }
 
-UCHAR BcdToDec(
-	UCHAR bySrc
+BYTE BcdToDec(
+	BYTE bySrc
 	)
 {
-	return (UCHAR)(((bySrc >> 4) & 0x0F) * 10 + (bySrc & 0x0F));
+	return (BYTE)(((bySrc >> 4) & 0x0F) * 10 + (bySrc & 0x0F));
 }
 
-UCHAR DecToBcd(
-	UCHAR bySrc
+BYTE DecToBcd(
+	BYTE bySrc
 	)
 {
 	INT m = 0;
 	INT n = bySrc;
 	m += n / 10;
 	n -= m * 10;
-	return (UCHAR)(m << 4 | n);
+	return (BYTE)(m << 4 | n);
 }
 
 INT MSFtoLBA(
-	UCHAR byFrame, 
-	UCHAR bySecond, 
-	UCHAR byMinute
+	BYTE byFrame, 
+	BYTE bySecond, 
+	BYTE byMinute
 	)
 {
 	return byFrame + 75 * (bySecond + 60 * byMinute);
@@ -141,25 +143,33 @@ INT MSFtoLBA(
 
 VOID LBAtoMSF(
 	INT nLBA, 
-	PUCHAR byFrame, 
-	PUCHAR bySecond, 
-	PUCHAR byMinute
+	LPBYTE byFrame, 
+	LPBYTE bySecond, 
+	LPBYTE byMinute
 	)
 {
-	*byFrame = (UCHAR)(nLBA % 75);
+	*byFrame = (BYTE)(nLBA % 75);
 	nLBA /= 75;
-	*bySecond = (UCHAR)(nLBA % 60);
+	*bySecond = (BYTE)(nLBA % 60);
 	nLBA /= 60;
-	*byMinute = (UCHAR)(nLBA);
+	*byMinute = (BYTE)(nLBA);
 }
 
 VOID LittleToBig(
-	_TCHAR* out,
-	CONST _TCHAR* in,
-	INT cnt
+	_TCHAR* pOut,
+	_TCHAR* pIn,
+	INT nCnt
 	)
 {
-	for(INT a = 0; a < cnt; a++) {
-		REVERSE_BYTES_SHORT(&out[a], &in[a]);
+	for (INT a = 0; a < nCnt; a++) {
+		REVERSE_BYTES_SHORT(&pOut[a], &pIn[a]);
 	}
+}
+
+LPBYTE ConvParagraphBoundary(
+	PDEVICE_DATA pDevData,
+	LPBYTE pv
+	)
+{
+	return (LPBYTE)(((UINT_PTR)pv + pDevData->AlignmentMask) & ~pDevData->AlignmentMask);
 }

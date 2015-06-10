@@ -1,40 +1,47 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
+#pragma once
+#include "forwardDeclaration.h"
 
 BOOL AlignRowSubcode(
-	CONST PUCHAR pBuf,
-	PUCHAR Subcode
+	LPBYTE lpColumnSubcode,
+	LPBYTE lpRowSubcode
 	);
 
 BOOL AlignColumnSubcode(
-	CONST PUCHAR pRowSubcode,
-	PUCHAR pColumnSubcode
+	LPBYTE lpRowSubcode,
+	LPBYTE lpColumnSubcode
 	);
 
-UCHAR BcdToDec(
-	UCHAR bySrc
+BYTE BcdToDec(
+	BYTE bySrc
 	);
 
-UCHAR DecToBcd(
-	UCHAR bySrc
+BYTE DecToBcd(
+	BYTE bySrc
 	);
 
 INT MSFtoLBA(
-	UCHAR byFrame,
-	UCHAR bySecond,
-	UCHAR byMinute
+	BYTE byFrame,
+	BYTE bySecond,
+	BYTE byMinute
 	);
 
 VOID LBAtoMSF(
 	INT nLBA,
-	PUCHAR byFrame,
-	PUCHAR bySecond,
-	PUCHAR byMinute
+	LPBYTE byFrame,
+	LPBYTE bySecond,
+	LPBYTE byMinute
 	);
 
 VOID LittleToBig(
-	_TCHAR* out,
-	CONST _TCHAR* in,
-	INT cnt
+	_TCHAR* pOut,
+	_TCHAR* pIn,
+	INT nCnt
+	);
+
+LPBYTE ConvParagraphBoundary(
+	PDEVICE_DATA pDevData,
+	LPBYTE pv
 	);

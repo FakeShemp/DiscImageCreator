@@ -1,27 +1,36 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
+#pragma once
+#include "forwardDeclaration.h"
+#include "enum.h"
 
-USHORT GetCrc16CCITT(
-	UCHAR c[],
-	INT n
+BOOL GetCreatedFileList(
+	PHANDLE h,
+	PWIN32_FIND_DATA lp,
+	LPTSTR szPathWithoutFileName
 	);
 
 BOOL GetDriveOffset(
-	LPCSTR pszProductId,
-	PINT nDriveOffset
+	LPCSTR szProductId,
+	LPINT lpDriveOffset
 	);
 
-ULONG GetFilesize(
-	LONG nOffset,
+DWORD GetFileSize(
+	LONG lOffset,
 	FILE *fp
 	);
 
-UCHAR GetMode(
-	CONST PUCHAR pBuf
+UINT64 GetFileSize64(
+	INT64 n64Offset,
+	FILE *fp
+	);
+
+BYTE GetMode(
+	LPBYTE lpBuf
 	);
 
 BOOL GetWriteOffset(
 	PDISC_DATA pDiscData,
-	CONST PUCHAR pBuf
+	LPBYTE lpBuf
 	);

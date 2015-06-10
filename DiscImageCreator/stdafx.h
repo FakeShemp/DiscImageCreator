@@ -9,26 +9,27 @@
 
 // TODO: プログラムに必要な追加ヘッダーをここで参照してください。
 
-#pragma warning( disable : 4514 )
-#pragma warning( disable : 4711 )
-#pragma warning( push )
-#pragma warning( disable : 4668 )
-#pragma warning( disable : 4820 )
+#pragma warning(disable:4514 4711 4820)
+#pragma warning(push)
+#pragma warning(disable:4324 4365 4668)
 #include <stddef.h>
 #include <stdio.h>
+#include <shlwapi.h>
 #include <tchar.h>
 #include <time.h>
+#include <TlHelp32.h>
 #include <windows.h>
+#include <winioctl.h>
 #include <WinSock.h>
 
 // SPTI(need Windows Driver Kit(wdk))
 #include <ntddcdrm.h> // inc\api
 #include <ntddcdvd.h> // inc\api
-#include <winioctl.h> // inc\api
 #include <ntddmmc.h> // inc\api
 #include <ntddscsi.h> // inc\api
 #define _NTSCSI_USER_MODE_
 #include <scsi.h> // inc\ddk
+#undef _NTSCSI_USER_MODE_
 //#include <dsm.h> // inc\ddk
 
 // reference
@@ -53,102 +54,19 @@
 
 typedef struct _SCSI_PASS_THROUGH_WITH_BUFFERS {
     SCSI_PASS_THROUGH   ScsiPassThrough;
-    PTRALIGN UCHAR      SenseInfoBuffer[SPTWB_SENSE_LENGTH];
-    PTRALIGN UCHAR      DataBuffer[SPTWB_DATA_LENGTH];
+    PTRALIGN BYTE      SenseInfoBuffer[SPTWB_SENSE_LENGTH];
+    PTRALIGN BYTE      DataBuffer[SPTWB_DATA_LENGTH];
 } SCSI_PASS_THROUGH_WITH_BUFFERS, *PSCSI_PASS_THROUGH_WITH_BUFFERS;
 
 typedef struct _SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER {
     SCSI_PASS_THROUGH_DIRECT    ScsiPassThroughDirect;
-    PTRALIGN UCHAR              SenseInfoBuffer[SPTWB_SENSE_LENGTH];
+    PTRALIGN BYTE              SenseInfoBuffer[SPTWB_SENSE_LENGTH];
 } SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER, *PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER;
 /////////////////////////// end spliting from dsm.h ///////////////////////////
-#pragma warning( pop )
-
-#ifdef WIN64
-	typedef INT64 _INT;
-#else
-	typedef INT _INT;
-#endif
-
-#ifdef UNICODE
-	#define WFLAG "w, ccs=UTF-8"
-	#define AFLAG "a, ccs=UTF-8"
-#else
-	#define WFLAG "w"
-	#define AFLAG "a"
-#endif
-
-#define META_CATALOG_SIZE	(13)
-
-typedef struct _ExtArg {
-	BOOL bPre;
-	BOOL bC2;
-	BOOL bIsrc;
-	BOOL bCmi;
-} ExtArg;
-
-typedef struct _LogFile {
-	FILE* fpDriveLog;
-	FILE* fpDiscLog;
-	FILE* fpErrorLog;
-} LogFile;
-
-#pragma pack(1)
-__declspec(align(1)) typedef struct _DEVICE_DATA {
-	HANDLE hDevice;
-	SCSI_ADDRESS address;
-	UINT_PTR AlignmentMask;
-	CHAR pszVendorId[8+1];
-	CHAR pszProductId[16+1];
-	BOOL bPlextor;
-	BOOL bPlextorPX760A;
-	BOOL bPlextorPX755A;
-	BOOL bPlextorPX716A;
-	BOOL bPlextorPX712A;
-	BOOL bPlextorPX708A;
-	BOOL bPlextorPX320A;
-	BOOL bPlextorPXW5232A;
-	BOOL bPlextorPXW5224A;
-	BOOL bPlextorPXW4824A;
-	BOOL bPlextorPXW4012A;
-	BOOL bPlextorPXW2410A;
-	BOOL bPlextorPXW1610A;
-	BOOL bPlextorPXW1210A;
-	BOOL bPlextorPXW8432T;
-	BOOL bCanCDText;
-	BOOL bC2ErrorData;
-} DEVICE_DATA, *PDEVICE_DATA;
-
-typedef struct _DISC_DATA {
-	CDROM_TOC toc;
-	USHORT usCurrentMedia;
-	UINT* aSessionNum;
-	INT aTocLBA[MAXIMUM_NUMBER_TRACKS][2];
-	INT nFirstDataLBA;
-	INT nLastLBAof1stSession;
-	INT nStartLBAof2ndSession;
-	INT nAdjustSectorNum;
-	INT nCombinedOffset;
-	INT nLength;
-	UCHAR nLastTrackForFullToc;
-	BOOL bAudioOnly;
-	_TCHAR szCatalog[META_CATALOG_SIZE+1];
-	_TCHAR **szISRC;
-	_TCHAR **szTitle;
-	_TCHAR **szPerformer;
-	_TCHAR **szSongWriter;
-} DISC_DATA, *PDISC_DATA;
-# pragma pack ()
+#pragma warning(pop)
 
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #define new new(_NORMAL_BLOCK,__FILE__,__LINE__)
 #endif
-#include "convert.h"
-#include "execIoctl.h"
-#include "execMMC.h"
-#include "check.h"
-#include "get.h"
-#include "output.h"
-#include "outputGD.h"

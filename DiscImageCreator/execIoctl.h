@@ -1,19 +1,29 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
+#pragma once
+#include "forwardDeclaration.h"
 
-BOOL ReadFloppy(
+BOOL DiskGetMediaTypes(
 	PDEVICE_DATA pDevData,
-	LPCTSTR pszOutFile,
-	FILE* fpLog
+	LPCTSTR pszPath
 	);
 
-BOOL ReadScsiGetAddress(
-	PDEVICE_DATA pDevData,
-	FILE* fpLog
+BOOL ScsiGetAddress(
+	PDEVICE_DATA pDevData
 	);
 
-BOOL ReadStorageQueryProperty(
+BOOL ScsiPassThroughDirect(
 	PDEVICE_DATA pDevData,
-	FILE* fpLog
+	PVOID lpCdbCmd,
+	BYTE byCdbCmdLength,
+	PVOID pvBuffer,
+	DWORD dwBufferLength,
+	LPBYTE byScsiStatus,
+	LPCTSTR pszFuncName,
+	LONG lLineNum
+	);
+
+BOOL StorageQueryProperty(
+	PDEVICE_DATA pDevData
 	);

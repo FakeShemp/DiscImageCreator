@@ -1,82 +1,58 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
+#pragma once
+#include "forwardDeclaration.h"
 
-BOOL IsValidRelativeTime(
-	CONST PSUB_Q_DATA prevSubQ,
-	CONST PSUB_Q_DATA subQ,
-	CONST PUCHAR Subcode,
+BOOL CheckAndFixSubchannel(
+	PEXT_ARG pExtArg,
+	PDISC_DATA pDiscData,
+	LPBYTE lpSubcode,
+	PSUB_Q_DATA pNextSubQ,
+	PSUB_Q_DATA pSubQ,
+	PSUB_Q_DATA pPrevSubQ,
+	PSUB_Q_DATA pPrevPrevSubQ,
+	LPBYTE lpCurrentTrackNum,
+	LPBOOL lpCatalog,
+	LPBOOL lpISRCList,
+	LPBYTE lpEndCtlList,
+	LPINT* lpLBAStartList,
+	LPINT* lpLBAOfDataTrackList,
 	INT nLBA
 	);
 
-BOOL IsValidAbsoluteTime(
-	CONST PSUB_Q_DATA prevSubQ,
-	CONST PSUB_Q_DATA subQ,
-	CONST PUCHAR Subcode,
-	INT nLBA
+BOOL CheckC2Error(
+	PDISC_DATA pDiscData,
+	PC2_ERROR_DATA pC2ErrorData,
+	PREAD_CD_TRANSFER_DATA pTransferData,
+	LPBYTE lpBuf,
+	UINT uiC2ErrorLBACnt
 	);
 
-BOOL IsValidControl(
-	CONST PSUB_Q_DATA prevPrevSubQ,
-	CONST PSUB_Q_DATA prevSubQ,
-	CONST PSUB_Q_DATA subQ,
-	UCHAR byEndCtl
-	);
-
-BOOL IsValidDataHeader(
-	CONST PUCHAR src
-	);
-
-BOOL IsValidIndex(
-	CONST PSUB_Q_DATA prevPrevSubQ,
-	CONST PSUB_Q_DATA prevSubQ,
-	CONST PSUB_Q_DATA subQ,
-	PBOOL bPrevIndex,
-	PBOOL bPrevPrevIndex
-	);
-
-BOOL IsValidISRC(
-	CONST PUCHAR Subcode
-	);
-
-BOOL IsValidMCN(
-	CONST PUCHAR Subcode
-	);
-
-BOOL IsValidTrackNumber(
-	CONST PSUB_Q_DATA prevPrevSubQ,
-	CONST PSUB_Q_DATA prevSubQ,
-	CONST PSUB_Q_DATA subQ,
-	UCHAR byFirstTrackNum,
-	UCHAR byLastTrackNum,
-	PBOOL bPrevTrackNum
+BOOL CheckByteError(
+	PC2_ERROR_DATA pC2ErrorData,
+	LPBYTE lpBuf,
+	DWORD dwBufLen,
+	INT nSlideLBANum,
+	UINT i
 	);
 
 BOOL Is3DOData(
-	CONST PUCHAR src
+	LPBYTE lpSrc
 	);
 
 BOOL IsMacData(
-	CONST PUCHAR src
+	LPBYTE lpSrc
 	);
 
 BOOL IsPlextorDrive(
 	PDEVICE_DATA pDevData
 	);
 
-BOOL CheckAndFixSubchannel(
-	ExtArg* extArg,
-	PDISC_DATA pDiscData,
-	PUCHAR Subcode,
-	PSUB_Q_DATA subQ,
-	PSUB_Q_DATA prevSubQ,
-	PSUB_Q_DATA prevPrevSubQ,
-	PUCHAR byCurrentTrackNum,
-	PBOOL bCatalog,
-	PBOOL aISRC,
-	PUCHAR aEndCtl,
-	PINT* aLBAStart,
-	PINT* aLBAOfDataTrack,
-	INT nLBA,
-	FILE* fpLog
+BOOL IsValidDataHeader(
+	LPBYTE lpSrc
+	);
+
+BOOL IsValidMCN(
+	LPBYTE lpSubcode
 	);

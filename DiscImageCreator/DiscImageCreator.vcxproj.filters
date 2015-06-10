@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="_external">
+      <UniqueIdentifier>{d35268ec-8112-4a08-91a9-0180ab5497ed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -36,10 +39,49 @@
     <ClInclude Include="output.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="outputGD.h">
+    <ClInclude Include="execIoctl.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="execIoctl.h">
+    <ClInclude Include="_external\crc16ccitt.h">
+      <Filter>_external</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\crc32.h">
+      <Filter>_external</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\md5.h">
+      <Filter>_external</Filter>
+    </ClInclude>
+    <ClInclude Include="_external\sha1.h">
+      <Filter>_external</Filter>
+    </ClInclude>
+    <ClInclude Include="execMMCforDVD.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="execMMCforCD.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="outputMMCLog.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="outputIoctlLog.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="init.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="set.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="calcHash.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="struct.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="enum.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="ForwardDeclaration.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -65,10 +107,40 @@
     <ClCompile Include="output.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="outputGD.cpp">
+    <ClCompile Include="execIoctl.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="execIoctl.cpp">
+    <ClCompile Include="_external\crc16ccitt.cpp">
+      <Filter>_external</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\crc32.cpp">
+      <Filter>_external</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\sha1.cpp">
+      <Filter>_external</Filter>
+    </ClCompile>
+    <ClCompile Include="_external\md5c.cpp">
+      <Filter>_external</Filter>
+    </ClCompile>
+    <ClCompile Include="calcHash.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="execMMCforDVD.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="execMMCforCD.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="outputMMCLog.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="outputIoctlLog.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="init.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="set.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

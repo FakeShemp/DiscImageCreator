@@ -2,87 +2,114 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #include "stdafx.h"
+#include "struct.h"
+#include "check.h"
+#include "convert.h"
+#include "get.h"
+#include "output.h"
 
-#define CRCPOLY1  0x1021U  /* x^{16}+x^{12}+x^5+1 */
-// init val = 0, output xor = 0xFFFF, shift left
-USHORT GetCrc16CCITT(
-	UCHAR c[],
-	INT n
+// These global variable is set at pringAndSetArg().
+extern _TCHAR g_szCurrentdir[_MAX_PATH];
+extern _TCHAR g_drive[_MAX_DRIVE];
+extern _TCHAR g_dir[_MAX_DIR];
+
+BOOL GetCreatedFileList(
+	PHANDLE h,
+	PWIN32_FIND_DATA lp,
+	LPTSTR szPathWithoutFileName
 	)
 {
-	USHORT r = 0;
-	for(INT i = 0; i < n; i++) {
-		r ^= (USHORT)c[i] << (16 - CHAR_BIT);
-		for(INT j = 0; j < CHAR_BIT; j++) {
-			if(r & 0x8000U) {
-				r = (r << 1) ^ CRCPOLY1;
-			}
-			else {
-				r <<= 1;
-			}
+	_TCHAR drive[_MAX_DRIVE] = { 0 };
+	_TCHAR dir[_MAX_DIR] = { 0 };
+	if (g_drive[0] == 0 || g_dir[0] == 0) {
+		_TCHAR szTmpPath[_MAX_PATH] = { 0 };
+		_tcsncpy(szTmpPath, g_szCurrentdir, _MAX_PATH);
+		if (!PathAddBackslash(szTmpPath)) {
+			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+			return FALSE;
 		}
+		_tsplitpath(szTmpPath, drive, dir, NULL, NULL);
 	}
-	return ~r & 0xFFFFU;
+	else {
+		_tcsncpy(drive, g_drive, _MAX_DRIVE);
+		_tcsncpy(dir, g_dir, _MAX_DIR);
+	}
+	// "*" is wild card
+	_stprintf(szPathWithoutFileName, _T("%s\\%s\\*"), drive, dir);
+
+	*h = FindFirstFile(szPathWithoutFileName, lp);
+	if (*h == INVALID_HANDLE_VALUE) {
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+		OutputErrorString(_T("%s\n"), szPathWithoutFileName);
+			return FALSE;
+	}
+	else {
+		// delete '*'
+		szPathWithoutFileName[_tcslen(szPathWithoutFileName) - 1] = '\0';
+	}
+	return TRUE;
 }
 
 BOOL GetDriveOffset(
-	LPCSTR pszProductId,
-	PINT nDriveOffset
+	LPCSTR szProductId,
+	LPINT lpDriveOffset
 	)
 {
 	BOOL bGetOffset = FALSE;
 	FILE* fpDrive = OpenProgrammabledFile(_T("driveOffset.txt"), _T("r"));
 	if (!fpDrive) {
-		OutputErrorString(_T("Failed to open file [F:%s][L:%d]:%s"), 
-			_T(__FUNCTION__), __LINE__, _T("driveOffset.txt\n"));
+		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
 
-	CHAR szProduct[16+1] = {0};
-	for(INT src = 0, dst = 0; dst < sizeof(szProduct) - 1; dst++) {
-		if(pszProductId[dst] == ' ' && (pszProductId[dst+1] == ' ' || 
-			pszProductId[dst+1] == '\0')) {
+	CHAR szProduct[DRIVE_PRODUCT_ID_SIZE + 1] = { 0 };
+	for (INT src = 0, dst = 0; dst < sizeof(szProduct) - 1; dst++) {
+		if (szProductId[dst] == ' ' && (szProductId[dst + 1] == ' ' ||
+			szProductId[dst + 1] == '\0')) {
 			continue;
 		}
-		szProduct[src++] = pszProductId[dst];
+		szProduct[src++] = szProductId[dst];
 	}
 
-	PCHAR trimId[5] = {0};
-	PCHAR id = NULL;
-	trimId[0] = strtok(szProduct, " ");
-	// get model pszString (ex. PX-755A)
-	for(INT nRoop = 1; nRoop < 5; nRoop++) {
-		trimId[nRoop] = strtok(NULL, " ");
-		if(trimId[nRoop] != NULL) {
-			id = trimId[nRoop];
+	PCHAR pTrimId[5] = { 0 };
+	PCHAR pId = NULL;
+	pTrimId[0] = strtok(szProduct, " ");
+	// get model string (ex. PX-755A)
+	for (INT nRoop = 1; nRoop < 5; nRoop++) {
+		pTrimId[nRoop] = strtok(NULL, " ");
+		if (pTrimId[nRoop] != NULL) {
+			pId = pTrimId[nRoop];
 		}
 		else {
-			if(trimId[1] == NULL) {
-				id = trimId[0];
+			if (pTrimId[1] == NULL) {
+				pId = pTrimId[0];
 			}
 			break;
 		}
 	}
-	if(id != NULL) {
-		PCHAR tp[10] = {0};
-		CHAR buf[1024] = {0};
+	if (pId != NULL) {
+		PCHAR pTrimBuf[10] = { 0 };
+		CHAR lpBuf[1024] = { 0 };
 
-		while((fgets(buf, sizeof(buf), fpDrive)) != NULL) {
-			tp[0] = strtok(buf, " 	"); // space & tab
-			for(INT nRoop = 1; nRoop < 10; nRoop++) {
-				tp[nRoop] = strtok(NULL, " 	"); // space & tab
+		while((fgets(lpBuf, sizeof(lpBuf), fpDrive)) != NULL) {
+			pTrimBuf[0] = strtok(lpBuf, " 	"); // space & tab
+			for (INT nRoop = 1; nRoop < 10; nRoop++) {
+				pTrimBuf[nRoop] = strtok(NULL, " 	"); // space & tab
 			}
-			if(*tp[0] == '\n' || (*tp[1] != '-' && *tp[2] != '-')) {
+			if (pTrimBuf[0] == NULL || pTrimBuf[1] == NULL || pTrimBuf[2] == NULL) {
 				continue;
 			}
-			for(INT nRoop = 0; nRoop < 10 && tp[nRoop] != NULL; nRoop++) {
-				if(strstr(tp[nRoop], id) != NULL) {
-					*nDriveOffset = atoi(tp[nRoop+1]);
+			else if (*pTrimBuf[0] == '\n' || (*pTrimBuf[1] != '-' && *pTrimBuf[2] != '-')) {
+				continue;
+			}
+			for (INT nRoop = 0; nRoop < 10 && pTrimBuf[nRoop] != NULL; nRoop++) {
+				if (strstr(pTrimBuf[nRoop], pId) != NULL) {
+					*lpDriveOffset = atoi(pTrimBuf[nRoop+1]);
 					bGetOffset = TRUE;
 					break;
 				}
 			}
-			if(bGetOffset) {
+			if (bGetOffset) {
 				break;
 			}
 		}
@@ -91,32 +118,45 @@ BOOL GetDriveOffset(
 	return bGetOffset;
 }
 
-ULONG GetFilesize(
-	LONG nOffset,
+DWORD GetFileSize(
+	LONG lOffset,
 	FILE *fp
 	)
 {
-	ULONG filesize = 0;
+	DWORD dwFileSize = 0;
 	if (fp != NULL) {
 		fseek(fp, 0, SEEK_END);
-		filesize = (ULONG)ftell(fp);
-		fseek(fp, nOffset, SEEK_SET);
+		dwFileSize = (DWORD)ftell(fp);
+		fseek(fp, lOffset, SEEK_SET);
 	}
-
-	return filesize;
+	return dwFileSize;
 }
 
-UCHAR GetMode(
-	CONST PUCHAR pBuf
+UINT64 GetFileSize64(
+	INT64 n64Offset,
+	FILE *fp
 	)
 {
-	UCHAR byMode = DATA_BLOCK_MODE0;
-	if(IsValidDataHeader(pBuf)) {
-		if((pBuf[15] & 0x60) == 0x60) {
-			byMode = BcdToDec((UCHAR)(pBuf[15] ^ 0x60));
+	UINT64 ui64FileSize = 0;
+	if (fp != NULL) {
+		_fseeki64(fp, 0, SEEK_END);
+		ui64FileSize = (UINT64)_ftelli64(fp);
+		_fseeki64(fp, n64Offset, SEEK_SET);
+	}
+	return ui64FileSize;
+}
+
+BYTE GetMode(
+	LPBYTE lpBuf
+	)
+{
+	BYTE byMode = DATA_BLOCK_MODE0;
+	if (IsValidDataHeader(lpBuf)) {
+		if ((lpBuf[15] & 0x60) == 0x60) {
+			byMode = BcdToDec((BYTE)(lpBuf[15] ^ 0x60));
 		}
 		else {
-			byMode = BcdToDec(pBuf[15]);
+			byMode = BcdToDec(lpBuf[15]);
 		}
 	}
 	return byMode;
@@ -124,15 +164,15 @@ UCHAR GetMode(
 
 BOOL GetWriteOffset(
 	PDISC_DATA pDiscData,
-	CONST PUCHAR pBuf
+	LPBYTE lpBuf
 	)
 {
 	BOOL bRet = FALSE;
-	for(INT i = 0; i < CD_RAW_SECTOR_SIZE * 2; i++) {
-		if(IsValidDataHeader(pBuf + i)) {
-			UCHAR sm = BcdToDec((UCHAR)(pBuf[i+12] ^ 0x01));
-			UCHAR ss = BcdToDec((UCHAR)(pBuf[i+13] ^ 0x80));
-			UCHAR sf = BcdToDec((UCHAR)(pBuf[i+14]));
+	for (INT i = 0; i < CD_RAW_SECTOR_SIZE * 2; i++) {
+		if (IsValidDataHeader(lpBuf + i)) {
+			BYTE sm = BcdToDec((BYTE)(lpBuf[i + 12] ^ 0x01));
+			BYTE ss = BcdToDec((BYTE)(lpBuf[i + 13] ^ 0x80));
+			BYTE sf = BcdToDec((BYTE)(lpBuf[i + 14]));
 			INT tmpLBA = MSFtoLBA(sf, ss, sm) - 150;
 			pDiscData->nCombinedOffset = 
 				CD_RAW_SECTOR_SIZE * -(tmpLBA - pDiscData->nFirstDataLBA) + i;

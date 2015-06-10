@@ -1,6 +1,16 @@
 /*
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
+#pragma once
+#include "forwardDeclaration.h"
+
+#ifdef UNICODE
+#define WFLAG "w, ccs=UTF-8"
+#define AFLAG "a, ccs=UTF-8"
+#else
+#define WFLAG "w"
+#define AFLAG "a"
+#endif
 
 #define BOOLEAN_TO_STRING_TRUE_FALSE(_b_) \
 	( (_b_) ? _T("True") : _T("False") )
@@ -9,361 +19,108 @@
 	( (_b_) ? _T("Yes") : _T("No") )
 
 #define OutputString(str, ...) \
-		{ \
-			_tprintf(str, __VA_ARGS__); \
-		}
+{ \
+	_tprintf(str, __VA_ARGS__); \
+}
 #ifdef _DEBUG
+extern _TCHAR logBuffer[2048];
 #define OutputErrorString(str, ...) \
-		{ \
-			_TCHAR c[4096]; \
-			_stprintf(c, str, __VA_ARGS__); \
-			OutputDebugString(c); \
-		}
-#define OutputLogString(fp, str, ...) \
-		{ \
-			UNREFERENCED_PARAMETER(fp); \
-			_TCHAR c[4096]; \
-			_stprintf(c, str, __VA_ARGS__); \
-			OutputDebugString(c); \
-		}
+{ \
+	_stprintf(logBuffer, str, __VA_ARGS__); \
+	OutputDebugString(logBuffer); \
+}
+#define OutputDiscLog(str, ...) \
+{ \
+	_stprintf(logBuffer, str, __VA_ARGS__); \
+	OutputDebugString(logBuffer); \
+}
+#define OutputDriveLog(str, ...) \
+{ \
+	_stprintf(logBuffer, str, __VA_ARGS__); \
+	OutputDebugString(logBuffer); \
+}
+#define OutputErrorLog(str, ...) \
+{ \
+	_stprintf(logBuffer, str, __VA_ARGS__); \
+	OutputDebugString(logBuffer); \
+}
 #else
+// If it uses g_LogFile, call InitLogFile()
+extern _LOG_FILE g_LogFile;
 #define OutputErrorString(str, ...) \
-		{ \
-			_ftprintf(stderr, str, __VA_ARGS__); \
-		}
-#define OutputLogString(fp, str, ...) \
-		{ \
-			_ftprintf(fp, str, __VA_ARGS__); \
-		}
+{ \
+	_ftprintf(stderr, str, __VA_ARGS__); \
+}
+#define OutputDiscLog(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpDisc, str, __VA_ARGS__); \
+}
+#define OutputDriveLog(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
+}
+#define OutputErrorLog(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpError, str, __VA_ARGS__); \
+}
+#define FlushLog() \
+{ \
+	fflush(g_LogFile.fpDisc); \
+	fflush(g_LogFile.fpDrive); \
+	fflush(g_LogFile.fpError); \
+}
 #endif
 
 #define FcloseAndNull(fp) \
-		{ \
-			if(fp) { \
-				fclose(fp); \
-				fp = NULL; \
-			} \
-		}
+{ \
+	if (fp) { \
+		fclose(fp); \
+		fp = NULL; \
+	} \
+}
 
-#define FreeAndNull(buf) \
-		{ \
-			if(buf) { \
-				free(buf); \
-				buf = NULL; \
-			} \
-		}
+#define FreeAndNull(lpBuf) \
+{ \
+	if (lpBuf) { \
+		free(lpBuf); \
+		lpBuf = NULL; \
+	} \
+}
 
 FILE* CreateOrOpenFileW(
-	LPCTSTR pszSrcPath,
+	LPCTSTR pszPath,
 	LPTSTR pszOutPath,
-	LPTSTR pszFileNameWithoutPath,
-	LPTSTR pszFileNameWithoutPathAndExt,
+	LPTSTR pszPathWithoutPath,
+	LPTSTR pszPathWithoutPathAndExt,
 	LPCTSTR pszExt,
 	LPCTSTR pszMode,
-	UINT nTrackNum,
-	UINT nMaxTrackNum
+	UINT uiTrackNum,
+	UINT uiMaxTrackNum
 	);
 
 FILE* CreateOrOpenFileA(
-	LPCSTR pszSrcPath,
+	LPCSTR pszPath,
 	LPSTR pszOutPath,
-	LPSTR pszFileNameWithoutPath,
+	LPSTR pszPathWithoutPath,
 	LPCSTR pszExt,
 	LPCSTR pszMode,
-	INT nTrackNum,
-	INT nMaxTrackNum
+	UINT uiTrackNum,
+	UINT uiMaxTrackNum
 	);
 
 FILE* OpenProgrammabledFile(
-	LPCTSTR pszFilename,
+	LPCTSTR pszPath,
 	LPCTSTR pszMode
 	);
 
-VOID OutputIoctlInfoScsiStatus(
-	CONST PSCSI_PASS_THROUGH_DIRECT_WITH_BUFFER swb,
-	PUCHAR byScsiStatus,
-	LPCTSTR pszFuncname,
-	INT nLineNum
-	);
-
-VOID OutputIoctlInfoSense(
-	UCHAR byKey,
-	UCHAR byAsc,
-	UCHAR byAscq
-	);
-
-VOID OutputIoctlScsiAddress(
-	PDEVICE_DATA pDevData,
-	FILE* fpLog
-	);
-
-VOID OutputIoctlStorageAdaptorDescriptor(
-	PSTORAGE_ADAPTER_DESCRIPTOR adapterDescriptor,
-	FILE* fpLog
-	);
-
-VOID OutputIoctlFloppyInfo(
-	PDISK_GEOMETRY geom,
-	FILE* fpLog
-	);
-
-VOID OutputMmcBufferCapacity(
-	PUCHAR buf,
-	FILE* fpLog
-	);
-
-VOID OutputMmcDriveSpeed(
-	PCDROM_SET_SPEED pSetspeed,
-	FILE* fpLog
-	);
-
-VOID OutputMmcDiscInformation(
-	CONST PUCHAR pInfo,
-	FILE* fpLog
-	);
-
-VOID OutputMmcFeatureNumber(
-	PDEVICE_DATA pDevData,
-	CONST PUCHAR pConf,
-	ULONG ulAllLen,
-	size_t uiSize,
-	FILE* fpLog
-	);
-
-VOID OutputMmcFeatureProfileType(
-	USHORT usFeatureProfileType,
-	FILE* fpLog
-	);
-
-VOID OutputMmcInquiryData(
-	PDEVICE_DATA pDevData,
-	PINQUIRYDATA pInquiry,
-	FILE* fpLog
-	);
-
-VOID OutputMmcTocWithPregap(
-	PDISC_DATA pDiscData,
-	PUCHAR pCtlList,
-	PUCHAR pModeList,
-	PINT* pLBAStartList,
-	FILE* fpLog
-	);
-
-VOID OutputMmcToc(
-	PDISC_DATA pDiscData,
-	FILE* fpLog
-	);
-
-VOID OutputMmcTocFull(
-	PDISC_DATA pDiscData,
-	CONST PCDROM_TOC_FULL_TOC_DATA fullToc,
-	CONST PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData,
-	size_t uiTocEntries,
-	FILE* fpCcd,
-	FILE* fpLog
-	);
-
-VOID OutputMmcTocCDText(
-	PDISC_DATA pDiscData,
-	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
-	PCHAR pTmpText,
-	size_t uiTocTextEntries,
-	size_t allTextSize,
-	FILE* fpLog
-	);
-
-VOID OutputMmcTocCDWText(
-	PDISC_DATA pDiscData,
-	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
-	PCHAR pTmpText,
-	size_t uiFirstEntries,
-	size_t uiTocTextEntries,
-	size_t allTextSize,
-	FILE* fpLog
-	);
-
-VOID OutputMmcCdC2Error296(
-	CONST PUCHAR pBuf,
-	INT nLBA,
-	FILE* fpLog
-	);
-
-VOID OutputMmcCdMain2352(
-	CONST PUCHAR pBuf,
-	INT nLBA,
-	FILE* fpLog
-	);
-
-VOID OutputMmcCdSub96Align(
-	CONST PUCHAR pBuf,
-	INT nLBA,
-	FILE* fpLog
-	);
-
-VOID OutputMmcCdSub96Raw(
-	CONST PUCHAR pBuf,
-	INT nLBA,
-	FILE* fpLog
-	);
-
-VOID OutputMmcCdSubToLog(
-	PDISC_DATA pDiscData,
-	CONST PUCHAR Subcode,
-	CONST PUCHAR SubcodeOrg,
-	INT nLBA,
-	INT nTrackNum,
-	FILE* fpParse
-	);
-
-VOID OutputMmcDVDStructureFormat(
-	PDISC_DATA pDiscData,
-	INT nNum,
-	CONST PUCHAR pFormat, 
-	CONST PUCHAR pStructure,
-	CONST PUSHORT pStructureLength,
-	PUCHAR nLayerNum,
-	size_t i,
-	FILE* fpLog
-	);
-
-VOID OutputMmcDVDCopyrightManagementInformation(
-	PUCHAR pBuf2,
-	INT nLBA,
-	INT i,
-	FILE* fpLog
-	);
-
-VOID OutputFsVolumeDescriptor(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsBootRecord(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-bool OutputFsTagFormat(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsPrimaryVolumeDescriptorForISO9660(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsPrimaryVolumeDescriptorForJoliet(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsVolumePartitionDescriptor(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsVolumeStructureDescriptorFormat(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsVolumeRecognitionSequence(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsBootDescriptor(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsAnchorVolumeDescriptorPointer(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsPrimaryVolumeDescriptorForUDF(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsImplementationUseVolumeDescriptor(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsPartitionDescriptor(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsLogicalVolumeDescriptor(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsUnallocatedSpaceDescriptor(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsVolumeDescriptorPointer(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsVolumeDescriptorSequence(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID OutputFsMasterDirectoryBlocks(
-	CONST PUCHAR buf,
-	INT idx,
-	FILE* fpLog
-	);
-
-VOID SetISRCToString(
-	PDISC_DATA pDiscData,
-	CONST PUCHAR Subcode,
-	LPTSTR pszOutString,
-	INT nTrackNum,
-	BOOL bCopy
-	);
-
-VOID SetMCNToString(
-	PDISC_DATA pDiscData,
-	CONST PUCHAR Subcode,
-	LPTSTR pszOutString,
-	BOOL bCopy
-	);
-
 VOID WriteCcdFileForDisc(
-	size_t tocEntries,
-	UCHAR LastCompleteSession,
+	UINT uiTocEntries,
+	BYTE LastCompleteSession,
 	FILE* fpCcd
 	);
 
 VOID WriteCcdFileForDiscCDTextLength(
-	size_t cdTextSize,
+	UINT uiCDTextSize,
 	FILE* fpCcd
 	);
 
@@ -373,130 +130,111 @@ VOID WriteCcdFileForDiscCatalog(
 	);
 
 VOID WriteCcdFileForCDText(
-	size_t cdTextSize,
+	UINT uiCDTextSize,
 	FILE* fpCcd
 	);
 
 VOID WriteCcdFileForCDTextEntry(
-	CONST PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
-	size_t uiTocTextEntries,
+	PCDROM_TOC_CD_TEXT_DATA_BLOCK pDesc,
+	UINT uiTocTextEntries,
 	FILE* fpCcd
 	);
 
 VOID WriteCcdFileForSession(
-	UCHAR SessionNumber,
-	FILE* fpCcd
-	);
-
-VOID WriteCcdFileForSessionPregap(
-	UCHAR mode,
+	BYTE SessionNumber,
+	BYTE byMode,
 	FILE* fpCcd
 	);
 
 VOID WriteCcdFileForEntry(
-	CONST PCDROM_TOC_FULL_TOC_DATA_BLOCK toc,
-	size_t a,
+	PCDROM_TOC_FULL_TOC_DATA_BLOCK toc,
+	UINT a,
 	FILE* fpCcd
 	);
 
 VOID WriteCcdFileForTrack(
 	PDISC_DATA pDiscData,
 	UINT nTrackNum,
-	UCHAR byModeNum,
+	BYTE byModeNum,
 	BOOL bISRC,
-	UCHAR byCtl,
+	BYTE byCtl,
 	FILE* fpCcd
 	);
 
 VOID WriteCcdFileForTrackIndex(
-	LONG index,
-	LONG lba,
+	INT nIndex,
+	INT nLba,
 	FILE* fpCcd
 	);
 
 VOID WriteCueFileFirst(
 	PDISC_DATA pDiscData,
-	BOOL bCatalog,
+	BOOL lpCatalog,
 	FILE* fpCue
 	);
 
 VOID WriteCueFile(
 	PDISC_DATA pDiscData,
-	LPCTSTR pszFilename,
+	LPCTSTR pszPath,
 	BOOL bCDG,
 	UINT nTrackNum,
-	UCHAR byModeNum, 
+	BYTE byModeNum, 
 	BOOL bISRC,
-	UCHAR byCtl,
+	BYTE byCtl,
 	FILE* fpCue
 	);
 
 VOID WriteCueFileForIndex(
-	UCHAR byIndex,
-	UCHAR byFrame, 
-	UCHAR bySecond,
-	UCHAR byMinute,
+	BYTE byIndex,
+	BYTE byFrame, 
+	BYTE bySecond,
+	BYTE byMinute,
 	FILE* fpCue
 	);
 
 VOID WriteMainChannel(
 	PDISC_DATA pDiscData,
-	PUCHAR pBuf,
-	PINT* aLBAStart,
+	LPBYTE lpBuf,
+	LPINT* lpLBAStartList,
 	INT nLBA,
-	INT nFixStartLBA,
-	INT nFixEndLBA,
-	size_t uiShift,
+	PCD_OFFSET_DATA pCdOffsetData,
 	FILE* fpImg
 	);
 
 VOID WriteSubChannel(
-	PDEVICE_DATA pDevData,
 	PDISC_DATA pDiscData,
-	PUCHAR pBuf,
-	PUCHAR Subcode,
-	PUCHAR SubcodeRaw,
+	PREAD_CD_TRANSFER_DATA pTransferData,
+	LPBYTE lpBuf,
+	LPBYTE lpSubcode,
+	LPBYTE lpSubcodeRaw,
 	INT nLBA,
-	UCHAR byCurrentTrackNum,
+	BYTE lpCurrentTrackNum,
 	FILE* fpSub,
 	FILE* fpParse,
 	FILE* fpCdg
 	);
 
-VOID WriteParsingSubfile(
+BOOL WriteParsingSubfile(
 	LPCTSTR pszSubfile
 	);
 
-BOOL UpdateSubchannelQData(
-	PSUB_Q_DATA subQ,
-	PSUB_Q_DATA prevSubQ,
-	PSUB_Q_DATA prevPrevSubQ
+BOOL DescrambleMainChannelForGD(
+	LPCTSTR pszPath
 	);
 
-BOOL PreserveTrackAttribution(
-	PDISC_DATA pDiscData,
-	INT nLBA,
-	PUCHAR byCurrentTrackNum,
-	PSUB_Q_DATA subQ,
-	PSUB_Q_DATA prevSubQ,
-	PSUB_Q_DATA prevPrevSubQ,
-	PUCHAR pCtlList,
-	PUCHAR pModeList,
-	PINT* pLBAStartList,
-	PINT* pLBAOfDataTrackList,
-	FILE* fpLog
+BOOL SplitFileForGD(
+	LPCTSTR pszPath
 	);
 
-BOOL DescrambleMainChannel(
+VOID DescrambleMainChannel(
 	PDISC_DATA pDiscData,
-	PINT* pLBAOfDataTrackList,
+	LPINT* lpLBAOfDataTrackList,
 	FILE* fpTbl,
-	FILE* fpImg,
-	FILE* fpLog
+	FILE* fpImg
 	);
 
 BOOL MergeMainChannelAndCDG(
-	LPCTSTR pszOutFile,
+	LPCTSTR pszPath,
 	BOOL bCDG,
 	BOOL bAudioOnly,
 	FILE* fpImg
@@ -504,14 +242,28 @@ BOOL MergeMainChannelAndCDG(
 
 BOOL CreatingBinCueCcd(
 	PDISC_DATA pDiscData,
-	LPCTSTR pszOutFile,
-	BOOL bCatalog,
+	LPCTSTR pszPath,
+	BOOL lpCatalog,
 	BOOL bCDG,
-	PUCHAR pCtlList,
-	PUCHAR pModeList,
-	PBOOL pbISRCList,
-	PINT* pLBAStartList,
+	LPBYTE lpCtlList,
+	LPBYTE lpModeList,
+	LPBOOL lpISRCList,
+	LPINT* lpLBAStartList,
 	FILE* fpImg,
 	FILE* fpCue,
 	FILE* fpCcd
+	);
+
+VOID OutputHashData(
+	FILE* fpHash,
+	LPCTSTR filename,
+	UINT64 ui64FileSize,
+	DWORD crc32,
+	LPBYTE digest,
+	LPBYTE Message_Digest
+	);
+
+VOID OutputLastErrorNumAndString(
+	LPCTSTR pszFuncName,
+	LONG lLineNum
 	);
