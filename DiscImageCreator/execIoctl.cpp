@@ -73,6 +73,7 @@ BOOL ScsiGetAddress(
 }
 
 BOOL ScsiPassThroughDirect(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	LPVOID lpCdb,
 	BYTE byCdbLength,
@@ -107,11 +108,13 @@ BOOL ScsiPassThroughDirect(
 		&swb, dwLength, &swb, dwLength, &dwReturned, NULL)) {
 		OutputLastErrorNumAndString(pszFuncName, lLineNum);
 		bRet = FALSE;
-		// When semaphore time out occurred, if doesn't execute sleep,
-		// UNIT_ATTENSION errors occurs next ScsiPassThroughDirect executing.
-		DWORD millisec = 25000;
-		OutputErrorString(_T("Sleep at %d milliseconds...\n"), millisec);
-		Sleep(millisec);
+		if (!pExtArg->byReadContinue || !_tcscmp(_T("SetCDSpeed"), pszFuncName)) {
+			// When semaphore time out occurred, if doesn't execute sleep,
+			// UNIT_ATTENSION errors occurs next ScsiPassThroughDirect executing.
+			DWORD millisec = 25000;
+			OutputErrorString(_T("Sleep at %d milliseconds...\n"), millisec);
+			Sleep(millisec);
+		}
 	}
 	else {
 		if (swb.SenseData.SenseKey == SCSI_SENSE_NO_SENSE &&
@@ -121,7 +124,7 @@ BOOL ScsiPassThroughDirect(
 		}
 		if (swb.ScsiPassThroughDirect.ScsiStatus >= SCSISTAT_CHECK_CONDITION &&
 			!bNoSense) {
-			OutputString(_T("[F:%s][L:%d] OperationCode: %#04x\n"),
+			OutputErrorString(_T("[F:%s][L:%d] OperationCode: %#04x\n"),
 				pszFuncName, lLineNum, swb.ScsiPassThroughDirect.Cdb[0]);
 			OutputScsiStatus(swb.ScsiPassThroughDirect.ScsiStatus);
 			OutputSenseData(&swb.SenseData);

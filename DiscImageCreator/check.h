@@ -20,7 +20,12 @@ BOOL IsValidPceSector(
 	LPBYTE lpBuf
 	);
 
+BOOL IsValidPcfxSector(
+	LPBYTE lpBuf
+	);
+
 BOOL IsValidPlextorDrive(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	);
 
@@ -29,11 +34,11 @@ BOOL IsValidLibCryptSector(
 	INT nLBA
 	);
 
-BYTE IsValidSubQMCN(
+BOOL IsValidSubQMCN(
 	LPBYTE lpSubcode
 	);
 
-BYTE IsValidSubQISRC(
+BOOL IsValidSubQISRC(
 	LPBYTE lpSubcode
 	);
 
@@ -41,8 +46,6 @@ VOID CheckMainChannel(
 	PDISC pDisc,
 	LPBYTE lpBuf,
 	PSUB_Q pSubQ,
-	PSUB_Q pPrevSubQ,
-	PSUB_Q pPrevPrevSubQ,
 	BYTE byCurrentTrackNum,
 	INT nLBA
 	);
@@ -52,11 +55,7 @@ VOID CheckAndFixSubChannel(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,
 	LPBYTE lpSubcode,
-	PSUB_Q pNextNextSubQ,
-	PSUB_Q pNextSubQ,
 	PSUB_Q pSubQ,
-	PSUB_Q pPrevSubQ,
-	PSUB_Q pPrevPrevSubQ,
 	BYTE byCurrentTrackNum,
 	INT nLBA,
 	BOOL bLibCrypt

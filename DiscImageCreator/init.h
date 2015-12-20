@@ -6,7 +6,6 @@
 
 BOOL InitC2ErrorData(
 	PEXT_ARG pExtArg,
-	PDISC pDisc,
 	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector,
 	DWORD dwAllBufLen
 	);
@@ -28,6 +27,7 @@ BOOL InitTocTextData(
 	);
 
 VOID InitMainDataHeader(
+	PEXT_ARG pExtArg,
 	PMAIN_HEADER pMain
 	);
 

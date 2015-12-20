@@ -10,6 +10,29 @@ BOOL ReadCDForSearchingOffset(
 	PDISC pDisc
 	);
 
+BOOL ReadCDForCheckingAdrFirst(
+	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
+	PDISC pDisc,
+	LPBYTE* aBuf2,
+	LPBYTE* lpBuf,
+	LPBYTE lpCmd,
+	LPINT nOfs
+	);
+
+BOOL ReadCDForCheckingAdr(
+	PEXT_ARG pExtArg,
+	PDEVICE pDevice,
+	PDISC pDisc,
+	LPBYTE lpCmd,
+	LPBYTE lpBuf,
+	INT aLBA[],
+	INT nOfs,
+	LPBYTE byMode,
+	BYTE bySessionIdx,
+	FILE* fpCcd
+	);
+
 BOOL ReadCDForCheckingReadInOut(
 	PEXEC_TYPE pExecType,
 	PEXT_ARG pExtArg,
@@ -19,14 +42,15 @@ BOOL ReadCDForCheckingReadInOut(
 	LPCTSTR pszPath,
 	READ_CD_FLAG::EXPECTED_SECTOR_TYPE flg
 	);
-
+#if 0
 BOOL ReadCDForCheckingCommand(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc
 	);
-
+#endif
 BOOL ReadCDForCheckingCDG(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc
 	);
@@ -61,6 +85,7 @@ BOOL ReadCDPartial(
 	);
 
 BOOL ReadCDForGDTOC(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc
 	);

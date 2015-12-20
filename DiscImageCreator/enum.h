@@ -5,11 +5,11 @@
 
 typedef enum _EXEC_TYPE {
 	cd,
-	dvd,
-	gd,
 	data,
 	audio,
-	floppy,
+	dvd,
+	gd,
+	fd,
 	stop,
 	start,
 	eject,
@@ -22,11 +22,29 @@ typedef enum _LOG_TYPE {
 	standardOut = 1,
 	standardErr = 1 << 1,
 	fileDisc = 1 << 2,
-	fileDrive = 1 << 3,
-	fileSubError = 1 << 4,
-	fileC2Error = 1 << 5,
-	fileInfo = 1 << 6
+	fileVolDesc = 1 << 3,
+	fileDrive = 1 << 4,
+	fileMainInfo = 1 << 5,
+	fileMainError = 1 << 6,
+	fileSubInfo = 1 << 7,
+	fileSubError = 1 << 8,
+	fileC2Error = 1 << 9
 } LOG_TYPE, *PLOG_TYPE;
+
+typedef enum _PROTECT_TYPE {
+	no,
+	codelock,
+	laserlock,
+	proring,
+	safeDiscLite,
+	safeDisc,
+	smartE
+} PROTECT_TYPE, *PPROTECT_TYPE;
+
+typedef enum _PATH_TYPE {
+	lType,
+	mType
+} PATH_TYPE, *PPATH_TYPE;
 
 // a naming rule of PLEXTOR drive
 // Plefix
@@ -95,7 +113,7 @@ typedef enum _DRIVE_DATA_ORDER {
 } DRIVE_DATA_ORDER, *PDRIVE_DATA_ORDER;
 
 typedef struct _READ_CD_FLAG {
-	// use ExpectedSectorType : 3;
+	// used ExpectedSectorType : 3;
 	typedef enum _EXPECTED_SECTOR_TYPE {
 		All = 0,
 		CDDA = 1,
@@ -106,7 +124,7 @@ typedef struct _READ_CD_FLAG {
 		// 6, 7 is reserved
 	} EXPECTED_SECTOR_TYPE, *PEXPECTED_SECTOR_TYPE;
 
-	// use ErrorFlags : 2;
+	// used ErrorFlags : 2;
 	typedef enum _ERROR_FLAGS {
 		NoC2 = 0,
 		byte294 = 1,
@@ -114,7 +132,7 @@ typedef struct _READ_CD_FLAG {
 		// 3 is reserved
 	} ERROR_FLAGS, *PERROR_FLAGS;
 
-	// use HeaderCode : 2;
+	// used HeaderCode : 2;
 	typedef enum _HEADER_CODE {
 		NoHeader = 0,
 		SectorHeader = 1,
@@ -122,7 +140,7 @@ typedef struct _READ_CD_FLAG {
 		BothHeader = 3
 	} HEADER_CODE, *PHEADER_CODE;
 
-	// use SubChannelSelection : 3;
+	// used SubChannelSelection : 3;
 	typedef enum _SUB_CHANNEL_SELECTION {
 		NoSub = 0,
 		Raw = 1,	// Raw P-W sub-channel data

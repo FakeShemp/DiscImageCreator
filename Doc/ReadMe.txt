@@ -17,7 +17,7 @@
  GD: http://forum.redump.org/post/14552/#p14552
    and TSSTcorp(TS-H353A, TS-H352C, TS-H192C)
  DVD: All supported drive
- Floppy: All supported drive
+ Floppy Disk: All supported drive
 
 * Not recommend (because can't read lead-in and/or lead-out, can't exec 0xd8 command)
  CD:
@@ -43,6 +43,7 @@
   http://www.accuraterip.com/driveoffsets.htm
   Copyright (c) 2015 Illustrate. All Rights Reserved.
  About _external folder
+  scramble data to CD: Copyright (c) 2015 Jonathan Gevaryahu
   crc16: http://oku.edu.mie-u.ac.jp/~okumura/algo/
          src\crc16.c in algo.lzh
   crc32: http://www.ietf.org/rfc.html
@@ -56,49 +57,84 @@
  Use this tool at own your risk.
  Trouble in regard to the use of this tool, I can not guarantee any.
 
+* Bug report
+ To: http://forum.redump.org/topic/10483/discimagecreator/
+
 * Gratitude
  Thank's redump.org users.
 
-========================== Created files information ==========================
- .bin
-  2352byte/sector binary image. This file is used to a cue file.
- .c2
-  store c2 error. 1bit expresses 1byte.
- .ccd
-  store CD information. Original format is CloneCD (http://www.slysoft.com/en/clonecd.html)
- .cue
-  store CD information. Original format is CDRWIN (http://www.goldenhawk.com/cdrwin.htm)
- .dat
-  store crc32/md5/sha1 of bin file. Original format is clrmamepro (http://mamedev.emulab.it/clrmamepro/)
- .img
-  2352byte/sector binary image. This file is used to a ccd file.
- .scm
-  scrambled image file of img file.
- .sub
-  store sub channel data. This file is used to a ccd file.
- _disclog.txt
-  store disc information returned by SCSI command.
- _drivelog.txt
-  store drive information returned by SCSI command.
- _c2errorlog.txt
-  store disc c2 error information getting read disc.
- _suberrorlog.txt
-  store disc sub error information getting read disc.
- _infolog.txt
-  store volume descriptor, path table, directory table of CD.
- _sub.txt
-  store parsed sub channel file as text data.
+========================== Supported/Unsupported Disc =========================
+* Supported Disc (I tested these)
+ - Apple Macintosh
+ - Audio CD
+ - Bandai Playdia
+ - DVD-Video
+ - Fujitsu FM Towns series
+ - IBM PC compatible
+ - NEC PC-98 series CD
+ - NEC PC-Engine CD
+ - NEC PC-FX
+ - Panasonic 3DO Interactive Multiplayer
+ - Philips CD-i
+ - Sega Dreamcast
+ - Sega Mega-CD
+ - Sega Saturn
+ - Sony PlayStation
+ - Sony PlayStation 2
+ - SNK Neo Geo CD
+ - VCD
+
+* Support WIP (Because I haven't enough to test)
+ - Protected Disc
+    bad(error) sector                   => SafeDisc, SmartE, Cactus Data Shield 300
+    weak sector                         => SafeDisc v2 or higher
+    unique data on subchannel           => PSX PAL, SecuROM(v1)
+    no signal sector                    => LaserLock, RingPROTECH, ProRing
+    Intensional(deliberate) C1/C2 error => Cactus Data Shield 200, Codelock
+    characteristic track                => CD Lock
+
+* Supported Disc? (I haven't tested these yet)
+ - Acorn Archimedes
+ - Bandai / Apple Pippin
+ - Commodore Amiga CD
+ - Commodore Amiga CD32
+ - Commodore Amiga CDTV
+ - Mattel HyperScan
+ - Microsoft Xbox
+ - Microsoft Xbox 360
+ - NEC PC-88 series CD
+ - Sharp X68000 CD
+ - Tandy / Memorex Visual Information System
+ - Tao iKTV CD
+ - Tomy Kiss-Site CD
+ - VM Labs NUON DVD
+ - VTech V.Flash
+
+* Unsupported Disc
+ - Protected Disc
+    different frequency               => SecuROM(v4 or higher), StarForce, CD-Cops
+     These needs DPM(Data position measurement). cue, ccd doesn't support DPM.
+     To store DPM, you need to use the Alcohol 120/52% (http://www.alcohol-soft.com/)
+    duplicated(double, triple) sector => Alpha-ROM, ROOT, TAGES
+     It can read in reverse, but specifications are not decided in redump.org
+    Fake TOC                          => Cactus Data Shield 100
+     Can't analyze the illegal TOC at the present.
+ - HD DVD & Blu-ray Disc
+    I don't have a drive, so I can't test.
+ - Nintendo GameCube & Wii
+    I don't implement a code to decrypt. (if you have a supported drive,
+   you can rip a "encrypted" image.)
 
 ============================= Ripping information =============================
 * Preparation
  Download and install Visual C++ Redistributable Packages.
   http://www.microsoft.com/en-us/download/details.aspx?id=40784
- EccEdc checking tool
+ EccEdc checking tool (for CD)
   http://www.mediafire.com/download/?7ac64jer16sl7zi
   Put it to directory of DiscImageCreator.exe.
   (If EccEdc doesn't exist, DiscImageCreator works.)
 
-* Ripping Guide for CD, DVD, Floppy
+* Ripping Guide for CD, DVD, Floppy Disk
  Run exe without args to get detail info.
 
 * Ripping Guide for CD (SafeDisc)
@@ -128,66 +164,43 @@
 5. run below. (start rippping gdrom)
    DiscImageCreator.exe gd [DriveLetter] foo.bin [DriveSpeed(0-72)]
 
-========================== Supported/Unsupported Disc =========================
-* Supported Disc (I tested these)
- - Apple Macintosh
- - Audio CD
- - Bandai Playdia
- - DVD-Video
- - Fujitsu FM Towns series
- - IBM PC compatible
- - NEC PC-98 series CD
- - NEC PC-Engine CD
- - NEC PC-FX
- - Panasonic 3DO Interactive Multiplayer
- - Philips CD-i
- - Sega Dreamcast
- - Sega Mega-CD
- - Sega Saturn
- - Sony PlayStation
- - Sony PlayStation 2
- - SNK Neo Geo CD
- - VCD
-
-* Support WIP (Because I haven't enough to test)
- - Protected Disc
-    bad(error) sector                   => SafeDisc, SmartE, Cactus Data Shield 300
-    weak sector                         => SafeDisc v2 or higher
-    unique data on subchannel           => PSX PAL, SecuROM(v1)
-    no signal sector                    => LaserLock, RingPROTECH, ProRing
-    Intensional(deliberate) C1/C2 error => Cactus Data Shield 200
-
-* Supported Disc? (I haven't tested these yet)
- - Acorn Archimedes
- - Bandai / Apple Pippin
- - Commodore Amiga CD
- - Commodore Amiga CD32
- - Commodore Amiga CDTV
- - Mattel HyperScan
- - Microsoft Xbox
- - Microsoft Xbox 360
- - NEC PC-88 series CD
- - Sharp X68000 CD
- - Tandy / Memorex Visual Information System
- - Tao iKTV CD
- - Tomy Kiss-Site CD
- - VM Labs NUON DVD
- - VTech V.Flash
-
-* Unsupported Disc
- - Protected Disc
-    different frequency     => SecuROM(v4 or higher), StarForce, CD-Cops
-     These needs DPM(Data position measurement). cue, ccd doesn't support DPM.
-     To store DPM, needs to use the Alcohol 120/52% (http://www.alcohol-soft.com/)
-    duplicated(double, triple) sector => Alpha-ROM, ROOT, TAGES
-     It can read in reverse, but specifications are not decided in redump.org
-    Fake TOC                => Cactus Data Shield 100, CD Lock
-     Can't analyze the illegal TOC at the present.
- - HD DVD & Blu-ray Disc
-    I don't have a drive
- - Nintendo GameCube & Wii
-    I don't implement a code to decrypt. (if you have a supported drive,
-   you can rip a "encrypted" image.)
+========================== Created files information ==========================
+ .bin
+  2352byte/sector binary image. This file is used to a cue file.
+ .c2
+  store the c2 error. 1bit expresses 1byte.
+ .ccd
+  store the CD information. Original format is CloneCD (http://www.slysoft.com/en/clonecd.html)
+ .cue
+  store the CD information. Original format is CDRWIN (https://web.archive.org/web/20111008191852/http://www.goldenhawk.com/cdrwin.htm)
+ .dat
+  store the crc32/md5/sha1 of bin file. Original format is clrmamepro (http://mamedev.emulab.it/clrmamepro/)
+ .img
+  2352byte/sector binary image. This file is used to a ccd file.
+ .scm
+  scrambled image file of img file.
+ .sub
+  store the sub channel data. This file is used to a ccd file.
+ _c2error.txt
+  store disc c2 error information getting read disc.
+ _cmd.txt
+  store the command-line argument.
+ _disc.txt
+  store the disc information returned by SCSI command.
+ _drive.txt
+  store the drive information returned by SCSI command.
+ _mainError.txt
+  store the disc main error information getting read disc.
+ _mainInfo.txt
+  store the disc main info information getting read disc.
+ _sub.txt
+  store the parsed sub channel file as text data.
+ _subError.txt
+  store the disc sub error information getting read disc.
+ _subInfo.txt
+  store the disc sub info information getting read disc.
+ _volDesc.txt
+  store the volume descriptor, path table, directory table of CD.
 
 ========================= Drive information (I tested) ========================
 Vendor					Model					Firmware(*1)	Lead-in	Lead-out	Scrambled	GD-ROM(*2)				Wii-ROM
@@ -208,14 +221,21 @@ MATSHITA				SW-9574S				ADX4			No		No			No			No						No
 NEC						CDR-1700A(286)			3.06			No		No			No			No						No
 NEC						CDR-3001A(28F)			3.32			No		No			No			No						No
 Optiarc					AD-7203S				1-B0			No		No			No			No						No
+PLEXTOR					PX-12TS					1.01			Yes		Yes			Yes			No						No
+PLEXTOR					PX-20TS					1.00			Yes		Yes			Yes			No						No
 PLEXTOR					PX-40TS					1.14			Yes		Yes			Yes			No						No
-PLEXTOR					PX-W8220T				1.05			Yes		Yes			Yes			No						No
-PLEXTOR					PX-W8432Ti(PX-W8432T)	1.09			Yes		Yes			Yes(*3)		No						No
-PLEXTOR					PX-W124TS				1.07			Yes		Yes			Yes			No						No
+PLEXTOR					PX-R412C				1.07			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-R820Ti				1.08			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W8220Ti				1.05			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W8432Ti				1.09			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W124TS				1.07			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W1210TA				1.10			Yes		Yes			Yes(*3)		No						No
 PLEXTOR					PX-W1210TS				1.06			Yes		Yes			Yes			No						No
-PLEXTOR					PX-W1210TA(PX-W1210A)	1.10			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W1610TA				1.05			Yes		Yes			Yes(*3)		No						No
 PLEXTOR					PX-S88T					1.06			Yes		Yes			Yes(*3)		No						No
-PLEXTOR					PX-W2410TA(PX-W2410A)	1.04			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W2410TA				1.04			Yes		Yes			Yes(*3)		No						No
+PLEXTOR					PX-W4012TA				1.07			Yes		Yes			Yes			No						No
+PLEXTOR					PX-W4012TS				1.06			Yes		Yes			Yes			No						No
 PLEXTOR					PX-W4824TA				1.07			Yes		Yes			Yes			No						No
 PLEXTOR					PX-W5224A				1.04			Yes		Yes			Yes			No						No
 PLEXTOR					PREMIUM					1.07			Yes		Yes			Yes			No						No
@@ -228,6 +248,7 @@ PLEXTOR					PX-750A					1.03			No		No			No			No						No
 PLEXTOR					PX-755SA(PX-755A)		1.08			Yes		Yes			Yes			Partial(about 79:59:74)	No
 PLEXTOR					PX-760A					1.07			Yes		Yes			Yes			No						No
 Slimtype				DS8A3S					HAT9			No		No			Yes			No						No
+SONY					CRX200E					1.0f			No		No			Yes			No						No
 TSSTcorp				SH-W162L				LC03			No		No			Yes			No						No
 TSSTcorp				TS-L162C				DE00			No		No			No			No						No
 TSSTcorp				TS-H192C				DE01			No		No			No			Yes						No
@@ -257,3 +278,4 @@ TSSTcorp				TS-H652C(TS-H652D)		TI06			No		No			No			No						No
 
 *3
  Single data track disc fails. (05-64-00, ILLEGAL_REQUEST. ILLEGAL MODE FOR THIS TRACK)
+ Not supported the C2 error report on READ D8 command

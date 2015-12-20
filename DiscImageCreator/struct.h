@@ -26,15 +26,20 @@ typedef struct _CDVD_CAPABILITIES_PAGE_WITH_HEADER {
 } CDVD_CAPABILITIES_PAGE_WITH_HEADER, *PCDVD_CAPABILITIES_PAGE_WITH_HEADER;
 
 typedef struct _LOG_FILE {
-	FILE* fpDrive;
 	FILE* fpDisc;
+	FILE* fpVolDesc;
+	FILE* fpDrive;
+	FILE* fpMainInfo;
+	FILE* fpMainError;
+	FILE* fpSubInfo;
 	FILE* fpSubError;
 	FILE* fpC2Error;
-	FILE* fpInfo;
 } LOG_FILE, *PLOG_FILE;
 
 typedef struct _EXT_ARG {
 	BYTE byAdd;
+	BYTE byBe;
+	BYTE byD8;
 	BYTE byC2;
 	BYTE byCmi;
 	BYTE byFua;
@@ -44,14 +49,12 @@ typedef struct _EXT_ARG {
 	BYTE byPre;
 	BYTE byReverse;
 	BYTE byReadContinue;
-	BYTE reserved[2];
 	INT nAudioCDOffsetNum;
 	DWORD dwMaxRereadNum;
 	DWORD dwMaxC2ErrorNum;
 	DWORD dwRereadSpeedNum;
-	INT nC2OffsetNum;
 	DWORD dwTimeoutNum;
-	INT nSubAddionalNum;
+	DWORD dwSubAddionalNum;
 } EXT_ARG, *PEXT_ARG;
 
 typedef struct _DEVICE {
@@ -63,8 +66,7 @@ typedef struct _DEVICE {
 	CHAR szProductId[DRIVE_PRODUCT_ID_SIZE];
 	BYTE byPlxtrType;
 	BYTE bySuccessReadToc;
-	BYTE reserved[2];
-	WORD wDriveBufSize;
+	BYTE bySuccessReadTocFull;
 	WORD wMaxReadSpeed;
 	DWORD dwTimeOutValue;
 	struct _TRANSFER {
@@ -131,21 +133,20 @@ typedef struct _DISC {
 		INT nFixFirstLBAof2ndSession;	// for sliding offset
 		// 0 origin, max is last track num.
 		LPBYTE lpModeList;
+		BOOL bPathType; // use path table record
 	} MAIN;
-	struct _C2 {
-		SHORT sC2Offset;
-		BYTE reserved[2];
-	} C2, *PC2;
 	struct _SUB {
 		BYTE byDesync;
 		BYTE byIndex0InTrack1;
 		BYTE byCatalog;
 		BYTE byISRC;
-		INT nFirstLBAForMCN;
-		INT nRangeLBAForMCN;
+		INT nFirstLBAForMCN[3][2];
+		INT nRangeLBAForMCN[3][2];
+		INT nPrevMCNSector;
 		CHAR szCatalog[META_CATALOG_SIZE];
-		INT nFirstLBAForISRC;
-		INT nRangeLBAForISRC;
+		INT nFirstLBAForISRC[3][2];
+		INT nRangeLBAForISRC[3][2];
+		INT nPrevISRCSector;
 		// 0 origin, max is last track num.
 		LPSTR* pszISRC;
 		// 0 origin, max is last track num.
@@ -185,14 +186,38 @@ typedef struct _DISC {
 			INT nNextExtentPos;
 			INT nSectorSize;
 		} ERROR_SECTOR;
+		INT nPrevLBAOfPathTablePos; // for CodeLock
+		INT nNextLBAOfLastVolDesc; // for CodeLock
+		INT nExtentPosForExe[16]; // for CodeLock
+		CHAR nameForExe[16][12 + 1]; // for CodeLock
+		INT nCntForExe; // for CodeLock
 	} PROTECT;
 } DISC, *PDISC;
 
+// This buffer stores all CD data (main + c2 + sub) obtained from SCSI read command
+// Depending on the situation, this may store main, main + sub.
+typedef struct _DATA_IN_CD {
+	LPBYTE present;
+	LPBYTE next;
+	LPBYTE nextNext;
+} DATA_IN_CD, *PDATA_IN_CD;
+
+// This buffer stores the header of mode 1 of main channel obtained from DATA_IN_CD structure
+// If it doesn't exist in DATA_IN_CD, set manually
 typedef struct _MAIN_HEADER {
-	BYTE header[SYNC_SIZE + HEADER_SIZE];
+	BYTE prev[MAINHEADER_MODE1_SIZE];
+	BYTE present[MAINHEADER_MODE1_SIZE];
 } MAIN_HEADER, *PMAIN_HEADER;
 
-typedef struct _SUB_Q {
+// This buffer stores the aligned subcode obtained from DATA_IN_CD structure
+typedef struct _SUBCODE {
+	BYTE present[CD_RAW_READ_SUBCODE_SIZE];
+	BYTE next[CD_RAW_READ_SUBCODE_SIZE];
+	BYTE nextNext[CD_RAW_READ_SUBCODE_SIZE];
+} SUBCODE, *PSUBCODE;
+
+// This buffer stores the Q channel of SUBCODE structure
+typedef struct _SUB_Q_PER_SECTOR {
 	BYTE reserved;
 	BYTE byCtl : 4;		// 13th byte
 	BYTE byAdr : 4;		// 13th byte
@@ -200,9 +225,24 @@ typedef struct _SUB_Q {
 	BYTE byIndex;		// 15th byte
 	INT nRelativeTime;	// 16th - 18th byte
 	INT nAbsoluteTime;	// 20th - 22nd byte
+} SUB_Q_PER_SECTOR, *PSUB_Q_PER_SECTOR;
+
+typedef struct _SUB_Q {
+	SUB_Q_PER_SECTOR prevPrev;
+	SUB_Q_PER_SECTOR prev;
+	SUB_Q_PER_SECTOR present;
+	SUB_Q_PER_SECTOR next;
+	SUB_Q_PER_SECTOR nextNext;
 } SUB_Q, *PSUB_Q;
 
-// EN 60908:1999 Page25-
+typedef struct _DISC_PER_SECTOR {
+	DATA_IN_CD data;
+	MAIN_HEADER mainHeader;
+	SUBCODE subcode;
+	SUB_Q subQ;
+} DISC_PER_SECTOR, *PDISC_PER_SECTOR;
+
+// This buffer stores the R to W channel (only use to check)
 typedef struct _SUB_R_TO_W {
 	CHAR command;
 	CHAR instruction;

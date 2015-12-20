@@ -4,22 +4,18 @@
 #pragma once
 #include "enum.h"
 
-BOOL PreserveTrackAttribution(
+VOID PreserveTrackAttribution(
 	PEXT_ARG pExtArg,
 	PDISC pDisc,
 	INT nLBA,
 	LPBYTE lpCurrentTrackNum,
 	PMAIN_HEADER pMain,
-	PSUB_Q pSubQ,
-	PSUB_Q pPrevSubQ
+	PSUB_Q pSubQ
 	);
 
 VOID SetC2ErrorData(
-	PDISC pDisc,
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
-	INT nC2Offset,
 	INT nLBA,
-	DWORD dwAllBufLen,
 	PUINT puiC2ErrorLBACnt,
 	BOOL b1stRead
 	);
@@ -29,15 +25,13 @@ VOID SetNoC2ErrorData(
 	LPBYTE lpBuf,
 	INT nLBA,
 	DWORD dwAllBufLen,
-	UINT uiC2ErrorLBACnt
+	PUINT puiC2ErrorLBACnt
 	);
 
 VOID SetNoC2ErrorExistsByteErrorData(
 	PC2_ERROR_PER_SECTOR pC2ErrorPerSector,
-	LPBYTE lpBuf,
 	INT nLBA,
-	DWORD dwAllBufLen,
-	UINT uiC2ErrorLBACnt
+	PUINT puiC2ErrorLBACnt
 	);
 
 VOID SetC2ErrorBackup(
@@ -86,6 +80,7 @@ VOID SetFeatureRealTimeStreaming(
 	);
 
 VOID SetCDOffset(
+	BYTE byBe,
 	PDISC pDisc,
 	INT nStartLBA,
 	INT nEndLBA
@@ -94,6 +89,15 @@ VOID SetCDOffset(
 VOID SetCDTransfer(
 	PDEVICE pDevice,
 	DRIVE_DATA_ORDER order
+	);
+
+VOID SetFirstAdrSector(
+	INT nFirstLBA[][2],
+	INT nRangeLBA[][2],
+	LPSTR strAdr,
+	LPINT nAdrLBAList,
+	BYTE bySessionIdx,
+	BYTE byPlxtrType
 	);
 
 VOID SetISRCToString(
@@ -128,32 +132,31 @@ VOID SetReadD8Command(
 	PLXTR_READ_CDDA_FLAG::SUB_CHANNEL_SELECTION Sub
 	);
 
-VOID SetModeFromBuffer(
-	WORD wDriveBufSize,
-	UINT uiMainDataSlideSize,
-	PMAIN_HEADER pMain,
-	PSUB_Q pSubQ,
-	LPBYTE lpBuf
+VOID SetTransferLength(
+	CDB::_READ12* pCdb,
+	DWORD dwSize,
+	LPBYTE lpTransferLen
 	);
 
 VOID SetSubQDataFromBuffer(
-	PSUB_Q pSubQ,
+	PSUB_Q_PER_SECTOR pSubQ,
 	LPBYTE lpSubcode
 	);
 
 VOID SetBufferFromSubQData(
-	PSUB_Q pSubQ,
+	SUB_Q_PER_SECTOR pSubQ,
 	LPBYTE lpSubcode,
 	BYTE byPresent
 	);
 
-BOOL UpdateSubQData(
+VOID UpdateSubQData(
 	PSUB_Q pSubQ,
-	PSUB_Q pPrevSubQ,
-	PSUB_Q pPrevPrevSubQ,
 	BOOL bLibCrypt
 	);
 
 VOID UpdateTmpMainHeader(
-	PMAIN_HEADER pMain
+	PMAIN_HEADER pMain,
+	LPBYTE lpBuf,
+	BYTE byCtl,
+	INT nType
 	);

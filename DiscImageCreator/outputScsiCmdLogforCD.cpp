@@ -13,16 +13,15 @@ VOID OutputFsBootRecord(
 	CHAR str[2][32] = { "0" };
 	strncpy(str[0], (PCHAR)&lpBuf[7], sizeof(str[0]));
 	strncpy(str[1], (PCHAR)&lpBuf[39], sizeof(str[1]));
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"\t                       Boot System Identifier: %s\n"
 		"\t                              Boot Identifier: %s\n"
-		"\t                              Boot System Use: ",
-		str[0],
-		str[1]);
+		"\t                              Boot System Use: "
+		, str[0], str[1]);
 	for (INT i = 71; i < 2048; i++) {
-		OutputInfoLogA("%x", lpBuf[i]);
+		OutputVolDescLogA("%x", lpBuf[i]);
 	}
-	OutputInfoLogA("\n");
+	OutputVolDescLogA("\n");
 }
 
 VOID OutputFsVolumeDescriptorFirst(
@@ -30,14 +29,17 @@ VOID OutputFsVolumeDescriptorFirst(
 	CHAR str32[][32]
 	)
 {
-	OutputInfoLogA(
+	DWORD vss = MAKEDWORD(MAKEWORD(lpBuf[80], lpBuf[81]),
+		MAKEWORD(lpBuf[82], lpBuf[83]));
+	if (vss == 0) {
+		vss = MAKEDWORD(MAKEWORD(lpBuf[87], lpBuf[86]),
+			MAKEWORD(lpBuf[85], lpBuf[84]));
+	}
+	OutputVolDescLogA(
 		"\t                            System Identifier: %.32s\n"
 		"\t                            Volume Identifier: %.32s\n"
-		"\t                            Volume Space Size: %u\n",
-		str32[0],
-		str32[1],
-		MAKELONG(MAKEWORD(lpBuf[80], lpBuf[81]),
-		MAKEWORD(lpBuf[82], lpBuf[83])));
+		"\t                            Volume Space Size: %u\n"
+		,str32[0], str32[1], vss);
 }
 
 VOID OutputFsDirectoryRecord(
@@ -50,6 +52,10 @@ VOID OutputFsDirectoryRecord(
 {
 	INT nExtentPos = MAKELONG(MAKEWORD(lpBuf[2], lpBuf[3]),
 		MAKEWORD(lpBuf[4], lpBuf[5]));
+	if (nExtentPos == 0) {
+		nExtentPos = MAKELONG(MAKEWORD(lpBuf[9], lpBuf[8]),
+			MAKEWORD(lpBuf[7], lpBuf[6]));
+	}
 	CHAR str[128] { 0 };
 	INT nFileFlag = lpBuf[25];
 	if (nFileFlag & 0x01) {
@@ -88,7 +94,11 @@ VOID OutputFsDirectoryRecord(
 	else {
 		strncat(str, "Final Directory Record", 22);
 	}
-	OutputInfoLogA(
+	WORD vsn = MAKEWORD(lpBuf[28], lpBuf[29]);
+	if (vsn == 0) {
+		vsn = MAKEWORD(lpBuf[31], lpBuf[30]);
+	}
+	OutputVolDescLogA(
 		"\t\t      Length of Directory Record: %u\n"
 		"\t\tExtended Attribute Record Length: %u\n"
 		"\t\t              Location of Extent: %u\n"
@@ -100,22 +110,14 @@ VOID OutputFsDirectoryRecord(
 		"\t\t          Volume Sequence Number: %u\n"
 		"\t\t       Length of File Identifier: %u\n"
 		"\t\t                 File Identifier: "
-		, lpBuf[0]
-		, lpBuf[1]
-		, nExtentPos
-		, nDataLen
-		, lpBuf[18] + 1900, lpBuf[19], lpBuf[20]
-		, lpBuf[21], lpBuf[22], lpBuf[23], lpBuf[24]
-		, lpBuf[25], str
-		, lpBuf[26]
-		, lpBuf[27]
-		, MAKEWORD(lpBuf[28], lpBuf[29])
-		, lpBuf[32]);
+		, lpBuf[0], lpBuf[1], nExtentPos, nDataLen, lpBuf[18] + 1900, lpBuf[19]
+		, lpBuf[20], lpBuf[21], lpBuf[22], lpBuf[23], lpBuf[24], lpBuf[25], str
+		, lpBuf[26], lpBuf[27], vsn, lpBuf[32]);
 	for (INT n = 0; n < lpBuf[32]; n++) {
-		OutputInfoLogA("%c", lpBuf[33 + n]);
+		OutputVolDescLogA("%c", lpBuf[33 + n]);
 		fname[n] = (CHAR)lpBuf[33 + n];
 	}
-	OutputInfoLogA("\n");
+	OutputVolDescLogA("\n");
 	if (pExtArg->byReadContinue) {
 		if ((nFileFlag & 0x02) == 0 && pDisc->PROTECT.byExist) {
 			if (pDisc->PROTECT.ERROR_SECTOR.nExtentPos < nExtentPos) {
@@ -129,28 +131,44 @@ VOID OutputFsDirectoryRecord(
 				}
 			}
 		}
-		if (
-			!strncmp(fname, "LASERLOK.IN", 11) ||
-			!strncmp(fname, "PROTECT.PRO", 11) ||
-			!strncmp(fname, "00000001.LT1", 12) ||
-			!strncmp(fname, "00000001.TMP", 12)
-			) {
-			pDisc->PROTECT.byExist = TRUE;
-			if (
-				!strncmp(fname, "LASERLOK.IN", 11) ||
-				!strncmp(fname, "PROTECT.PRO", 11)
-				) {
-				strncpy(pDisc->PROTECT.name, fname, 11);
-				pDisc->PROTECT.ERROR_SECTOR.nExtentPos = nExtentPos;
-				pDisc->PROTECT.ERROR_SECTOR.nSectorSize = (INT)(nDataLen / DISC_RAW_READ_SIZE - 1);
-			}
-			else if (
-				!strncmp(fname, "00000001.LT1", 12) ||
-				!strncmp(fname, "00000001.TMP", 12)
-				) {
-				strncpy(pDisc->PROTECT.name, fname, 12);
-				pDisc->PROTECT.byTmpForSafeDisc = TRUE;
-				pDisc->PROTECT.ERROR_SECTOR.nExtentPos = (INT)(nExtentPos + nDataLen / DISC_RAW_READ_SIZE);
+		if (!strncmp(fname, "LASERLOK.IN", 11)) {
+			pDisc->PROTECT.byExist = laserlock;
+			strncpy(pDisc->PROTECT.name, fname, 11);
+			pDisc->PROTECT.ERROR_SECTOR.nExtentPos = nExtentPos;
+			pDisc->PROTECT.ERROR_SECTOR.nSectorSize = (INT)(nDataLen / DISC_RAW_READ_SIZE - 1);
+		}
+		else if (!strncmp(fname, "PROTECT.PRO", 11)) {
+			pDisc->PROTECT.byExist = proring;
+			strncpy(pDisc->PROTECT.name, fname, 11);
+			pDisc->PROTECT.ERROR_SECTOR.nExtentPos = nExtentPos;
+			pDisc->PROTECT.ERROR_SECTOR.nSectorSize = (INT)(nDataLen / DISC_RAW_READ_SIZE - 1);
+		}
+		else if (!strncmp(fname, "00000001.LT1", 12)) {
+			pDisc->PROTECT.byExist = safeDiscLite;
+			strncpy(pDisc->PROTECT.name, fname, 12);
+			pDisc->PROTECT.byTmpForSafeDisc = TRUE;
+			pDisc->PROTECT.ERROR_SECTOR.nExtentPos = (INT)(nExtentPos + nDataLen / DISC_RAW_READ_SIZE);
+		}
+		else if (!strncmp(fname, "00000001.TMP", 12)) {
+			pDisc->PROTECT.byExist = safeDisc;
+			strncpy(pDisc->PROTECT.name, fname, 12);
+			pDisc->PROTECT.byTmpForSafeDisc = TRUE;
+			pDisc->PROTECT.ERROR_SECTOR.nExtentPos = (INT)(nExtentPos + nDataLen / DISC_RAW_READ_SIZE);
+		}
+		else if (!strncmp(fname, "00002.tmp", 9)) {
+			pDisc->PROTECT.byExist = smartE;
+			strncpy(pDisc->PROTECT.name, fname, 9);
+			pDisc->PROTECT.ERROR_SECTOR.nExtentPos = nExtentPos;
+			pDisc->PROTECT.ERROR_SECTOR.nSectorSize = (INT)(nDataLen / DISC_RAW_READ_SIZE - 1);
+		}
+		else {
+			PCHAR p = strstr(fname, ".EXE");
+			if (p) {
+				size_t len = (size_t)(p - fname + 4);
+				// for CodeLock
+				pDisc->PROTECT.nExtentPosForExe[pDisc->PROTECT.nCntForExe] = nExtentPos;
+				strncpy(pDisc->PROTECT.nameForExe[pDisc->PROTECT.nCntForExe], fname, len);
+					pDisc->PROTECT.nCntForExe++;
 			}
 		}
 	}
@@ -165,28 +183,62 @@ VOID OutputFsVolumeDescriptorSecond(
 	BOOL bTCHAR
 	)
 {
-	OutputInfoLogA(
+	WORD vss = MAKEWORD(lpBuf[120], lpBuf[121]);
+	if (vss == 0) {
+		vss = MAKEWORD(lpBuf[123], lpBuf[122]);
+	}
+	WORD vsn = MAKEWORD(lpBuf[124], lpBuf[125]);
+	if (vsn == 0) {
+		vsn = MAKEWORD(lpBuf[127], lpBuf[126]);
+	}
+	WORD lbs = MAKEWORD(lpBuf[128], lpBuf[129]);
+	if (lbs == 0) {
+		lbs = MAKEWORD(lpBuf[131], lpBuf[130]);
+	}
+	DWORD pts = MAKEDWORD(MAKEWORD(lpBuf[132], lpBuf[133]),
+		MAKEWORD(lpBuf[134], lpBuf[135]));
+	if (pts == 0) {
+		pts = MAKEDWORD(MAKEWORD(lpBuf[139], lpBuf[138]),
+			MAKEWORD(lpBuf[137], lpBuf[136]));
+	}
+	DWORD lopt = MAKEDWORD(MAKEWORD(lpBuf[140], lpBuf[141]),
+		MAKEWORD(lpBuf[142], lpBuf[143]));
+	pDisc->MAIN.bPathType = lType;
+	if (lopt == 0) {
+		lopt = MAKEDWORD(MAKEWORD(lpBuf[151], lpBuf[150]),
+			MAKEWORD(lpBuf[149], lpBuf[148]));
+		pDisc->MAIN.bPathType = mType;
+	}
+	if (pExtArg->byReadContinue) {
+		if (pDisc->PROTECT.nPrevLBAOfPathTablePos == 0) {
+			pDisc->PROTECT.nPrevLBAOfPathTablePos = (INT)lopt - 1;
+		}
+	}
+	DWORD loopt = MAKEDWORD(MAKEWORD(lpBuf[144], lpBuf[145]),
+		MAKEWORD(lpBuf[146], lpBuf[147]));
+	if (loopt == 0) {
+		loopt = MAKEDWORD(MAKEWORD(lpBuf[155], lpBuf[154]),
+			MAKEWORD(lpBuf[153], lpBuf[152]));
+	}
+	OutputVolDescLogA(
 		"\t                              Volume Set Size: %u\n"
 		"\t                       Volume Sequence Number: %u\n"
 		"\t                           Logical Block Size: %u\n"
 		"\t                              Path Table Size: %u\n"
 		"\t         Location of Occurrence of Path Table: %u\n"
 		"\tLocation of Optional Occurrence of Path Table: %u\n"
-		, MAKEWORD(lpBuf[120], lpBuf[121])
-		, MAKEWORD(lpBuf[124], lpBuf[125])
-		, MAKEWORD(lpBuf[128], lpBuf[129])
-		, MAKELONG(MAKEWORD(lpBuf[132], lpBuf[133]), 
-		MAKEWORD(lpBuf[134], lpBuf[135]))
-		, MAKELONG(MAKEWORD(lpBuf[140], lpBuf[141]),
-		MAKEWORD(lpBuf[142], lpBuf[143]))
-		, MAKELONG(MAKEWORD(lpBuf[144], lpBuf[145]),
-		MAKEWORD(lpBuf[146], lpBuf[147])));
-	DWORD nDataLen = MAKEDWORD(MAKEWORD(lpBuf[166], lpBuf[167]),
+		, vss, vsn, lbs, pts, lopt, loopt);
+
+	DWORD dwDataLen = MAKEDWORD(MAKEWORD(lpBuf[166], lpBuf[167]),
 		MAKEWORD(lpBuf[168], lpBuf[169]));
+	if (dwDataLen == 0) {
+		dwDataLen = MAKEDWORD(MAKEWORD(lpBuf[173], lpBuf[172]),
+			MAKEWORD(lpBuf[171], lpBuf[170]));
+	}
 	CHAR fname[64] = { 0 };
-	OutputFsDirectoryRecord(pExtArg, pDisc, lpBuf + 156, nDataLen, fname);
+	OutputFsDirectoryRecord(pExtArg, pDisc, lpBuf + 156, dwDataLen, fname);
 	if (bTCHAR) {
-		OutputInfoLogA(
+		OutputVolDescLogA(
 			"\t                        Volume Set Identifier: %.64s\n"
 			"\t                         Publisher Identifier: %.64s\n"
 			"\t                     Data Preparer Identifier: %.64s\n"
@@ -194,16 +246,10 @@ VOID OutputFsVolumeDescriptorSecond(
 			"\t                    Copyright File Identifier: %.18s\n"
 			"\t                     Abstract File Identifier: %.18s\n"
 			"\t                Bibliographic File Identifier: %.18s\n"
-			, str128[0]
-			, str128[1]
-			, str128[2]
-			, str128[3]
-			, str37[0]
-			, str37[1]
-			, str37[2]);
+			, str128[0], str128[1], str128[2], str128[3], str37[0], str37[1], str37[2]);
 	}
 	else {
-		OutputInfoLogA(
+		OutputVolDescLogA(
 			"\t                        Volume Set Identifier: %.128s\n"
 			"\t                         Publisher Identifier: %.128s\n"
 			"\t                     Data Preparer Identifier: %.128s\n"
@@ -211,13 +257,7 @@ VOID OutputFsVolumeDescriptorSecond(
 			"\t                    Copyright File Identifier: %.37s\n"
 			"\t                     Abstract File Identifier: %.37s\n"
 			"\t                Bibliographic File Identifier: %.37s\n"
-			, str128[0]
-			, str128[1]
-			, str128[2]
-			, str128[3]
-			, str37[0]
-			, str37[1]
-			, str37[2]);
+			, str128[0], str128[1], str128[2], str128[3], str37[0], str37[1], str37[2]);
 	}
 }
 
@@ -260,7 +300,7 @@ VOID OutputFsVolumeDescriptorForTime(
 	strncpy(time[3], (PCHAR)&lpBuf[874], sizeof(time[3]));
 	strncpy(second[3], (PCHAR)&lpBuf[876], sizeof(second[3]));
 	strncpy(milisecond[3], (PCHAR)&lpBuf[878], sizeof(milisecond[3]));
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"\t                Volume Creation Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%u\n"
 		"\t            Volume Modification Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%u\n"
 		"\t              Volume Expiration Date and Time: %.4s-%.2s-%.2s %.2s:%.2s:%.2s.%.2s +%u\n"
@@ -273,9 +313,9 @@ VOID OutputFsVolumeDescriptorForTime(
 		year[3], month[3], day[3], hour[3], time[3], second[3], milisecond[3], lpBuf[880],
 		lpBuf[881]);
 	for (INT i = 883; i <= 1394; i++) {
-		OutputInfoLogA("%x", lpBuf[i]);
+		OutputVolDescLogA("%x", lpBuf[i]);
 	}
-	OutputInfoLogA("\n");
+	OutputVolDescLogA("\n");
 }
 
 VOID OutputFsVolumeDescriptorForISO9660(
@@ -299,7 +339,7 @@ VOID OutputFsVolumeDescriptorForISO9660(
 	OutputFsVolumeDescriptorFirst(lpBuf, str32);
 	if (lpBuf[0] == 2) {
 		strncpy(str32[2], (PCHAR)&lpBuf[88], 32);
-		OutputInfoLogA(
+		OutputVolDescLogA(
 			"\t                             Escape Sequences: %.32s\n", str32[2]);
 	}
 	OutputFsVolumeDescriptorSecond(pExtArg, pDisc, lpBuf, str128, str37, FALSE);
@@ -428,7 +468,7 @@ VOID OutputFsVolumeDescriptorForJoliet(
 	OutputFsVolumeDescriptorFirst(lpBuf, str32);
 
 	strncpy(str32[2], (PCHAR)&lpBuf[88], 32);
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"\t                             Escape Sequences: %.32s\n", str32[2]);
 	OutputFsVolumeDescriptorSecond(pExtArg, pDisc, lpBuf, str128, str37, TRUE);
 	OutputFsVolumeDescriptorForTime(lpBuf);
@@ -441,7 +481,7 @@ VOID OutputFsVolumePartitionDescriptor(
 	CHAR str[2][32] = { 0 };
 	strncpy(str[0], (PCHAR)&lpBuf[8], 32);
 	strncpy(str[1], (PCHAR)&lpBuf[40], 32);
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"\t          System Identifier: %.32s\n"
 		"\tVolume Partition Identifier: %.32s\n"
 		"\t  Volume Partition Location: %u\n"
@@ -454,9 +494,9 @@ VOID OutputFsVolumePartitionDescriptor(
 		MAKELONG(MAKEWORD(lpBuf[84], lpBuf[85]),
 		MAKEWORD(lpBuf[86], lpBuf[87])));
 	for (INT i = 88; i < 2048; i++) {
-		OutputInfoLogA("%x", lpBuf[i]);
+		OutputVolDescLogA("%x", lpBuf[i]);
 	}
-	OutputInfoLogA("\n");
+	OutputVolDescLogA("\n");
 }
 
 VOID OutputFsVolumeDescriptor(
@@ -474,7 +514,7 @@ VOID OutputFsVolumeDescriptor(
 	// 255 is Volume Descriptor Set Terminator.
 	CHAR str[5] = { 0 };
 	strncpy(str, (PCHAR)&lpBuf[1], sizeof(str));
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"=================== Volume Descriptor, LBA[%06d, %#07x] ===================\n"
 		"\t                       Volume Descriptor Type: %u\n"
 		"\t                          Standard Identifier: %.5s\n"
@@ -497,44 +537,57 @@ VOID OutputFsVolumeDescriptor(
 		OutputFsVolumePartitionDescriptor(lpBuf);
 	}
 	else if (lpBuf[0] == 255) {
-		// all zero
+		if (pExtArg->byReadContinue) {
+			pDisc->PROTECT.nNextLBAOfLastVolDesc = nLBA + 1;
+		}
 	}
 }
 
 VOID OutputFsPathTableRecord(
+	PDISC pDisc,
 	LPBYTE lpBuf,
-	INT nLBA,
-	INT nPathTblSize,
+	DWORD dwPathTblPos,
+	DWORD dwPathTblSize,
 	LPUINT pDirTblPosList,
 	LPSTR* pDirTblNameList,
 	LPINT nDirPosNum
 	)
 {
-	OutputInfoLogA(
-		"=================== Path Table Record, LBA[%06d, %#07x] ===================\n"
-		, nLBA, nLBA);
-	for (INT i = 0; i < nPathTblSize;) {
+	OutputVolDescLogA(
+		"=================== Path Table Record, LBA[%06u, %#07x] ===================\n"
+		, dwPathTblPos, dwPathTblPos);
+	for (DWORD i = 0; i < dwPathTblSize;) {
 		size_t nLenDI = lpBuf[i];
-		DWORD nPos = MAKEDWORD(MAKEWORD(lpBuf[2 + i], lpBuf[3 + i]),
-			MAKEWORD(lpBuf[4 + i], lpBuf[5 + i]));
+		DWORD dwPosOfExtent = 0;
+		if (pDisc->MAIN.bPathType == lType) {
+			dwPosOfExtent = MAKEDWORD(MAKEWORD(lpBuf[2 + i], lpBuf[3 + i]),
+				MAKEWORD(lpBuf[4 + i], lpBuf[5 + i]));
+		}
+		else {
+			dwPosOfExtent = MAKEDWORD(MAKEWORD(lpBuf[5 + i], lpBuf[4 + i]),
+				MAKEWORD(lpBuf[3 + i], lpBuf[2 + i]));
+		}
 		if (nLenDI > 0) {
-			OutputInfoLogA(
+			WORD nud = 0;
+			if (pDisc->MAIN.bPathType == lType) {
+				nud = MAKEWORD(lpBuf[6 + i], lpBuf[7 + i]);
+			}
+			else {
+				nud = MAKEWORD(lpBuf[7 + i], lpBuf[6 + i]);
+			}
+			OutputVolDescLogA(
 				"     Length of Directory Identifier: %u\n"
 				"Length of Extended Attribute Record: %u\n"
 				"                 Position of Extent: %u\n"
 				"          Number of Upper Directory: %u\n"
 				"               Directory Identifier: "
-				, nLenDI
-				, lpBuf[1 + i]
-				, nPos
-				, MAKEWORD(lpBuf[6 + i], lpBuf[7 + i])
-				);
+				, nLenDI, lpBuf[1 + i], dwPosOfExtent, nud);
 			for (size_t n = 0; n < nLenDI; n++) {
-				OutputInfoLogA("%c", lpBuf[8 + i + n]);
+				OutputVolDescLogA("%c", lpBuf[8 + i + n]);
 				pDirTblNameList[*nDirPosNum][n] = (CHAR)lpBuf[8 + i + n];
 			}
-			OutputInfoLogA("\n\n");
-			pDirTblPosList[*nDirPosNum] = nPos;
+			OutputVolDescLogA("\n\n");
+			pDirTblPosList[*nDirPosNum] = dwPosOfExtent;
 			*nDirPosNum = *nDirPosNum + 1;
 			
 			i += 8 + nLenDI;
@@ -545,9 +598,7 @@ VOID OutputFsPathTableRecord(
 	}
 }
 
-/*
-http://www.dubeyko.com/development/FileSystems/HFS/hfs_ondisk_layout/Files-102.html
-*/
+// http://www.dubeyko.com/development/FileSystems/HFS/hfs_ondisk_layout/Files-102.html
 VOID OutputFsMasterDirectoryBlocks(
 	LPBYTE lpBuf,
 	INT nLBA
@@ -555,7 +606,7 @@ VOID OutputFsMasterDirectoryBlocks(
 {
 	CHAR str[27] = { 0 };
 	strncpy(str, (PCHAR)&lpBuf[36], sizeof(str));
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"================ Master Directory Blocks, LBA[%06d, %#07x] ================\n"
 		"\t                       volume signature: %04x\n"
 		"\t       date and time of volume creation: %08x\n"
@@ -644,7 +695,7 @@ VOID OutputFs3doHeader(
 	INT nLBA
 	)
 {
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"======================= 3DO Header, LBA[%06d, %#07x] ======================\n"
 		"\t                Record Type: %#04x\n"
 		"\t                 Sync Bytes: %#04x %#04x %#04x %#04x %#04x\n"
@@ -657,17 +708,17 @@ VOID OutputFs3doHeader(
 		lpBuf[6],
 		lpBuf[7]);
 	for (INT i = 0; i < 32; i++) {
-		OutputInfoLogA("%c", lpBuf[8 + i]);
+		OutputVolDescLogA("%c", lpBuf[8 + i]);
 	}
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"\n"
 		"\t               Volume Label: ");
 	for (INT i = 0; i < 32; i++) {
-		OutputInfoLogA("%c", lpBuf[40 + i]);
+		OutputVolDescLogA("%c", lpBuf[40 + i]);
 	}
 	LONG dwNumOfCopy =
 		MAKELONG(MAKEWORD(lpBuf[99], lpBuf[98]), MAKEWORD(lpBuf[97], lpBuf[96]));
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"\n"
 		"\t                  Volume ID: %#10x\n"
 		"\t         Logical Block Size: %u\n"
@@ -687,7 +738,7 @@ VOID OutputFs3doHeader(
 		MAKELONG(MAKEWORD(lpBuf[103], lpBuf[102]), MAKEWORD(lpBuf[101], lpBuf[100])));
 
 	for (LONG i = 0; i < dwNumOfCopy; i++) {
-		OutputInfoLogA(
+		OutputVolDescLogA(
 			"\t       Pos of Root Dir Copy: %u\n",
 			MAKELONG(MAKEWORD(lpBuf[107 + i * 4], lpBuf[106 + i * 4]),
 			MAKEWORD(lpBuf[105 + i * 4], lpBuf[104 + i * 4])));
@@ -697,11 +748,11 @@ VOID OutputFs3doHeader(
 VOID OutputFs3doDirectoryRecord(
 	LPBYTE lpBuf,
 	INT nLBA,
-	PCHAR path,
-	LONG directorySize
+	PCHAR pPath,
+	LONG lDirSize
 	)
 {
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"==================== Directory Record, LBA[%06d, %#07x] ===================\n"
 		"\tcurrentDir: %s\n"
 		"\t==================== Directory Header ===================\n"
@@ -711,22 +762,22 @@ VOID OutputFs3doDirectoryRecord(
 		"\t  directorySize: %u\n"
 		"\tdirectoryOffset: %u\n"
 		, nLBA, nLBA
-		, path
+		, pPath
 		, MAKELONG(MAKEWORD(lpBuf[3], lpBuf[2]), MAKEWORD(lpBuf[1], lpBuf[0]))
 		, MAKELONG(MAKEWORD(lpBuf[7], lpBuf[6]), MAKEWORD(lpBuf[5], lpBuf[4]))
 		, MAKELONG(MAKEWORD(lpBuf[11], lpBuf[10]), MAKEWORD(lpBuf[9], lpBuf[8]))
-		, directorySize
+		, lDirSize
 		, MAKELONG(MAKEWORD(lpBuf[19], lpBuf[18]), MAKEWORD(lpBuf[17], lpBuf[16])));
 
 	LONG cur = THREEDO_DIR_HEADER_SIZE;
 	LONG lastCopy = 0;
 	CHAR fname[32] = { 0 };
-	while (cur < directorySize) {
+	while (cur < lDirSize) {
 		LPBYTE dirEnt = lpBuf + cur;
 		strncpy(fname, (PCHAR)&dirEnt[32], sizeof(fname));
 		lastCopy = MAKELONG(MAKEWORD(dirEnt[67], dirEnt[66]), MAKEWORD(dirEnt[65], dirEnt[64]));
 		cur += THREEDO_DIR_ENTRY_SIZE;
-		OutputInfoLogA(
+		OutputVolDescLogA(
 			"\t==================== Directory Entry ===================\n"
 			"\t            flags: %#010x\n"
 			"\t               id: %#08x\n"
@@ -752,7 +803,7 @@ VOID OutputFs3doDirectoryRecord(
 			, MAKELONG(MAKEWORD(dirEnt[71], dirEnt[70]), MAKEWORD(dirEnt[69], dirEnt[68])));
 		for (LONG i = 0; i < lastCopy; i++) {
 			LPBYTE pCopyPos = lpBuf + cur + sizeof(LONG) * i;
-			OutputInfoLogA("\t    data copy pos: %u\n"
+			OutputVolDescLogA("\t    data copy pos: %u\n"
 				, MAKELONG(MAKEWORD(pCopyPos[3], pCopyPos[2]), MAKEWORD(pCopyPos[1], pCopyPos[0])));
 			cur += sizeof(LONG);
 		}
@@ -764,7 +815,7 @@ VOID OutputFsPceStuff(
 	INT nLBA
 	)
 {
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"============== PCE Warning msg, all stuff, LBA[%06d, %#07x] ==============\n",
 		nLBA, nLBA);
 	CHAR str[39] = { 0 };
@@ -778,7 +829,7 @@ VOID OutputFsPceStuff(
 		len = strlen(ptr) + 1;
 		if (len < sizeof(str)) {
 			strncpy(str, ptr, len);
-			OutputInfoLogA("\t%s\n", str);
+			OutputVolDescLogA("\t%s\n", str);
 		}
 	}
 }
@@ -796,7 +847,7 @@ VOID OutputFsPceBootSector(
 	strncpy(str3, (PCHAR)&lpBuf[106], sizeof(str3) - 1);
 	CHAR str4[7] = { 0 };
 	strncpy(str4, (PCHAR)&lpBuf[122], sizeof(str4) - 1);
-	OutputInfoLogA(
+	OutputVolDescLogA(
 		"==================== PCE Boot Sector, LBA[%06d, %#07x] ====================\n"
 		"\t       load start record no.of CD: %02x:%02x:%02x\n"
 		"\t          load block length of CD: %02x\n"
@@ -835,6 +886,173 @@ VOID OutputFsPceBootSector(
 		lpBuf[25], lpBuf[26], lpBuf[27], lpBuf[28], lpBuf[29], lpBuf[30], lpBuf[31],
 		str, str2, str3, str4
 		);
+}
+
+VOID OutputFsPcfxHeader(
+	LPBYTE lpBuf,
+	INT nLBA
+	)
+{
+	OutputVolDescLogA(
+		"=================== PCFX Warning msg, LBA[%06d, %#07x] ====================\n"
+		"\t%s\n"
+		, nLBA, nLBA, (PCHAR)&lpBuf[16]);
+}
+
+VOID OutputFsPcfxSector(
+	LPBYTE lpBuf,
+	INT nLBA
+	)
+{
+	OutputVolDescLogA(
+		"================= PCFX Title Maker YMD, LBA[%06d, %#07x] ==================\n"
+		"\t       Title: %s\n"
+		"\tMaker(short): %s\n"
+		"\t Maker(long): %s\n"
+		"\t         YMD: %s\n"
+		, nLBA, nLBA
+		, (PCHAR)&lpBuf[0]
+		, (PCHAR)&lpBuf[48]
+		, (PCHAR)&lpBuf[52]
+		, (PCHAR)&lpBuf[120]
+		);
+}
+
+VOID OutputFsImageDosHeader(
+	PIMAGE_DOS_HEADER pIdh
+	)
+{
+	OutputVolDescLogA(
+		"Image Dos Header\n"
+		"                     Magic number: %04x\n"
+		"       Bytes on last page of file: %04x\n"
+		"                    Pages in file: %04x\n"
+		"                      Relocations: %04x\n"
+		"     Size of header in paragraphs: %04x\n"
+		"  Minimum extra paragraphs needed: %04x\n"
+		"  Maximum extra paragraphs needed: %04x\n"
+		"      Initial (relative) SS value: %04x\n"
+		"                 Initial SP value: %04x\n"
+		"                         Checksum: %04x\n"
+		"                 Initial IP value: %04x\n"
+		"      Initial (relative) CS value: %04x\n"
+		" File address of relocation table: %04x\n"
+		"                   Overlay number: %04x\n"
+		"   OEM identifier (for e_oeminfo): %04x\n"
+		"OEM information; e_oemid specific: %04x\n"
+		"   File address of new exe header: %08x\n"
+		, pIdh->e_magic, pIdh->e_cblp, pIdh->e_cp, pIdh->e_crlc, pIdh->e_cparhdr
+		, pIdh->e_minalloc, pIdh->e_maxalloc, pIdh->e_ss, pIdh->e_sp, pIdh->e_csum
+		, pIdh->e_ip, pIdh->e_cs, pIdh->e_lfarlc, pIdh->e_ovno, pIdh->e_oemid
+		, pIdh->e_oeminfo, pIdh->e_lfanew
+		);
+}
+
+VOID OutputFsImageNtHeader(
+	PIMAGE_NT_HEADERS32 pInh
+	)
+{
+	OutputVolDescLogA(
+		"Image NT Header\n"
+		"Signature: %08x\n"
+		"FileHeader\n"
+		"\t             Machine: %04x\n"
+		"\t    NumberOfSections: %04x\n"
+		"\t       TimeDateStamp: %08x\n"
+		"\tPointerToSymbolTable: %08x\n"
+		"\t     NumberOfSymbols: %08x\n"
+		"\tSizeOfOptionalHeader: %04x\n"
+		"\t     Characteristics: %04x\n"
+		"OptionalHeader\n"
+		"\t                      Magic: %04x\n"
+		"\t         MajorLinkerVersion: %02x\n"
+		"\t         MinorLinkerVersion: %02x\n"
+		"\t                 SizeOfCode: %08x\n"
+		"\t      SizeOfInitializedData: %08x\n"
+		"\t    SizeOfUninitializedData: %08x\n"
+		"\t        AddressOfEntryPoint: %08x\n"
+		"\t                 BaseOfCode: %08x\n"
+		"\t                 BaseOfData: %08x\n"
+		"\t                  ImageBase: %08x\n"
+		"\t           SectionAlignment: %08x\n"
+		"\t              FileAlignment: %08x\n"
+		"\tMajorOperatingSystemVersion: %04x\n"
+		"\tMinorOperatingSystemVersion: %04x\n"
+		"\t          MajorImageVersion: %04x\n"
+		"\t          MinorImageVersion: %04x\n"
+		"\t      MajorSubsystemVersion: %04x\n"
+		"\t      MinorSubsystemVersion: %04x\n"
+		"\t          Win32VersionValue: %08x\n"
+		"\t                SizeOfImage: %08x\n"
+		"\t              SizeOfHeaders: %08x\n"
+		"\t                   CheckSum: %08x\n"
+		"\t                  Subsystem: %04x\n"
+		"\t         DllCharacteristics: %04x\n"
+		"\t         SizeOfStackReserve: %08x\n"
+		"\t          SizeOfStackCommit: %08x\n"
+		"\t          SizeOfHeapReserve: %08x\n"
+		"\t           SizeOfHeapCommit: %08x\n"
+		"\t                LoaderFlags: %08x\n"
+		"\t        NumberOfRvaAndSizes: %08x\n"
+		"\t              DataDirectory:\n"
+		, pInh->Signature, pInh->FileHeader.Machine, pInh->FileHeader.NumberOfSections
+		, pInh->FileHeader.TimeDateStamp, pInh->FileHeader.PointerToSymbolTable
+		, pInh->FileHeader.NumberOfSymbols, pInh->FileHeader.SizeOfOptionalHeader
+		, pInh->FileHeader.Characteristics
+		, pInh->OptionalHeader.Magic, pInh->OptionalHeader.MajorLinkerVersion
+		, pInh->OptionalHeader.MinorLinkerVersion, pInh->OptionalHeader.SizeOfCode
+		, pInh->OptionalHeader.SizeOfInitializedData, pInh->OptionalHeader.SizeOfUninitializedData
+		, pInh->OptionalHeader.AddressOfEntryPoint, pInh->OptionalHeader.BaseOfCode
+		, pInh->OptionalHeader.BaseOfData, pInh->OptionalHeader.ImageBase
+		, pInh->OptionalHeader.SectionAlignment, pInh->OptionalHeader.FileAlignment
+		, pInh->OptionalHeader.MajorOperatingSystemVersion, pInh->OptionalHeader.MinorOperatingSystemVersion
+		, pInh->OptionalHeader.MajorImageVersion, pInh->OptionalHeader.MinorImageVersion
+		, pInh->OptionalHeader.MajorSubsystemVersion, pInh->OptionalHeader.MinorSubsystemVersion
+		, pInh->OptionalHeader.Win32VersionValue, pInh->OptionalHeader.SizeOfImage
+		, pInh->OptionalHeader.SizeOfHeaders, pInh->OptionalHeader.CheckSum
+		, pInh->OptionalHeader.Subsystem, pInh->OptionalHeader.DllCharacteristics
+		, pInh->OptionalHeader.SizeOfStackReserve, pInh->OptionalHeader.SizeOfStackCommit
+		, pInh->OptionalHeader.SizeOfHeapReserve, pInh->OptionalHeader.SizeOfHeapCommit
+		, pInh->OptionalHeader.LoaderFlags, pInh->OptionalHeader.NumberOfRvaAndSizes
+		);
+	for (INT i = 0; i < IMAGE_NUMBEROF_DIRECTORY_ENTRIES; i++) {
+		OutputVolDescLogA(
+			"\t\tVirtualAddress[%d]: %08x\n"
+			"\t\t          Size[%d]: %08x\n"
+			, i, pInh->OptionalHeader.DataDirectory[i].VirtualAddress
+			, i, pInh->OptionalHeader.DataDirectory[i].Size
+			);
+	}
+}
+
+VOID OutputFsImageSectionHeader(
+	PDISC pDisc,
+	PIMAGE_SECTION_HEADER pIsh,
+	INT nIdx
+	)
+{
+	OutputVolDescLogA(
+		"Image Section Header\n"
+		"                Name: %s\n"
+		"      VirtualAddress: %08x\n"
+		"       SizeOfRawData: %08x\n"
+		"    PointerToRawData: %08x\n"
+		"PointerToRelocations: %08x\n"
+		"PointerToLinenumbers: %08x\n"
+		" NumberOfRelocations: %04x\n"
+		" NumberOfLinenumbers: %04x\n"
+		"     Characteristics: %08x\n"
+		, pIsh->Name, pIsh->VirtualAddress, pIsh->SizeOfRawData, pIsh->PointerToRawData
+		, pIsh->PointerToRelocations, pIsh->PointerToLinenumbers, pIsh->NumberOfRelocations
+		, pIsh->NumberOfLinenumbers, pIsh->Characteristics
+		);
+	if (!strncmp((PCHAR)pIsh->Name, "icd1", 4)) {
+		pDisc->PROTECT.byExist = codelock;
+		strcpy(pDisc->PROTECT.name, pDisc->PROTECT.nameForExe[nIdx]);
+		pDisc->PROTECT.ERROR_SECTOR.nExtentPos = pDisc->PROTECT.nNextLBAOfLastVolDesc;
+		pDisc->PROTECT.ERROR_SECTOR.nSectorSize 
+			= pDisc->PROTECT.nPrevLBAOfPathTablePos - pDisc->PROTECT.nNextLBAOfLastVolDesc;
+	}
 }
 
 VOID OutputTocForGD(
@@ -940,6 +1158,17 @@ VOID OutputCDOffset(
 			pDisc->MAIN.nCombinedOffset - nDriveOffset,
 			(pDisc->MAIN.nCombinedOffset - nDriveOffset) / 4);
 	}
+
+	if (0 < pDisc->MAIN.nCombinedOffset) {
+		pDisc->MAIN.nAdjustSectorNum =
+			pDisc->MAIN.nCombinedOffset / CD_RAW_SECTOR_SIZE + 1;
+	}
+	else if (pDisc->MAIN.nCombinedOffset < 0) {
+		pDisc->MAIN.nAdjustSectorNum =
+			pDisc->MAIN.nCombinedOffset / CD_RAW_SECTOR_SIZE - 1;
+	}
+	OutputDiscLogA(
+		"\tOverread sector: %d\n", pDisc->MAIN.nAdjustSectorNum);
 }
 
 VOID OutputCDC2Error296(
@@ -964,17 +1193,21 @@ VOID OutputCDC2Error296(
 }
 
 VOID OutputCDMain(
+	LOG_TYPE type,
 	LPBYTE lpBuf,
 	INT nLBA,
 	INT nSize
 	)
 {
-	OutputDiscLogA(
+#ifdef _DEBUG
+	UNREFERENCED_PARAMETER(type);
+#endif
+	OutputLogA(type,
 		"===================== Main Channel, LBA[%06d, %#07x] ======================\n"
 		"\t          +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n", nLBA, nLBA);
 
 	for (INT i = 0; i < nSize; i += 16) {
-		OutputDiscLogA(
+		OutputLogA(type,
 			"\t%3x(%4d) %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
 			i, i, lpBuf[i], lpBuf[i + 1], lpBuf[i + 2], lpBuf[i + 3], lpBuf[i + 4], lpBuf[i + 5],
 			lpBuf[i + 6], lpBuf[i + 7], lpBuf[i + 8], lpBuf[i + 9], lpBuf[i + 10], lpBuf[i + 11],

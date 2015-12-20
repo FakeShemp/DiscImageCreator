@@ -10,7 +10,6 @@ extern BYTE g_aSyncHeader[SYNC_SIZE];
 
 BOOL InitC2ErrorData(
 	PEXT_ARG pExtArg,
-	PDISC pDisc,
 	PC2_ERROR_PER_SECTOR* pC2ErrorPerSector,
 	DWORD dwAllBufLen
 	)
@@ -21,7 +20,6 @@ BOOL InitC2ErrorData(
 		OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 		return FALSE;
 	}
-	pDisc->C2.sC2Offset = (SHORT)(pDisc->MAIN.nCombinedOffset / CHAR_BIT);
 	try {
 		for (UINT n = 0; n < pExtArg->dwMaxC2ErrorNum; n++) {
 			OutputString(_T("\rAllocating memory for C2 errors: %u/%u"), 
@@ -160,13 +158,19 @@ BOOL InitTocTextData(
 }
 
 VOID InitMainDataHeader(
+	PEXT_ARG pExtArg,
 	PMAIN_HEADER pMain
 	)
 {
-	memcpy(pMain->header, g_aSyncHeader, sizeof(g_aSyncHeader));
-	pMain->header[12] = 0x01;
-	pMain->header[13] = 0x82;
-	pMain->header[14] = (BYTE)-1;
+	memcpy(pMain->present, g_aSyncHeader, sizeof(g_aSyncHeader));
+	if (!pExtArg->byBe) {
+		pMain->present[12] = 0x01;
+		pMain->present[13] = 0x82;
+	}
+	else {
+		pMain->present[13] = 2;
+	}
+	pMain->present[14] = (BYTE)-1;
 }
 
 BOOL InitSubData(
@@ -177,12 +181,6 @@ BOOL InitSubData(
 	BOOL bRet = TRUE;
 	size_t dwTrackAllocSize =
 		*pExecType == gd ? 100 : (size_t)(*pDisc)->SCSI.toc.LastTrack + 1;
-	(*pDisc)->SUB.byCatalog = FALSE;
-	(*pDisc)->SUB.nFirstLBAForMCN = -1;
-	(*pDisc)->SUB.nRangeLBAForMCN = -1;
-	(*pDisc)->SUB.byISRC = FALSE;
-	(*pDisc)->SUB.nFirstLBAForISRC = -1;
-	(*pDisc)->SUB.nRangeLBAForISRC = -1;
 	try {
 		if (NULL == ((*pDisc)->SUB.lpRtoWList =
 			(LPBYTE)calloc(dwTrackAllocSize, sizeof(BYTE)))) {
@@ -245,6 +243,16 @@ BOOL InitSubData(
 			(*pDisc)->SUB.lpFirstLBAListOfDataTrackOnSub[h] = -1;
 			(*pDisc)->SUB.lpLastLBAListOfDataTrackOnSub[h] = -1;
 		}
+		(*pDisc)->SUB.byCatalog = FALSE;
+		(*pDisc)->SUB.byISRC = FALSE;
+		for (INT i = 0; i < 3; i++) {
+			for (INT j = 0; j < 2; j++) {
+				(*pDisc)->SUB.nFirstLBAForMCN[i][j] = -1;
+				(*pDisc)->SUB.nRangeLBAForMCN[i][j] = -1;
+				(*pDisc)->SUB.nFirstLBAForISRC[i][j] = -1;
+				(*pDisc)->SUB.nRangeLBAForISRC[i][j] = -1;
+			}
+		}
 	}
 	catch (BOOL bErr) {
 		bRet = bErr;
@@ -270,31 +278,39 @@ BOOL InitLogFile(
 	CONST INT size = 32;
 	CHAR szDiscLogtxt[size] = { 0 };
 	CHAR szDriveLogtxt[size] = { 0 };
-	CHAR szInfoLogtxt[size] = { 0 };
+	CHAR szVolDescLogtxt[size] = { 0 };
+	CHAR szMainInfoLogtxt[size] = { 0 };
+	CHAR szMainErrorLogtxt[size] = { 0 };
+	CHAR szSubInfoLogtxt[size] = { 0 };
 	CHAR szSubErrorLogtxt[size] = { 0 };
 	CHAR szC2ErrorLogtxt[size] = { 0 };
 
-	if (*pExecType == floppy) {
-		strncpy(szDiscLogtxt, "_disclog_fd", size);
+	if (*pExecType == fd) {
+		strncpy(szDiscLogtxt, "_disc_fd", size);
 	}
 	else if (*pExecType == dvd) {
-		strncpy(szDiscLogtxt, "_disclog_dvd", size);
-		strncpy(szDriveLogtxt, "_drivelog_dvd", size);
-		strncpy(szInfoLogtxt, "_infolog_dvd", size);
+		strncpy(szDiscLogtxt, "_disc_dvd", size);
+		strncpy(szDriveLogtxt, "_drive_dvd", size);
+		strncpy(szVolDescLogtxt, "_volDesc_dvd", size);
 	}
 	else if (*pExecType == gd) {
-		strncpy(szDiscLogtxt, "_disclog_gd", size);
-		strncpy(szDriveLogtxt, "_drivelog_gd", size);
-		strncpy(szInfoLogtxt, "_infolog_gd", size);
-		strncpy(szSubErrorLogtxt, "_suberrorlog_gd", size);
-		strncpy(szC2ErrorLogtxt, "_c2errorlog_gd", size);
+		strncpy(szDiscLogtxt, "_disc_gd", size);
+		strncpy(szDriveLogtxt, "_drive_gd", size);
+		strncpy(szVolDescLogtxt, "_volDesc_gd", size);
+		strncpy(szMainInfoLogtxt, "_mainInfo_gd", size);
+		strncpy(szMainErrorLogtxt, "_mainError_gd", size);
+		strncpy(szSubErrorLogtxt, "_subError_gd", size);
+		strncpy(szC2ErrorLogtxt, "_c2error_gd", size);
 	}
 	else {
-		strncpy(szDiscLogtxt, "_disclog", size);
-		strncpy(szDriveLogtxt, "_drivelog", size);
-		strncpy(szInfoLogtxt, "_infolog", size);
-		strncpy(szSubErrorLogtxt, "_suberrorlog", size);
-		strncpy(szC2ErrorLogtxt, "_c2errorlog", size);
+		strncpy(szDiscLogtxt, "_disc", size);
+		strncpy(szDriveLogtxt, "_drive", size);
+		strncpy(szVolDescLogtxt, "_volDesc", size);
+		strncpy(szMainInfoLogtxt, "_mainInfo", size);
+		strncpy(szMainErrorLogtxt, "_mainError", size);
+		strncpy(szSubInfoLogtxt, "_subInfo", size);
+		strncpy(szSubErrorLogtxt, "_subError", size);
+		strncpy(szC2ErrorLogtxt, "_c2error", size);
 	}
 
 	g_LogFile.fpDisc = CreateOrOpenFileA(
@@ -305,20 +321,38 @@ BOOL InitLogFile(
 	}
 	BOOL bRet = TRUE;
 	try {
-		if (*pExecType != floppy) {
+		if (*pExecType != fd) {
 			g_LogFile.fpDrive = CreateOrOpenFileA(
 				path, szDriveLogtxt, NULL, NULL, NULL, ".txt", "w", 0, 0);
 			if (!g_LogFile.fpDrive) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
-			g_LogFile.fpInfo = CreateOrOpenFileA(
-				path, szInfoLogtxt, NULL, NULL, NULL, ".txt", "w", 0, 0);
-			if (!g_LogFile.fpInfo) {
+			g_LogFile.fpVolDesc = CreateOrOpenFileA(
+				path, szVolDescLogtxt, NULL, NULL, NULL, ".txt", "w", 0, 0);
+			if (!g_LogFile.fpVolDesc) {
 				OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 				throw FALSE;
 			}
 			if (*pExecType != dvd) {
+				g_LogFile.fpMainInfo = CreateOrOpenFileA(
+					path, szMainInfoLogtxt, NULL, NULL, NULL, ".txt", "w", 0, 0);
+				if (!g_LogFile.fpMainInfo) {
+					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+					throw FALSE;
+				}
+				g_LogFile.fpMainError = CreateOrOpenFileA(
+					path, szMainErrorLogtxt, NULL, NULL, NULL, ".txt", "w", 0, 0);
+				if (!g_LogFile.fpMainError) {
+					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+					throw FALSE;
+				}
+				g_LogFile.fpSubInfo = CreateOrOpenFileA(
+					path, szSubInfoLogtxt, NULL, NULL, NULL, ".txt", "w", 0, 0);
+				if (!g_LogFile.fpSubInfo) {
+					OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
+					throw FALSE;
+				}
 				g_LogFile.fpSubError = CreateOrOpenFileA(
 					path, szSubErrorLogtxt, NULL, NULL, NULL, ".txt", "w", 0, 0);
 				if (!g_LogFile.fpSubError) {
@@ -433,11 +467,16 @@ VOID TerminateLogFile(
 	)
 {
 	FcloseAndNull(g_LogFile.fpDisc);
-	if (*pExecType != floppy) {
+	if (*pExecType != fd) {
 		FcloseAndNull(g_LogFile.fpDrive);
-		FcloseAndNull(g_LogFile.fpInfo);
+		FcloseAndNull(g_LogFile.fpVolDesc);
 		if (*pExecType != dvd) {
+			FcloseAndNull(g_LogFile.fpMainInfo);
+			FcloseAndNull(g_LogFile.fpMainError);
 			FcloseAndNull(g_LogFile.fpSubError);
+			if (pExtArg->byLibCrypt) {
+				FcloseAndNull(g_LogFile.fpSubInfo);
+			}
 			if (pExtArg->byC2) {
 				FcloseAndNull(g_LogFile.fpC2Error);
 			}

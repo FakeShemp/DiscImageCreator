@@ -32,9 +32,10 @@ VOID OutputFsDirectoryRecord(
 	);
 
 VOID OutputFsPathTableRecord(
+	PDISC pDisc,
 	LPBYTE lpBuf,
-	INT nLBA,
-	INT nPathTblSize,
+	DWORD dwPathTblPos,
+	DWORD dwPathTblSize,
 	LPUINT pDirTblPosList,
 	LPSTR* pDirTblNameList,
 	LPINT nDirPosNum
@@ -53,8 +54,8 @@ VOID OutputFs3doHeader(
 VOID OutputFs3doDirectoryRecord(
 	LPBYTE lpBuf,
 	INT nLBA,
-	PCHAR path,
-	LONG directorySize
+	PCHAR pPath,
+	LONG lDirSize
 	);
 
 VOID OutputFsPceStuff(
@@ -65,6 +66,30 @@ VOID OutputFsPceStuff(
 VOID OutputFsPceBootSector(
 	LPBYTE lpBuf,
 	INT nLBA
+	);
+
+VOID OutputFsPcfxHeader(
+	LPBYTE lpBuf,
+	INT nLBA
+	);
+
+VOID OutputFsPcfxSector(
+	LPBYTE lpBuf,
+	INT nLBA
+	);
+
+VOID OutputFsImageDosHeader(
+	PIMAGE_DOS_HEADER pIdh
+	);
+
+VOID OutputFsImageNtHeader(
+	PIMAGE_NT_HEADERS32 pInh
+	);
+
+VOID OutputFsImageSectionHeader(
+	PDISC pDisc,
+	PIMAGE_SECTION_HEADER pIsh,
+	INT nIdx
 	);
 
 VOID OutputTocForGD(
@@ -90,6 +115,7 @@ VOID OutputCDC2Error296(
 	);
 
 VOID OutputCDMain(
+	LOG_TYPE type,
 	LPBYTE lpBuf,
 	INT nLBA,
 	INT nSize

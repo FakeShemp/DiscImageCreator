@@ -12,7 +12,7 @@ extern _TCHAR g_szCurrentdir[_MAX_PATH];
 extern _TCHAR g_drive[_MAX_DRIVE];
 extern _TCHAR g_dir[_MAX_DIR];
 
-BOOL GetAlignedAllocatedBuffer(
+BOOL GetAlignedCallocatedBuffer(
 	PDEVICE pDevice,
 	LPBYTE* ppSrcBuf,
 	DWORD dwSize,
@@ -27,6 +27,27 @@ BOOL GetAlignedAllocatedBuffer(
 		return FALSE;
 	}
 	*ppOutBuf = (LPBYTE)ConvParagraphBoundary(pDevice, *ppSrcBuf);
+	return TRUE;
+}
+
+BOOL GetAlignedReallocatedBuffer(
+	PDEVICE pDevice,
+	LPBYTE* ppSrcBuf,
+	DWORD dwSize,
+	BYTE byTransferLen,
+	LPBYTE* ppOutBuf,
+	LPCTSTR pszFuncName,
+	LONG lLineNum
+	)
+{
+	LPBYTE pBuf = (LPBYTE)realloc(
+		*ppSrcBuf, dwSize * byTransferLen + pDevice->AlignmentMask);
+	if (!pBuf) {
+		OutputLastErrorNumAndString(pszFuncName, lLineNum);
+		return FALSE;
+	}
+	*ppSrcBuf = pBuf;
+	*ppOutBuf = (LPBYTE)ConvParagraphBoundary(pDevice, pBuf);
 	return TRUE;
 }
 
@@ -168,17 +189,39 @@ UINT64 GetFileSize64(
 
 BYTE GetMode(
 	LPBYTE lpBuf,
-	BYTE byCtl
+	BYTE byPrevMode,
+	BYTE byCtl,
+	INT nType
 	)
 {
-	BYTE byMode = DATA_BLOCK_MODE0;
-	if ((byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK &&
-		IsValidMainDataHeader(lpBuf)) {
-		if ((lpBuf[15] & 0x60) == 0x60) {
-			byMode = BcdToDec((BYTE)(lpBuf[15] ^ 0x60));
+	BYTE byMode = byPrevMode;
+	if ((byCtl & AUDIO_DATA_TRACK) == AUDIO_DATA_TRACK) {
+		if (IsValidMainDataHeader(lpBuf)) {
+			if ((lpBuf[15] & 0x60) == 0x60 && nType == UNSCRAMBLED) {
+				byMode = BcdToDec((BYTE)(lpBuf[15] ^ 0x60));
+			}
+			else {
+				byMode = lpBuf[15];
+			}
 		}
 		else {
-			byMode = BcdToDec(lpBuf[15]);
+			if ((byPrevMode & 0x60) == 0x60 && nType == UNSCRAMBLED) {
+				byMode = BcdToDec(byPrevMode);
+			}
+			else {
+				byMode = byPrevMode;
+			}
+		}
+	}
+	else if ((byCtl & AUDIO_DATA_TRACK) == 0) {
+		byMode = DATA_BLOCK_MODE0;
+	}
+	else {
+		if ((byPrevMode & 0x60) == 0x60 && nType == UNSCRAMBLED) {
+			byMode = BcdToDec(byPrevMode);
+		}
+		else {
+			byMode = byPrevMode;
 		}
 	}
 	return byMode;
@@ -209,7 +252,9 @@ BOOL GetEccEdcCmd(
 	LPTSTR pszStr,
 	size_t cmdSize,
 	LPCTSTR pszCmd,
-	LPCTSTR pszImgPath
+	LPCTSTR pszImgPath,
+	INT nStartLBA,
+	INT nEndLBA
 	)
 {
 	_TCHAR path[_MAX_PATH] = { 0 };
@@ -223,8 +268,15 @@ BOOL GetEccEdcCmd(
 	_tsplitpath(path, drive, dir, NULL, NULL);
 	_tmakepath(path, drive, dir, _T("EccEdc"), _T("exe"));
 	if (PathFileExists(path)) {
-		_sntprintf(pszStr, cmdSize, 
-			_T("\"\"%s\" %s \"%s\"\""), path, pszCmd, pszImgPath);
+		if (!_tcscmp(pszCmd, _T("check"))) {
+			_sntprintf(pszStr, cmdSize,
+				_T("\"\"%s\" %s \"%s\"\""), path, pszCmd, pszImgPath);
+		}
+		else if (!_tcscmp(pszCmd, _T("fix"))) {
+			_sntprintf(pszStr, cmdSize,
+				_T("\"\"%s\" %s \"%s\"\" %d %d"),
+				path, pszCmd, pszImgPath, nStartLBA, nEndLBA);
+		}
 		bRet = TRUE;
 	}
 	else {

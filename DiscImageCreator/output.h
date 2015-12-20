@@ -2,6 +2,7 @@
  * This code is released under the Microsoft Public License (MS-PL). See License.txt, below.
  */
 #pragma once
+#include "forwardDeclaration.h"
 
 #define BOOLEAN_TO_STRING_TRUE_FALSE_W(_b_) \
 	((_b_) ? _T("True") : _T("False"))
@@ -56,11 +57,43 @@ extern CHAR logBufferA[DISC_RAW_READ_SIZE];
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
+#define OutputVolDescLogW(str, ...) \
+{ \
+	OutputDebugStringExW(str, __VA_ARGS__); \
+}
+#define OutputVolDescLogA(str, ...) \
+{ \
+	OutputDebugStringExA(str, __VA_ARGS__); \
+}
 #define OutputDriveLogW(str, ...) \
 { \
 	OutputDebugStringExW(str, __VA_ARGS__); \
 }
 #define OutputDriveLogA(str, ...) \
+{ \
+	OutputDebugStringExA(str, __VA_ARGS__); \
+}
+#define OutputMainInfoLogW(str, ...) \
+{ \
+	OutputDebugStringExW(str, __VA_ARGS__); \
+}
+#define OutputMainInfoLogA(str, ...) \
+{ \
+	OutputDebugStringExA(str, __VA_ARGS__); \
+}
+#define OutputMainErrorLogW(str, ...) \
+{ \
+	OutputDebugStringExW(str, __VA_ARGS__); \
+}
+#define OutputMainErrorLogA(str, ...) \
+{ \
+	OutputDebugStringExA(str, __VA_ARGS__); \
+}
+#define OutputSubInfoLogW(str, ...) \
+{ \
+	OutputDebugStringExW(str, __VA_ARGS__); \
+}
+#define OutputSubInfoLogA(str, ...) \
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
@@ -80,14 +113,6 @@ extern CHAR logBufferA[DISC_RAW_READ_SIZE];
 { \
 	OutputDebugStringExA(str, __VA_ARGS__); \
 }
-#define OutputInfoLogW(str, ...) \
-{ \
-	OutputDebugStringExW(str, __VA_ARGS__); \
-}
-#define OutputInfoLogA(str, ...) \
-{ \
-	OutputDebugStringExA(str, __VA_ARGS__); \
-}
 #define OutputLogW(type, str, ...) \
 { \
 	OutputDebugStringExW(str, __VA_ARGS__); \
@@ -102,10 +127,13 @@ extern _LOG_FILE g_LogFile;
 #define FlushLog() \
 { \
 	fflush(g_LogFile.fpDisc); \
+	fflush(g_LogFile.fpVolDesc); \
 	fflush(g_LogFile.fpDrive); \
+	fflush(g_LogFile.fpMainInfo); \
+	fflush(g_LogFile.fpMainError); \
+	fflush(g_LogFile.fpSubInfo); \
 	fflush(g_LogFile.fpSubError); \
 	fflush(g_LogFile.fpC2Error); \
-	fflush(g_LogFile.fpInfo); \
 }
 
 #define OutputErrorStringW(str, ...) \
@@ -124,6 +152,14 @@ extern _LOG_FILE g_LogFile;
 { \
 	fprintf(g_LogFile.fpDisc, str, __VA_ARGS__); \
 }
+#define OutputVolDescLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpVolDesc, str, __VA_ARGS__); \
+}
+#define OutputVolDescLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpVolDesc, str, __VA_ARGS__); \
+}
 #define OutputDriveLogW(str, ...) \
 { \
 	_ftprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
@@ -131,6 +167,30 @@ extern _LOG_FILE g_LogFile;
 #define OutputDriveLogA(str, ...) \
 { \
 	fprintf(g_LogFile.fpDrive, str, __VA_ARGS__); \
+}
+#define OutputMainInfoLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpMainInfo, str, __VA_ARGS__); \
+}
+#define OutputMainInfoLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpMainInfo, str, __VA_ARGS__); \
+}
+#define OutputMainErrorLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpMainError, str, __VA_ARGS__); \
+}
+#define OutputMainErrorLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpMainError, str, __VA_ARGS__); \
+}
+#define OutputSubInfoLogW(str, ...) \
+{ \
+	_ftprintf(g_LogFile.fpSubInfo, str, __VA_ARGS__); \
+}
+#define OutputSubInfoLogA(str, ...) \
+{ \
+	fprintf(g_LogFile.fpSubInfo, str, __VA_ARGS__); \
 }
 #define OutputSubErrorLogW(str, ...) \
 { \
@@ -148,14 +208,6 @@ extern _LOG_FILE g_LogFile;
 { \
 	fprintf(g_LogFile.fpC2Error, str, __VA_ARGS__); \
 }
-#define OutputInfoLogW(str, ...) \
-{ \
-	_ftprintf(g_LogFile.fpInfo, str, __VA_ARGS__); \
-}
-#define OutputInfoLogA(str, ...) \
-{ \
-	fprintf(g_LogFile.fpInfo, str, __VA_ARGS__); \
-}
 #define OutputLogW(type, str, ...) \
 { \
 	INT t = type; \
@@ -168,17 +220,26 @@ extern _LOG_FILE g_LogFile;
 	if ((t & fileDisc) == fileDisc) { \
 		OutputDiscLogW(str, __VA_ARGS__); \
 	} \
+	if ((t & fileVolDesc) == fileVolDesc) { \
+		OutputVolDescLogW(str, __VA_ARGS__); \
+	} \
 	if ((t & fileDrive) == fileDrive) { \
 		OutputDriveLogW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileMainInfo) == fileMainInfo) { \
+		OutputMainInfoLogW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileMainError) == fileMainError) { \
+		OutputMainErrorLogW(str, __VA_ARGS__); \
+	} \
+	if ((t & fileSubInfo) == fileSubInfo) { \
+		OutputSubInfoLogW(str, __VA_ARGS__); \
 	} \
 	if ((t & fileSubError) == fileSubError) { \
 		OutputSubErrorLogW(str, __VA_ARGS__); \
 	} \
 	if ((t & fileC2Error) == fileC2Error) { \
 		OutputC2ErrorLogW(str, __VA_ARGS__); \
-	} \
-	if ((t & fileInfo) == fileInfo) { \
-		OutputInfoLogW(str, __VA_ARGS__); \
 	} \
 }
 #define OutputLogA(type, str, ...) \
@@ -193,17 +254,26 @@ extern _LOG_FILE g_LogFile;
 	if ((t & fileDisc) == fileDisc) { \
 		OutputDiscLogA(str, __VA_ARGS__); \
 	} \
+	if ((t & fileVolDesc) == fileVolDesc) { \
+		OutputVolDescLogA(str, __VA_ARGS__); \
+	} \
 	if ((t & fileDrive) == fileDrive) { \
 		OutputDriveLogA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileMainInfo) == fileMainInfo) { \
+		OutputMainInfoLogA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileMainError) == fileMainError) { \
+		OutputMainErrorLogA(str, __VA_ARGS__); \
+	} \
+	if ((t & fileSubInfo) == fileSubInfo) { \
+		OutputSubInfoLogA(str, __VA_ARGS__); \
 	} \
 	if ((t & fileSubError) == fileSubError) { \
 		OutputSubErrorLogA(str, __VA_ARGS__); \
 	} \
 	if ((t & fileC2Error) == fileC2Error) { \
 		OutputC2ErrorLogA(str, __VA_ARGS__); \
-	} \
-	if ((t & fileInfo) == fileInfo) { \
-		OutputInfoLogA(str, __VA_ARGS__); \
 	} \
 }
 #endif
@@ -216,10 +286,14 @@ extern _LOG_FILE g_LogFile;
 #define OutputString OutputStringW
 #define OutputErrorString OutputErrorStringW
 #define OutputDiscLog OutputDiscLogW
+#define OutputVolDescLog OutputVolDescLogW
 #define OutputDriveLog OutputDriveLogW
+#define OutputMainInfoLog OutputMainInfoLogW
+#define OutputMainErrorLog OutputMainErrorLogW
+#define OutputSubInfoLog OutputSubInfoLogW
 #define OutputSubErrorLog OutputSubErrorLogW
 #define OutputC2ErrorLog OutputC2ErrorLogW
-#define OutputInfoLog OutputInfoLogW
+#define OutputLog OutputLogW
 #else
 #define WFLAG "w"
 #define AFLAG "a"
@@ -228,10 +302,14 @@ extern _LOG_FILE g_LogFile;
 #define OutputString OutputStringA
 #define OutputErrorString OutputErrorStringA
 #define OutputDiscLog OutputDiscLogA
+#define OutputVolDescLog OutputVolDescLogA
 #define OutputDriveLog OutputDriveLogA
+#define OutputMainInfoLog OutputMainInfoLogA
+#define OutputMainErrorLog OutputMainErrorLogA
+#define OutputSubInfoLog OutputSubInfoLogA
 #define OutputSubErrorLog OutputSubErrorLogA
 #define OutputC2ErrorLog OutputC2ErrorLogA
-#define OutputInfoLog OutputInfoLogA
+#define OutputLog OutputLogA
 #endif
 
 #define FcloseAndNull(fp) \
@@ -347,10 +425,8 @@ VOID WriteErrorBuffer(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	PMAIN_HEADER pMain,
-	LPBYTE lpBuf,
+	PDISC_PER_SECTOR pDiscPerSector,
 	LPBYTE lpScrambledBuf,
-	LPBYTE lpSubcode,
 	INT nLBA,
 	FILE* fpImg,
 	FILE* fpSub,

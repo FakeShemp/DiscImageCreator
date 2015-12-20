@@ -4,10 +4,20 @@
 #pragma once
 #include "enum.h"
 
-BOOL GetAlignedAllocatedBuffer(
+BOOL GetAlignedCallocatedBuffer(
 	PDEVICE pDevice,
 	LPBYTE* ppSrcBuf,
 	DWORD dwSize,
+	LPBYTE* ppOutBuf,
+	LPCTSTR pszFuncName,
+	LONG lLineNum
+	);
+
+BOOL GetAlignedReallocatedBuffer(
+	PDEVICE pDevice,
+	LPBYTE* ppSrcBuf,
+	DWORD dwSize,
+	BYTE byTransferLen,
 	LPBYTE* ppOutBuf,
 	LPCTSTR pszFuncName,
 	LONG lLineNum
@@ -37,7 +47,9 @@ UINT64 GetFileSize64(
 
 BYTE GetMode(
 	LPBYTE lpBuf,
-	BYTE byCtl
+	BYTE byPrevMode,
+	BYTE byCtl,
+	INT nType
 	);
 
 BOOL GetWriteOffset(
@@ -49,5 +61,7 @@ BOOL GetEccEdcCmd(
 	LPTSTR pszStr,
 	size_t cmdSize,
 	LPCTSTR pszCmd,
-	LPCTSTR pszImgPath
+	LPCTSTR pszImgPath,
+	INT nStartLBA,
+	INT nEndLBA
 	);

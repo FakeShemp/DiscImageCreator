@@ -161,7 +161,7 @@ VOID OutputGetConfigurationFeatureProfileType(
 		OutputDriveLogA("DVD-R DL");
 		break;
 	case ProfileDvdDashRLayerJump:
-		OutputDriveLogA("DVD-R LayerJump");
+		OutputDriveLogA("DVD-R Layer Jump");
 		break;
 	case ProfileDvdPlusRW:
 		OutputDriveLogA("DVD+RW");
@@ -169,17 +169,56 @@ VOID OutputGetConfigurationFeatureProfileType(
 	case ProfileDvdPlusR:
 		OutputDriveLogA("DVD+R");
 		break;
+	case ProfileDDCdrom:
+		OutputDriveLogA("DDCD-ROM");
+		break;
+	case ProfileDDCdRecordable:
+		OutputDriveLogA("DDCD-R");
+		break;
+	case ProfileDDCdRewritable:
+		OutputDriveLogA("DDCD-RW");
+		break;
 	case ProfileDvdPlusRWDualLayer:
 		OutputDriveLogA("DVD+RW DL");
 		break;
 	case ProfileDvdPlusRDualLayer:
 		OutputDriveLogA("DVD+R DL");
 		break;
+	case ProfileBDRom:
+		OutputDriveLogA("BD-ROM");
+		break;
+	case ProfileBDRSequentialWritable:
+		OutputDriveLogA("BD-R Sequential Writable");
+		break;
+	case ProfileBDRRandomWritable:
+		OutputDriveLogA("BD-R Random Writable");
+		break;
+	case ProfileBDRewritable:
+		OutputDriveLogA("BD-R");
+		break;
+	case ProfileHDDVDRom:
+		OutputDriveLogA("HD DVD-ROM");
+		break;
+	case ProfileHDDVDRecordable:
+		OutputDriveLogA("HD DVD-R");
+		break;
+	case ProfileHDDVDRam:
+		OutputDriveLogA("HD DVD-RAM");
+		break;
+	case ProfileHDDVDRewritable:
+		OutputDriveLogA("HD-DVD-RW");
+		break;
+	case ProfileHDDVDRDualLayer:
+		OutputDriveLogA("HD-DVD-R DL");
+		break;
+	case ProfileHDDVDRWDualLayer:
+		OutputDriveLogA("HD-DVD-RW DL");
+		break;
 	case ProfileNonStandard:
 		OutputDriveLogA("NonStandard");
 		break;
 	default:
-		OutputDriveLogA("Reserved [%x]", wFeatureProfileType);
+		OutputDriveLogA("Reserved [%#x]", wFeatureProfileType);
 		break;
 	}
 }
@@ -1374,7 +1413,6 @@ VOID OutputCDVDCapabilitiesPage(
 		, MAKEWORD(cdvd->CopyManagementRevision[1],
 			cdvd->CopyManagementRevision[0]));
 	pDevice->wMaxReadSpeed = rsm;
-	pDevice->wDriveBufSize = bs;
 }
 
 VOID OutputReadBufferCapacity(
@@ -1692,7 +1730,6 @@ VOID OutputEeprom(
 		case PLXTR_DRIVE_TYPE::PXW8220T:
 		case PLXTR_DRIVE_TYPE::PXW4220T:
 		case PLXTR_DRIVE_TYPE::PXR820T:
-		case PLXTR_DRIVE_TYPE::PXR412C:
 		{
 			OutputEepromUnknownByte(pBuf, 108, 121);
 			LONG ucw = MAKELONG(MAKEWORD(pBuf[125], pBuf[124]), MAKEWORD(pBuf[123], pBuf[122]));
@@ -1702,7 +1739,16 @@ VOID OutputEeprom(
 			idx = 126;
 			break;
 		}
+		case PLXTR_DRIVE_TYPE::PXR412C:
 		case PLXTR_DRIVE_TYPE::PX40TS:
+		case PLXTR_DRIVE_TYPE::PX40TSUW:
+		case PLXTR_DRIVE_TYPE::PX40TW:
+		case PLXTR_DRIVE_TYPE::PX32TS:
+		case PLXTR_DRIVE_TYPE::PX32CS:
+		case PLXTR_DRIVE_TYPE::PX20TS:
+		case PLXTR_DRIVE_TYPE::PX12TS:
+		case PLXTR_DRIVE_TYPE::PX12CS:
+		case PLXTR_DRIVE_TYPE::PX8XCS:
 			OutputEepromUnknownByte(pBuf, 108, 125);
 			idx = 126;
 			break;

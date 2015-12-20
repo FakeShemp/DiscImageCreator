@@ -6,6 +6,7 @@
 #include "convert.h"
 #include "execIoctl.h"
 #include "execScsiCmd.h"
+#include "execScsiCmdforCD.h"
 #include "init.h"
 #include "get.h"
 #include "output.h"
@@ -14,6 +15,7 @@
 #include "set.h"
 
 BOOL TestUnitReady(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -22,7 +24,7 @@ BOOL TestUnitReady(
 	cdb.LogicalUnitNumber = pDevice->address.Lun;
 
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB6GENERIC_LENGTH,
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH,
 		NULL, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -31,6 +33,7 @@ BOOL TestUnitReady(
 }
 
 BOOL Inquiry(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -40,7 +43,7 @@ BOOL Inquiry(
 
 	_declspec(align(4)) INQUIRYDATA inquiryData = { 0 };
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB6GENERIC_LENGTH, &inquiryData, 
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH, &inquiryData, 
 		sizeof(INQUIRYDATA), &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -50,6 +53,7 @@ BOOL Inquiry(
 }
 
 BOOL ModeSense(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -65,7 +69,7 @@ BOOL ModeSense(
 
 		_declspec(align(4)) CDVD_CAPABILITIES_PAGE_WITH_HEADER modesense = { 0 };
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB6GENERIC_LENGTH, &modesense,
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH, &modesense,
 			sizeof(CDVD_CAPABILITIES_PAGE_WITH_HEADER), &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 			byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false.
@@ -76,13 +80,8 @@ BOOL ModeSense(
 				OutputCDVDCapabilitiesPage(pDevice, &modesense.cdvd);
 			}
 			else {
-				if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PXW1210S) {
-					pDevice->wDriveBufSize = 4096;
-				}
 				OutputDriveLogA(
-					"SCSIOP_MODE_SENSE didn't fail. But it couldn't get PageCode on this drive\n"
-					"\tSet drive buffer size: %u\n"
-					, pDevice->wDriveBufSize);
+					"SCSIOP_MODE_SENSE didn't fail. But it couldn't get PageCode on this drive\n");
 			}
 		}
 	}
@@ -90,6 +89,7 @@ BOOL ModeSense(
 }
 
 BOOL StartStopUnit(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	BYTE Start,
 	BYTE LoadEject
@@ -102,7 +102,7 @@ BOOL StartStopUnit(
 	cdb.LoadEject = LoadEject;
 
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB6GENERIC_LENGTH,
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH,
 		NULL, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -111,6 +111,7 @@ BOOL StartStopUnit(
 }
 
 BOOL ReadTOC(
+	PEXT_ARG pExtArg,
 	PEXEC_TYPE pExecType,
 	PDEVICE pDevice,
 	PDISC pDisc
@@ -128,7 +129,7 @@ BOOL ReadTOC(
 	OutputString(_T("pDisc->SCSI.toc address: %p\n"), &pDisc->SCSI.toc);
 #endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, &pDisc->SCSI.toc,
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, &pDisc->SCSI.toc,
 		CDROM_TOC_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		if (pDisc->SCSI.wCurrentMedia != ProfileDvdRom) {
@@ -146,6 +147,7 @@ BOOL ReadTOC(
 }
 
 BOOL ReadTOCFull(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
 	FILE* fpCcd
@@ -164,10 +166,20 @@ BOOL ReadTOCFull(
 	OutputString(_T("fullToc address: %p\n"), &fullToc);
 #endif
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, &fullToc,
+	LPBYTE aBuf2 = NULL;
+	INT aLBA[] = { 0, pDisc->SCSI.nFirstLBAofDataTrack };
+	LPBYTE lpBuf = NULL;
+	BYTE lpCmd[CDB12GENERIC_LENGTH] = { 0 };
+	INT nOfs = 0;
+	BYTE byMode = DATA_BLOCK_MODE0;
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, &fullToc,
 		sizeof(CDROM_TOC_FULL_TOC_DATA), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-		return FALSE;
+		ReadCDForCheckingAdrFirst(pExtArg, pDevice, pDisc, &aBuf2, &lpBuf, lpCmd, &nOfs);
+		ReadCDForCheckingAdr(pExtArg, pDevice, pDisc, lpCmd, lpBuf, aLBA,
+			nOfs, &byMode, 1, fpCcd);
+		pDevice->bySuccessReadTocFull = FALSE;
+		return TRUE;
 	}
 	WORD wFullTocLen = MAKEWORD(fullToc.Length[1], fullToc.Length[0]);
 	WORD wTocEntriesAll = wFullTocLen - sizeof(fullToc.Length);
@@ -176,7 +188,7 @@ BOOL ReadTOCFull(
 	if (fpCcd) {
 		WriteCcdFileForDisc(wTocEntries, fullToc.LastCompleteSession, fpCcd);
 		if (pDevice->FEATURE.byCanCDText) {
-			ReadTOCText(pDevice, pDisc, fpCcd);
+			ReadTOCText(pExtArg, pDevice, pDisc, fpCcd);
 		}
 	}
 
@@ -187,7 +199,7 @@ BOOL ReadTOCFull(
 	}
 	LPBYTE pPFullToc = NULL;
 	LPBYTE pFullToc = NULL;
-	if (!GetAlignedAllocatedBuffer(pDevice, &pPFullToc,
+	if (!GetAlignedCallocatedBuffer(pDevice, &pPFullToc,
 		wFullTocLenFix, &pFullToc, _T(__FUNCTION__), __LINE__)) {
 		return FALSE;
 	}
@@ -202,40 +214,16 @@ BOOL ReadTOCFull(
 	cdb.AllocationLength[1] = LOBYTE(wFullTocLenFix);
 
 	BOOL bRet = TRUE;
-	LPBYTE aBuf2 = NULL;
 	try {
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, pFullToc,
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, pFullToc,
 			wFullTocLenFix, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
 		}
 		PCDROM_TOC_FULL_TOC_DATA_BLOCK pTocData =
 			((PCDROM_TOC_FULL_TOC_DATA)pFullToc)->Descriptors;
-		BYTE bySession = 0;
-		// session1, session2
-		INT aLBA[] = { 0, pDisc->SCSI.nFirstLBAofDataTrack };
-		LPBYTE lpBuf = NULL;
-		if (!GetAlignedAllocatedBuffer(pDevice, &aBuf2,
-			CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &lpBuf, _T(__FUNCTION__), __LINE__)) {
-			throw FALSE;
-		}
-		BYTE lpCmd[CDB12GENERIC_LENGTH] = { 0 };
-		INT nOfs = 0;
-		if (pDevice->byPlxtrType) {
-			CDB::_PLXTR_READ_CDDA cdb = { 0 };
-			SetReadD8Command(pDevice, &cdb, 1, PLXTR_READ_CDDA_FLAG::MainPack);
-			memcpy(lpCmd, &cdb, sizeof(lpCmd));
-			nOfs = pDisc->MAIN.nCombinedOffset % CD_RAW_SECTOR_SIZE;
-			if (pDisc->MAIN.nCombinedOffset < 0) {
-				nOfs = CD_RAW_SECTOR_SIZE + nOfs;
-			}
-		}
-		else {
-			CDB::_READ_CD cdb = { 0 };
-			SetReadCDCommand(NULL, pDevice, &cdb,
-				READ_CD_FLAG::All, 1, READ_CD_FLAG::Raw, TRUE);
-			memcpy(lpCmd, &cdb, sizeof(lpCmd));
-		}
+		BYTE bySessionIdx = 0;
+		ReadCDForCheckingAdrFirst(pExtArg, pDevice, pDisc, &aBuf2, &lpBuf, lpCmd, &nOfs);
 
 		for (WORD b = 0; b < wTocEntries; b++) {
 			if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PX40TS) {
@@ -250,98 +238,11 @@ BOOL ReadTOCFull(
 					pTocData[b].Point = BcdToDec(pTocData[b].Point);
 				}
 			}
-			if (pTocData[b].Point < 100 && bySession < pTocData[b].SessionNumber) {
-				BYTE byMode = DATA_BLOCK_MODE0;
-				// check 2 MCN, ISRC frame
-				INT nTmpMCNLBA = -1;
-				INT nTmpISRCLBA = -1;
-				BOOL bCheckMCN = FALSE;
-				BOOL bCheckISRC = FALSE;
-				CHAR szTmpCatalog[META_CATALOG_SIZE] = { 0 };
-				for (INT nLBA = aLBA[bySession]; nLBA < aLBA[bySession] + 200; nLBA++) {
-					lpCmd[2] = HIBYTE(HIWORD(nLBA));
-					lpCmd[3] = LOBYTE(HIWORD(nLBA));
-					lpCmd[4] = HIBYTE(LOWORD(nLBA));
-					lpCmd[5] = LOBYTE(LOWORD(nLBA));
-					if (!ScsiPassThroughDirect(pDevice, lpCmd, CDB12GENERIC_LENGTH, lpBuf,
-						CD_RAW_SECTOR_WITH_SUBCODE_SIZE, &byScsiStatus, _T(__FUNCTION__), __LINE__)
-						|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
-						throw FALSE;
-					}
-					LPBYTE lpBuf2 = lpBuf;
-					if (pDevice->byPlxtrType) {
-						lpBuf2 = lpBuf + nOfs;
-					}
-					BYTE lpSubcode[CD_RAW_READ_SUBCODE_SIZE] = { 0 };
-					AlignRowSubcode(lpBuf + CD_RAW_SECTOR_SIZE, lpSubcode);
-#if 0
-					OutputCDMain(lpBuf2, nLBA, CD_RAW_SECTOR_SIZE);
-					OutputCDSub96Align(lpSubcode, nLBA);
-#endif
-					if (nLBA == aLBA[bySession]) {
-						BYTE byCtl = (BYTE)((lpSubcode[12] >> 4) & 0x0f);
-						byMode = GetMode(lpBuf2, byCtl);
-					}
-					if (pTocData[b].SessionNumber == 1) {
-						BYTE byAdr = (BYTE)(lpSubcode[12] & 0x0f);
-						if (byAdr == ADR_ENCODES_MEDIA_CATALOG) {
-							BYTE byMCN = IsValidSubQMCN(lpSubcode);
-							if (byMCN) {
-								CHAR szCatalog[META_CATALOG_SIZE] = { 0 };
-								if (nTmpMCNLBA == -1) {
-									SetMCNToString(pDisc, lpSubcode, szCatalog, FALSE);
-									strncpy(szTmpCatalog, szCatalog, META_CATALOG_SIZE);
-									szTmpCatalog[META_CATALOG_SIZE - 1] = 0;
-									nTmpMCNLBA = nLBA;
-								}
-								else if (!pDisc->SUB.byCatalog && !bCheckMCN) {
-									SetMCNToString(pDisc, lpSubcode, szCatalog, FALSE);
-									if (!strncmp(szTmpCatalog, szCatalog, META_CATALOG_SIZE)) {
-										strncpy(pDisc->SUB.szCatalog, szCatalog, META_CATALOG_SIZE);
-										pDisc->SUB.byCatalog = byMCN;
-										pDisc->SUB.nFirstLBAForMCN = nTmpMCNLBA;
-										if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PXS88T) {
-											// Somehow PX-S88T is sliding subchannel +1;
-											pDisc->SUB.nFirstLBAForMCN++;
-										}
-										pDisc->SUB.nRangeLBAForMCN = nLBA - nTmpMCNLBA;
-										WriteCcdFileForDiscCatalog(pDisc, fpCcd);
-										OutputDiscLogA(
-											"First MCN sector: %d, MCN sector exists per: %d frame\n"
-											, pDisc->SUB.nFirstLBAForMCN, pDisc->SUB.nRangeLBAForMCN);
-										bCheckMCN = TRUE;
-									}
-								}
-							}
-						}
-						else if (byAdr == ADR_ENCODES_ISRC) {
-							BYTE byISRC = IsValidSubQISRC(lpSubcode);
-							if (byISRC) {
-								if (nTmpISRCLBA == -1) {
-									nTmpISRCLBA = nLBA;
-								}
-								else if (!bCheckISRC) {
-									pDisc->SUB.byISRC = byISRC;
-									pDisc->SUB.nFirstLBAForISRC = nTmpISRCLBA;
-									if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PXS88T) {
-										// Somehow PX-S88T is sliding subchannel +1;
-										pDisc->SUB.nFirstLBAForISRC++;
-									}
-									pDisc->SUB.nRangeLBAForISRC = nLBA - nTmpISRCLBA;
-									OutputDiscLogA(
-										"First ISRC sector: %d, ISRC sector exists per: %d frame\n"
-										, pDisc->SUB.nFirstLBAForISRC, pDisc->SUB.nRangeLBAForISRC);
-									bCheckISRC = TRUE;
-								}
-							}
-						}
-					}
-					else {
-						break;
-					}
-				}
+			if (pTocData[b].Point < 100 && bySessionIdx < pTocData[b].SessionNumber) {
+				ReadCDForCheckingAdr(pExtArg, pDevice, pDisc, lpCmd, lpBuf, aLBA,
+					nOfs, &byMode, bySessionIdx, fpCcd);
 				WriteCcdFileForSession(pTocData[b].SessionNumber, byMode, fpCcd);
-				bySession++;
+				bySessionIdx++;
 			}
 		}
 		SetAndOutputTocFull(pDisc, &fullToc, pTocData, wTocEntries, fpCcd);
@@ -349,12 +250,14 @@ BOOL ReadTOCFull(
 	catch (BOOL ret) {
 		bRet = ret;
 	}
+	pDevice->bySuccessReadTocFull = TRUE;
 	FreeAndNull(pPFullToc);
 	FreeAndNull(aBuf2);
 	return bRet;
 }
 
 BOOL ReadTOCText(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
 	FILE* fpCcd
@@ -374,12 +277,12 @@ BOOL ReadTOCText(
 	OutputDiscLogA(
 		"========================== CDTEXT on SCSIOP_READ_TOC ==========================\n");
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, &tocText,
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, &tocText,
 		sizeof(CDROM_TOC_CD_TEXT_DATA), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false. because undefined mmc1..
 		OutputDiscLogA(
-			"Nothing CDTEXT or Undefined CDROM_READ_TOC_EX_FORMAT_CDTEXT on this drive\n");
+			"Nothing CDTEXT or CDROM_READ_TOC_EX_FORMAT_CDTEXT doesn't support on this drive\n");
 		return TRUE;
 	}
 	WORD wTocTextLen = MAKEWORD(tocText.Length[1], tocText.Length[0]);
@@ -402,7 +305,7 @@ BOOL ReadTOCText(
 	}
 	LPBYTE pPTocText = NULL;
 	LPBYTE pTocText = NULL;
-	if (!GetAlignedAllocatedBuffer(pDevice, &pPTocText,
+	if (!GetAlignedCallocatedBuffer(pDevice, &pPTocText,
 		wTocTextLenFix, &pTocText, _T(__FUNCTION__), __LINE__)) {
 		return FALSE;
 	}
@@ -419,7 +322,7 @@ BOOL ReadTOCText(
 	PCHAR pTmpText = NULL;
 	BOOL bRet = TRUE;
 	try {
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, pTocText,
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, pTocText,
 			wTocTextLenFix, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			throw FALSE;
@@ -463,6 +366,7 @@ BOOL ReadTOCText(
 }
 
 BOOL GetConfiguration(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc
 	)
@@ -476,7 +380,7 @@ BOOL GetConfiguration(
 
 	_declspec(align(4)) GET_CONFIGURATION_HEADER configHeader = { 0 };
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, &configHeader,
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, &configHeader,
 		sizeof(GET_CONFIGURATION_HEADER), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		pDisc->SCSI.wCurrentMedia = ProfileCdrom;
@@ -486,7 +390,7 @@ BOOL GetConfiguration(
 			pDevice->FEATURE.byC2ErrorData = TRUE;
 		}
 		OutputDriveLogA(
-			"Undefined SCSIOP_GET_CONFIGURATION Command on this drive\n");
+			"SCSIOP_GET_CONFIGURATION doesn't support on this drive\n");
 	}
 	else {
 		pDisc->SCSI.wCurrentMedia =
@@ -506,19 +410,19 @@ BOOL GetConfiguration(
 			sizeof(configHeader.DataLength) + sizeof(GET_CONFIGURATION_HEADER);
 		LPBYTE pPConf = NULL;
 		LPBYTE lpConf = NULL;
-		if (!GetAlignedAllocatedBuffer(pDevice, &pPConf,
+		if (!GetAlignedCallocatedBuffer(pDevice, &pPConf,
 			dwAllLen, &lpConf, _T(__FUNCTION__), __LINE__)) {
 			return FALSE;
 		}
 		cdb.AllocationLength[0] = HIBYTE(dwAllLen);
 		cdb.AllocationLength[1] = LOBYTE(dwAllLen);
 
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, lpConf,
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, lpConf,
 			dwAllLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false. because undefined mmc1..
 			OutputDriveLogA(
-				"Undefined SCSIOP_GET_CONFIGURATION Command on this drive\n");
+				"SCSIOP_GET_CONFIGURATION doesn't support on this drive\n");
 		}
 		else {
 			OutputGetConfigurationFeatureNumber(pDevice,
@@ -528,11 +432,6 @@ BOOL GetConfiguration(
 				// Somehow SetCDSpeed fails in PX-W1210...
 				pDevice->FEATURE.bySetCDSpeed = FALSE;
 			}
-			if (pDevice->byPlxtrType == (BYTE)PLXTR_DRIVE_TYPE::PXS88T ||
-				pDevice->byPlxtrType == (BYTE)PLXTR_DRIVE_TYPE::PXW1210A) {
-				// If use PLXTR_READ_CDDA(0xd8) and subch(0x08), it fails.
-				pDevice->FEATURE.byC2ErrorData = FALSE;
-			}
 		}
 		FreeAndNull(pPConf);
 	}
@@ -540,6 +439,7 @@ BOOL GetConfiguration(
 }
 
 BOOL ReadDiscInformation(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -551,12 +451,12 @@ BOOL ReadDiscInformation(
 
 	_declspec(align(4)) DISC_INFORMATION discInformation = { 0 };
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, &discInformation,
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, &discInformation,
 		sizeof(DISC_INFORMATION), &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 		byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		// not false.
 		OutputDiscLogA(
-			"Undefined SCSIOP_READ_DISC_INFORMATION Command on this drive\n");
+			"SCSIOP_READ_DISC_INFORMATION doesn't support on this drive\n");
 	}
 	else {
 		OutputDiscInformation(&discInformation);
@@ -565,6 +465,7 @@ BOOL ReadDiscInformation(
 }
 
 BOOL ModeSense10(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -581,13 +482,13 @@ BOOL ModeSense10(
 
 		_declspec(align(4)) CDVD_CAPABILITIES_PAGE_WITH_HEADER10 modesense = { 0 };
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB10GENERIC_LENGTH, &modesense,
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB10GENERIC_LENGTH, &modesense,
 			sizeof(CDVD_CAPABILITIES_PAGE_WITH_HEADER10), &byScsiStatus, _T(__FUNCTION__), __LINE__) ||
 			byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false.
 			OutputDriveLogA(
-				"Undefined SCSIOP_MODE_SENSE10 Command on this drive\n");
-			ModeSense(pDevice);
+				"SCSIOP_MODE_SENSE10 doesn't support on this drive\n");
+			ModeSense(pExtArg, pDevice);
 		}
 		else {
 			if (modesense.cdvd.PageCode == MODE_PAGE_CAPABILITIES) {
@@ -597,41 +498,19 @@ BOOL ModeSense10(
 			else {
 				OutputDriveLogA(
 					"SCSIOP_MODE_SENSE10 didn't fail. But it couldn't get PageCode on this drive\n");
-				ModeSense(pDevice);
+				ModeSense(pExtArg, pDevice);
 			}
 		}
 	}
 	else {
-		if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PX40TS) {
-			pDevice->wDriveBufSize = 512;
-		}
-		else if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PXS88T ||
-			pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PX320A) {
-			pDevice->wDriveBufSize = 2048;
-			pDevice->FEATURE.bySetCDSpeed = TRUE;
-			pDevice->wMaxReadSpeed = CD_RAW_SECTOR_SIZE * 75 * 52 / 1000;
-		}
-		else if (pDevice->byPlxtrType == PLXTR_DRIVE_TYPE::PXW8220T) {
-			pDevice->wDriveBufSize = 4096;
-		}
-		else if (
-			!strncmp(pDevice->szProductId, "CD-ROM  TS-H192C", DRIVE_PRODUCT_ID_SIZE) ||
-			!strncmp(pDevice->szProductId, "CD-ROM TS-H192CN", DRIVE_PRODUCT_ID_SIZE)
-			) {
-			pDevice->FEATURE.bySetCDSpeed = TRUE;
-			pDevice->wMaxReadSpeed = CD_RAW_SECTOR_SIZE * 75 * 52 / 1000;
-		}
 		OutputDriveLogA(
-			"Doesn't support SCSIOP_MODE_SENSE10 Command on this drive\n"
-			"\tSet CD Speed: %s\n"
-			"\tSet drive buffer size: %u\n"
-			, BOOLEAN_TO_STRING_TRUE_FALSE_A(pDevice->FEATURE.bySetCDSpeed)
-			, pDevice->wDriveBufSize);
+			"SCSIOP_MODE_SENSE10 doesn't support on this drive\n");
 	}
 	return TRUE;
 }
 
 BOOL ReadBufferCapacity(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -643,12 +522,12 @@ BOOL ReadBufferCapacity(
 
 		_declspec(align(4)) READ_BUFFER_CAPACITY_DATA readBufCapaData = { 0 };
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, &readBufCapaData,
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, &readBufCapaData,
 			sizeof(READ_BUFFER_CAPACITY_DATA), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// not false.
 			OutputDriveLogA(
-				"Undefined SCSIOP_READ_BUFFER_CAPACITY Command on this drive\n");
+				"SCSIOP_READ_BUFFER_CAPACITY doesn't support on this drive\n");
 		}
 		else {
 			OutputReadBufferCapacity(&readBufCapaData);
@@ -659,6 +538,7 @@ BOOL ReadBufferCapacity(
 
 // https://msdn.microsoft.com/ja-jp/library/ff551396(v=vs.85).aspx
 BOOL SetCDSpeed(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	DWORD dwCDSpeedNum
 	)
@@ -758,12 +638,12 @@ BOOL SetCDSpeed(
 		setspeed.WriteSpeed = 0;
 		setspeed.RotationControl = CdromDefaultRotation;
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH, &setspeed, 
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH, &setspeed, 
 			sizeof(CDROM_SET_SPEED), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			// Somehow PX-W1210S fails...
 			OutputDriveLogA(
-				"Undefined SCSIOP_SET_CD_SPEED Command on this drive\n");
+				"SCSIOP_SET_CD_SPEED doesn't support on this drive\n");
 		}
 		else {
 			OutputSetSpeed(&setspeed);
@@ -774,6 +654,7 @@ BOOL SetCDSpeed(
 
 // feature PLEXTOR drive below
 BOOL SetSpeedRead(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	BOOL bState
 	)
@@ -801,7 +682,7 @@ BOOL SetSpeedRead(
 		cdb.Reserved2 = 0x08;
 
 		BYTE byScsiStatus = 0;
-		if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH,
+		if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH,
 			buf, sizeof(buf), &byScsiStatus, _T(__FUNCTION__), __LINE__)
 			|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 			return FALSE;
@@ -817,6 +698,7 @@ BOOL SetSpeedRead(
 }
 
 BOOL Reset(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -824,7 +706,7 @@ BOOL Reset(
 	cdb.OperationCode = SCSIOP_PLXTR_RESET;
 
 	BYTE byScsiStatus = 0;
-	if (!ScsiPassThroughDirect(pDevice, &cdb, CDB6GENERIC_LENGTH,
+	if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB6GENERIC_LENGTH,
 		NULL, 0, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 		|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 		return FALSE;
@@ -833,6 +715,7 @@ BOOL Reset(
 }
 
 BOOL ReadEeprom(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice
 	)
 {
@@ -865,7 +748,7 @@ BOOL ReadEeprom(
 	DWORD BufLen = tLen;
 	LPBYTE pPBuf = NULL;
 	LPBYTE pBuf = NULL;
-	if (!GetAlignedAllocatedBuffer(pDevice, &pPBuf,
+	if (!GetAlignedCallocatedBuffer(pDevice, &pPBuf,
 		BufLen, &pBuf, _T(__FUNCTION__), __LINE__)) {
 		return FALSE;
 	}
@@ -883,7 +766,7 @@ BOOL ReadEeprom(
 			cdb.TransferLength[1] = LOBYTE(HIWORD(tLen));
 			cdb.TransferLength[2] = HIBYTE(LOWORD(tLen));
 			cdb.TransferLength[3] = LOBYTE(LOWORD(tLen));
-			if (!ScsiPassThroughDirect(pDevice, &cdb, CDB12GENERIC_LENGTH,
+			if (!ScsiPassThroughDirect(pExtArg, pDevice, &cdb, CDB12GENERIC_LENGTH,
 				pBuf, BufLen, &byScsiStatus, _T(__FUNCTION__), __LINE__)
 				|| byScsiStatus >= SCSISTAT_CHECK_CONDITION) {
 				throw FALSE;

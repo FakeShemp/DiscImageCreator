@@ -13,6 +13,7 @@ BOOL ScsiGetAddress(
 	);
 
 BOOL ScsiPassThroughDirect(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	LPVOID lpCdbCmd,
 	BYTE byCdbCmdLength,

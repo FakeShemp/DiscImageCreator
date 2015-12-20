@@ -13,6 +13,7 @@ BOOL ReadDVD(
 	);
 
 BOOL ReadDVDForCMI(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc
 	);
@@ -24,6 +25,7 @@ BOOL ReadDVDRaw(
 	);
 
 BOOL ReadDVDStructure(
+	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc
 	);

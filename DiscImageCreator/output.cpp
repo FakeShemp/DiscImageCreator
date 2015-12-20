@@ -18,6 +18,8 @@ CHAR logBufferA[DISC_RAW_READ_SIZE];
 extern _TCHAR g_szCurrentdir[_MAX_PATH];
 // These global variable is set at DiscImageCreator.cpp
 extern BYTE g_aSyncHeader[SYNC_SIZE];
+// These global variable is set at prngcd.cpp
+extern unsigned char scrambled_table[2352];
 
 FILE* CreateOrOpenFileW(
 	LPCTSTR pszPath,
@@ -698,50 +700,61 @@ VOID WriteErrorBuffer(
 	PEXT_ARG pExtArg,
 	PDEVICE pDevice,
 	PDISC pDisc,
-	PMAIN_HEADER pMain,
-	LPBYTE lpBuf,
+	PDISC_PER_SECTOR pDiscPerSector,
 	LPBYTE lpScrambledBuf,
-	LPBYTE lpSubcode,
 	INT nLBA,
 	FILE* fpImg,
 	FILE* fpSub,
 	FILE* fpC2
 	)
 {
-	ZeroMemory(lpBuf, CD_RAW_SECTOR_SIZE);
-	for (UINT i = 0; i < pDisc->MAIN.uiMainDataSlideSize; i++) {
-		lpBuf[i] = (BYTE)(0x55 ^ lpScrambledBuf[CD_RAW_SECTOR_SIZE - pDisc->MAIN.uiMainDataSlideSize + i]);
-	}
-	for (UINT i = pDisc->MAIN.uiMainDataSlideSize; i < pDisc->MAIN.uiMainDataSlideSize + sizeof(pMain->header); i++) {
-		lpBuf[i] = pMain->header[i - pDisc->MAIN.uiMainDataSlideSize];
-	}
-	for (UINT i = pDisc->MAIN.uiMainDataSlideSize + sizeof(pMain->header); i < CD_RAW_SECTOR_SIZE; i++) {
-		lpBuf[i] = (BYTE)(0x55 ^ lpScrambledBuf[i - pDisc->MAIN.uiMainDataSlideSize]);
-	}
-
 	UINT uiSize = 0;
-	if (nLBA == pDisc->MAIN.nFixStartLBA) {
-		uiSize =
-			CD_RAW_SECTOR_SIZE - pDisc->MAIN.uiMainDataSlideSize;
-		fwrite(lpBuf + pDisc->MAIN.uiMainDataSlideSize,
-			sizeof(BYTE), uiSize, fpImg);
-	}
-	else if (nLBA == pDisc->MAIN.nFixEndLBA) {
-		uiSize = pDisc->MAIN.uiMainDataSlideSize;
-		fwrite(lpBuf, sizeof(BYTE), uiSize, fpImg);
+	if (pExtArg->byBe) {
+		uiSize = CD_RAW_SECTOR_SIZE;
+		fwrite(pDiscPerSector->mainHeader.present, sizeof(BYTE), MAINHEADER_MODE1_SIZE, fpImg);
+		for (UINT i = MAINHEADER_MODE1_SIZE; i < CD_RAW_SECTOR_SIZE; i++) {
+			pDiscPerSector->data.present[i] = 0x55;
+		}
+		fwrite(pDiscPerSector->data.present + MAINHEADER_MODE1_SIZE,
+			sizeof(BYTE), CD_RAW_SECTOR_SIZE - MAINHEADER_MODE1_SIZE, fpImg);
 	}
 	else {
-		uiSize = CD_RAW_SECTOR_SIZE;
-		fwrite(lpBuf, sizeof(BYTE), uiSize, fpImg);
+		ZeroMemory(pDiscPerSector->data.present, CD_RAW_SECTOR_SIZE);
+		for (UINT i = 0; i < pDisc->MAIN.uiMainDataSlideSize; i++) {
+			pDiscPerSector->data.present[i] =
+				(BYTE)(0x55 ^ lpScrambledBuf[CD_RAW_SECTOR_SIZE - pDisc->MAIN.uiMainDataSlideSize + i]);
+		}
+		for (UINT i = pDisc->MAIN.uiMainDataSlideSize; i < pDisc->MAIN.uiMainDataSlideSize + MAINHEADER_MODE1_SIZE; i++) {
+			pDiscPerSector->data.present[i] =
+				pDiscPerSector->mainHeader.present[i - pDisc->MAIN.uiMainDataSlideSize];
+		}
+		for (UINT i = pDisc->MAIN.uiMainDataSlideSize + MAINHEADER_MODE1_SIZE; i < CD_RAW_SECTOR_SIZE; i++) {
+			pDiscPerSector->data.present[i] =
+				(BYTE)(0x55 ^ lpScrambledBuf[i - pDisc->MAIN.uiMainDataSlideSize]);
+		}
+
+		if (nLBA == pDisc->MAIN.nFixStartLBA) {
+			uiSize = CD_RAW_SECTOR_SIZE - pDisc->MAIN.uiMainDataSlideSize;
+			fwrite(pDiscPerSector->data.present + pDisc->MAIN.uiMainDataSlideSize,
+				sizeof(BYTE), uiSize, fpImg);
+		}
+		else if (nLBA == pDisc->MAIN.nFixEndLBA) {
+			uiSize = pDisc->MAIN.uiMainDataSlideSize;
+			fwrite(pDiscPerSector->data.present, sizeof(BYTE), uiSize, fpImg);
+		}
+		else {
+			uiSize = CD_RAW_SECTOR_SIZE;
+			fwrite(pDiscPerSector->data.present, sizeof(BYTE), uiSize, fpImg);
+		}
 	}
 
-	OutputErrorString(
-		_T("LBA[%06d, %#07x] Read error. padding 0x55 [%ubyte]\n"),
-		nLBA, nLBA, uiSize - sizeof(pMain->header));
-	fwrite(lpSubcode, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSub);
+	OutputLogA(standardErr | fileMainError,
+		"LBA[%06d, %#07x] Read error. padding at 0x55 [%ubyte]\n",
+		nLBA, nLBA, uiSize - MAINHEADER_MODE1_SIZE);
+	fwrite(pDiscPerSector->subcode.present, sizeof(BYTE), CD_RAW_READ_SUBCODE_SIZE, fpSub);
 
 	if (pExtArg->byC2 && pDevice->FEATURE.byC2ErrorData) {
-		fwrite(lpBuf + pDevice->TRANSFER.dwBufC2Offset, sizeof(BYTE), CD_RAW_READ_C2_294_SIZE, fpC2);
+		fwrite(pDiscPerSector->data.present + pDevice->TRANSFER.dwBufC2Offset, sizeof(BYTE), CD_RAW_READ_C2_294_SIZE, fpC2);
 	}
 }
 
@@ -811,7 +824,7 @@ BOOL WriteParsingSubfile(
 			else {
 				byTrackNum = BcdToDec(*(data + i + 13));
 			}
-			if (0 < byTrackNum && byTrackNum < 0xaa) {
+			if (0 <= byTrackNum && byTrackNum < 100 || byTrackNum == 0xaa) {
 				OutputCDSubToLog(&discData, 
 					&data[i], lpSubcodeRtoW, j, byTrackNum, fpParse);
 			}
@@ -858,13 +871,14 @@ BOOL DescrambleMainChannelForGD(
 		return FALSE;
 	}
 	FILE* fpImg = NULL;
-	FILE* fpTbl = NULL;
 	try {
 		if (NULL == (fpImg = CreateOrOpenFileW(
 			pszPath, NULL, NULL, NULL, NULL, _T(".img2"), _T("wb"), 0, 0))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			throw FALSE;
 		}
+#if 0
+		FILE* fpTbl = NULL;
 		if (NULL == (fpTbl = OpenProgrammabledFile(_T("scramble.bin"), _T("rb")))) {
 			OutputLastErrorNumAndString(_T(__FUNCTION__), __LINE__);
 			throw FALSE;
@@ -872,7 +886,7 @@ BOOL DescrambleMainChannelForGD(
 		BYTE bufTbl[CD_RAW_SECTOR_SIZE] = { 0 };
 		fread(bufTbl, sizeof(BYTE), CD_RAW_SECTOR_SIZE, fpTbl);
 		FcloseAndNull(fpTbl);
-
+#endif
 		DWORD dwFileSize = GetFileSize(0, fpScm);
 		DWORD dwAllSectorVal = dwFileSize / CD_RAW_SECTOR_SIZE;
 		BYTE bufScm[CD_RAW_SECTOR_SIZE] = { 0 };
@@ -884,7 +898,8 @@ BOOL DescrambleMainChannelForGD(
 					break;
 				}
 				for (INT j = 0; j < CD_RAW_SECTOR_SIZE; j++) {
-					bufImg[j] = (BYTE)(bufScm[j] ^ bufTbl[j]);
+					bufImg[j] = (BYTE)(bufScm[j] ^ scrambled_table[j]);
+//					bufImg[j] = (BYTE)(bufScm[j] ^ bufTbl[j]);
 				}
 				fwrite(bufImg, sizeof(BYTE), CD_RAW_SECTOR_SIZE, fpImg);
 			}
@@ -1084,7 +1099,7 @@ VOID DescrambleMainChannel(
 			if (!pExtArg->byReverse) {
 				lSeekPtr = nFirstLBA;
 			}
-			INT nMode = 0;
+//			INT nMode = 0;
 			for (; nFirstLBA <= nLastLBA; nFirstLBA++, lSeekPtr++) {
 				// ファイルを読み書き両用モードで開いている時は 注意が必要です。
 				// 読み込みを行った後に書き込みを行う場合やその逆を行う場合は、 
@@ -1100,8 +1115,9 @@ VOID DescrambleMainChannel(
 						aSrcBuf[n] ^= lpScrambledBuf[n];
 					}
 					fwrite(aSrcBuf, sizeof(BYTE), sizeof(aSrcBuf), fpImg);
-					nMode = aSrcBuf[15];
+//					nMode = aSrcBuf[15];
 				}
+#if 0 // for SafeDisc 3.15.XXX
 				else if (pExtArg->byReadContinue) {
 					BYTE m, s, f;
 					LBAtoMSF(nFirstLBA + 150, &m, &s, &f);
@@ -1114,6 +1130,7 @@ VOID DescrambleMainChannel(
 						fputc(0x55, fpImg);
 					}
 				}
+#endif
 				OutputString(
 					_T("\rDescrambling data sector of img(LBA) %6d/%6d"), nFirstLBA, nLastLBA);
 			}
